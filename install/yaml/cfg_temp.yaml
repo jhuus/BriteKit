@@ -1,0 +1,14 @@
+audio:
+  spec_height: 224
+  spec_width: 224
+train:
+  train_pickle: "data/small_combined_224x224.pkl"
+  model_group: "timm"
+  model_type: "coatnext_nano_rw_224"
+  pretrained: False
+  model_size: 1.0
+  num_epochs: 10
+  multi_label: true
+  num_folds: 1
+  val_portion: 0
+  deterministic: false

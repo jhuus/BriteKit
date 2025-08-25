@@ -1,0 +1,11 @@
+# Sample for training scaled DlaNet, with recommended hyperparameters.
+train:
+  train_pickle: "data/alignment_test.pkl"
+  model_type: "dla.1"
+
+  learning_rate: .002
+  drop_rate: 0.0
+
+  num_epochs: 1
+  save_last_n: 3
+  num_workers: 8

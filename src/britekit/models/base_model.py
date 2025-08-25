@@ -1,0 +1,473 @@
+import contextlib
+from datetime import datetime
+from typing import List, Optional, Any
+import uuid
+
+import numpy as np
+import pytorch_lightning as pl
+from sklearn import metrics
+from timm.optim import create_optimizer_v2
+import torch
+from torch import nn
+import torch.nn.functional as F
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+from torchmetrics.functional import accuracy
+
+from britekit.core.config_loader import get_config
+from britekit.core import util
+from britekit.models.head_factory import is_sed
+
+
+def get_learning_rate(optimizer):
+    """Get learning rates from all parameter groups."""
+    lrs = []
+    for param_group in optimizer.param_groups:
+        lrs.append(param_group["lr"])
+    return lrs[0] if len(lrs) == 1 else lrs
+
+
+class BaseModel(pl.LightningModule):
+    """
+    Base class for models.
+
+    Attributes:
+        model_type (str): e.g. "effnet.5" or "timm.efficientnet_s"
+        head_type (str, optional): None for default head, else "basic", "basic_sed" etc.
+        hidden_channels (int): Used in scaled models if head specified, for some head types.
+        train_class_names (list[str]): List of training class names
+        train_class_codes (list[str]): List of training class codes
+        train_class_alt_names (list[str]): List of training class alternate names
+        train_class_alt_codes (list[str]): List of training class alternate codes
+        num_train_specs (int): Number of training spectrograms
+        multi_label (bool): If true, train multi_label model, else multi_class model.
+    """
+
+    def __init__(
+        self,
+        model_type: str,
+        head_type: Optional[str],
+        hidden_channels: int,
+        train_class_names: List[str],
+        train_class_codes: List[str],
+        train_class_alt_names: List[str],
+        train_class_alt_codes: List[str],
+        num_train_specs: int,
+        multi_label: bool,
+    ):
+        super().__init__()
+
+        # Input validation
+        if not train_class_names:
+            raise ValueError("train_class_names cannot be empty")
+        if len(train_class_names) != len(train_class_codes):
+            raise ValueError(
+                "train_class_names and train_class_codes must have the same length"
+            )
+        if len(train_class_names) != len(train_class_alt_names):
+            raise ValueError(
+                "train_class_names and train_class_alt_names must have the same length"
+            )
+        if len(train_class_names) != len(train_class_alt_codes):
+            raise ValueError(
+                "train_class_names and train_class_alt_codes must have the same length"
+            )
+
+        self.save_hyperparameters()
+        self.cfg, _ = get_config()
+
+        # Save parameters
+        self.model_type = model_type
+        self.head_type = head_type
+        self.use_sed = is_sed(head_type)
+        self.hidden_channels = hidden_channels
+        self.multi_label = multi_label
+        self.train_class_names = train_class_names
+        self.train_class_codes = train_class_codes
+        self.train_class_alt_names = train_class_alt_names
+        self.train_class_alt_codes = train_class_alt_codes
+        self.num_train_specs = num_train_specs
+        self.num_classes = len(train_class_names)
+        self.epoch_num = 0
+        self.learning_rate = self.cfg.train.learning_rate  # needed by lr_finder
+
+        # Define loss functions
+        if self.multi_label:
+            self.loss_fn: Any = nn.BCEWithLogitsLoss()
+        else:
+            self.loss_fn = nn.CrossEntropyLoss()
+
+        # Placeholder for model definition (subclass must define)
+        self.backbone: Optional[nn.Module] = None
+        self.head: Optional[nn.Module] = None
+
+    def forward(self, x):
+        """
+        Return (segment_logits, frame_logits).
+        SED heads return (segment_logits, frame_logits) and
+        non-SED heads return (segment_logits, None).
+        """
+        if self.backbone is None:
+            raise RuntimeError(
+                "backbone is not initialized. Subclass must set self.backbone"
+            )
+        if self.head is None:
+            raise RuntimeError("head is not initialized. Subclass must set self.head")
+
+        x = self.backbone(x)
+        x = self.head(x)
+        if self.use_sed:
+            segment_logits, frame_logits = x
+            actual_sed_frames = frame_logits.shape[-1]
+            target_sed_frames = int(
+                self.cfg.train.sed_fps * self.cfg.audio.spec_duration
+            )
+            if actual_sed_frames != target_sed_frames:
+                frame_logits = F.interpolate(
+                    frame_logits,
+                    size=target_sed_frames,
+                    mode="linear",
+                )
+
+            return segment_logits, frame_logits
+        else:
+            return x, None
+
+    def training_step(self, batch, batch_idx):
+        """Perform a single training step."""
+        input = batch["input"]  # augmented specs
+        seg_labels = batch["segment_labels"]
+
+        if self.multi_label:
+            # apply asymmetric label smoothing
+            seg_labels = (
+                seg_labels * (1.0 - self.cfg.train.pos_label_smoothing)
+                + (1.0 - seg_labels) * self.cfg.train.neg_label_smoothing
+            )
+
+        seg_logits, frame_logits = self(input)  # shapes [B, C], [B, C, T]
+        loss = self._calc_loss(seg_logits, frame_logits, seg_labels)
+
+        if frame_logits is not None and self.cfg.train.offpeak_weight > 0:
+            # add a penalty to discourage spread-out frame scores
+            p = torch.sigmoid(frame_logits)
+            mask = ~batch["mixup"].bool()
+            m = mask.view(-1, 1, 1).float()
+            p_sum = (p * m).sum(dim=-1) / m.sum(dim=-1).clamp_min(1.0)
+            p_max = (p * m).amax(dim=-1)
+            offpeak_loss = (p_sum - p_max).clamp_min(0).mean()
+            loss += self.cfg.train.offpeak_weight * offpeak_loss
+
+        self.log(
+            "lr",
+            get_learning_rate(self.optimizer),
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+        )
+
+        self.log("loss", loss, on_step=True, on_epoch=False, prog_bar=True)
+
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        """Perform a single validation step."""
+        x, y = batch
+        seg_logits, frame_logits = self(x)  # Get both segment and frame logits
+        loss = self.loss_fn(seg_logits, y)  # Use only segment logits for loss
+        if self.multi_label:
+            preds = torch.sigmoid(seg_logits)
+        else:
+            preds = torch.softmax(seg_logits, dim=1)
+
+        acc = accuracy(preds, y, task="multilabel", num_labels=self.num_classes)
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+
+        # do it here so it appears after the others on the prog_bar
+        micro_aps = metrics.average_precision_score(
+            y.cpu(), preds.cpu(), average="micro"
+        )
+        self.log(
+            "val_micro_aps", micro_aps, on_step=False, on_epoch=True, prog_bar=True
+        )
+
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        """Perform a single test step."""
+        x, y = batch
+        seg_logits, frame_logits = self(x)  # Get both segment and frame logits
+        loss = self.loss_fn(seg_logits, y)  # Use only segment logits for loss
+        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+
+        if self.multi_label:
+            preds = torch.sigmoid(seg_logits)
+            micro_aps = metrics.average_precision_score(
+                y.cpu(), preds.cpu(), average="micro"
+            )
+            self.log(
+                "test_micro_aps", micro_aps, on_step=False, on_epoch=True, prog_bar=True
+            )
+            macro_aps = metrics.average_precision_score(
+                y.cpu(), preds.cpu(), average="macro"
+            )
+            self.log(
+                "test_macro_aps", macro_aps, on_step=False, on_epoch=True, prog_bar=True
+            )
+
+        return loss
+
+    def configure_optimizers(self):
+        """Configure optimizers and learning rate schedulers."""
+        cfg = self.cfg.train
+        self.optimizer = create_optimizer_v2(
+            self,
+            cfg.optimizer,
+            lr=cfg.learning_rate,
+            weight_decay=cfg.opt_weight_decay,
+            betas=(cfg.opt_beta1, cfg.opt_beta2),
+            filter_bias_and_bn=False,
+        )
+
+        # Add error handling for trainer access
+        if not hasattr(self, "trainer") or self.trainer is None:
+            # Fallback for when trainer is not available (e.g., during testing)
+            total_steps = 1000  # Default value
+        else:
+            total_steps = self.trainer.estimated_stepping_batches
+
+        warmup_steps = self.cfg.train.warmup_fraction * total_steps
+        decay_steps = total_steps - warmup_steps
+
+        cosine_sched = CosineAnnealingLR(self.optimizer, T_max=decay_steps, eta_min=0.0)
+
+        if warmup_steps > 0:
+            # warmup: linearly ramp from 0 to base_lr
+            warmup_sched = LinearLR(
+                self.optimizer,
+                start_factor=1e-6,  # LR starts near 0
+                end_factor=1.0,  # LR reaches base_lr
+                total_iters=warmup_steps,
+            )
+
+            # stitch them together
+            scheduler = SequentialLR(
+                self.optimizer,
+                schedulers=[warmup_sched, cosine_sched],
+                milestones=[warmup_steps],
+            )
+        else:
+            scheduler = cosine_sched
+
+        return {
+            "optimizer": self.optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
+
+    def on_train_epoch_end(self):
+        """Log epoch number for checkpoint saving."""
+        # Log the epoch_num so we can save checkpoints for the last n epochs
+        epoch_num = torch.tensor(self.epoch_num).type(torch.float32)
+        self.log("epoch_num", epoch_num, prog_bar=False)
+        self.epoch_num += 1
+
+    def on_save_checkpoint(self, checkpoint):
+        """Save model metadata to checkpoint."""
+        if not hasattr(self, "identifier"):
+            self.identifier = str(uuid.uuid4()).upper()
+            self.training_date = datetime.today().strftime("%Y-%m-%d")
+
+        checkpoint["identifier"] = self.identifier
+        checkpoint["training_date"] = self.training_date
+        checkpoint["training_cfg"] = util.cfg_to_pure(self.cfg)
+
+    def on_load_checkpoint(self, checkpoint):
+        """Load model metadata from checkpoint."""
+        if "identifier" in checkpoint:
+            self.identifier = checkpoint["identifier"]
+            self.training_date = checkpoint["training_date"]
+            self.training_cfg = checkpoint["training_cfg"]
+
+            # set relevant config options based on how it was trained
+            self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
+            self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
+        else:
+            raise ValueError("Checkpoint metadata not found.")
+
+    def predict(self, x, device=None):
+        """
+        Memory-safe, block-wise inference with a single AMP toggle.
+        Config:
+        - infer.block_size: int (None/0 -> whole batch)
+        - infer.autocast: bool (use CUDA autocast if on GPU)
+        - infer.scaling_coefficient / scaling_intercept: scalar or [C] (multi-label only)
+        Returns:
+        segment_scores: (N, C) cpu float32 tensor
+        frame_scores:   (N, C, T) cpu float32 tensor or None
+        """
+        if device is None:
+            device = util.get_device()
+
+        block_size = self.cfg.infer.block_size
+        # Fix device handling
+        use_amp = bool(self.cfg.infer.autocast and device and device.startswith("cuda"))
+
+        # choose a safe AMP dtype (bf16 if available; else fp16)
+        amp_dtype = (
+            torch.bfloat16
+            if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+            else torch.float16
+        )
+        amp_ctx = (
+            (lambda: torch.autocast(device_type="cuda", dtype=amp_dtype))
+            if use_amp
+            else (lambda: contextlib.nullcontext())
+        )
+
+        # Move _iter_blocks outside to avoid redefinition
+        seg_parts, frame_parts = [], []
+
+        with torch.inference_mode():
+            for x_block in self._iter_blocks(x, block_size):
+                xb = self._ensure_tensor(x_block, device)
+
+                # Heavy ops under autocast (if enabled)
+                with amp_ctx():
+                    seg_logits, frame_logits = self(xb)
+
+                # === back to fp32 for numerics & calibration ===
+                seg_logits = seg_logits.float()
+                frame_logits = None if frame_logits is None else frame_logits.float()
+
+                # segment scores
+                if self.multi_label:
+                    w = torch.as_tensor(
+                        self.cfg.infer.scaling_coefficient,
+                        device=seg_logits.device,
+                        dtype=seg_logits.dtype,
+                    )
+                    b = torch.as_tensor(
+                        self.cfg.infer.scaling_intercept,
+                        device=seg_logits.device,
+                        dtype=seg_logits.dtype,
+                    )
+                    seg_scores = torch.sigmoid(seg_logits * w + b)
+                else:
+                    seg_scores = torch.softmax(seg_logits, dim=1)
+
+                seg_parts.append(seg_scores.detach().cpu())
+
+                # frame scores (SED)
+                if frame_logits is not None:
+                    frame_scores = torch.sigmoid(frame_logits)
+                    frame_parts.append(frame_scores.detach().cpu())
+
+        segment_scores = torch.cat(seg_parts, dim=0)
+        frame_scores = torch.cat(frame_parts, dim=0) if frame_parts else None
+        return segment_scores, frame_scores
+
+    def _iter_blocks(self, X, block_size):
+        """Helper method to iterate over data in blocks."""
+        if isinstance(X, torch.Tensor):
+            n = X.shape[0]
+            if block_size <= 0 or block_size >= n:
+                yield X
+            else:
+                for i in range(0, n, block_size):
+                    yield X[i : i + block_size]
+        else:
+            n = len(X)
+            if block_size <= 0 or block_size >= n:
+                yield X
+            else:
+                for i in range(0, n, block_size):
+                    yield X[i : i + block_size]
+
+    def get_embeddings(self, specs, device=None):
+        """Get embeddings for use in searching and clustering"""
+        if device is None:
+            device = util.get_device()
+
+        with torch.no_grad():
+            specs = self._ensure_tensor(specs, device)
+            feats = self.backbone(specs)
+
+            # If already 2D (e.g., [B, D]), just return
+            if feats.ndim == 2:
+                return feats.cpu().detach().numpy()
+
+            # 3D (SED) or 4D (CNN feature map)
+            if feats.ndim == 3:  # [B, C, T]
+                pooled = feats.mean(dim=-1)  # global temporal pooling
+            elif feats.ndim == 4:  # [B, C, H, W]
+                pooled = (
+                    F.adaptive_avg_pool2d(feats, (1, 1)).squeeze(-1).squeeze(-1)
+                )  # [B, C]
+            else:
+                raise ValueError(f"Unexpected feature shape: {feats.shape}")
+
+            return pooled.cpu().detach().numpy()  # [B, D]
+
+    def get_sed_scores(self, specs, device=None):
+        """
+        Get segment-scores and frame-scores from a model with a SED head.
+        """
+        assert self.use_sed, "get_sed_scores called on a non-SED model"
+        if device is None:
+            device = util.get_device()
+
+        self.backbone.to(device)
+        self.backbone.eval()
+        self.head.to(device)
+        self.head.eval()
+
+        with torch.no_grad():
+            specs = self._ensure_tensor(specs, device)
+            segment_logits, frame_logits = self(specs)
+            segment_scores = 1 / (1 + torch.exp(-segment_logits))
+            frame_scores = torch.sigmoid(frame_logits)
+
+        segment_scores = segment_scores.cpu().detach().numpy()
+        frame_scores = frame_scores.cpu().detach().numpy()
+        return segment_scores, frame_scores
+
+    def freeze_backbone(self):
+        """Freeze the backbone, in a way that works with any timm model"""
+        if self.backbone:
+            for _, param in self.backbone.named_parameters():
+                param.requires_grad = False
+
+    def _calc_loss(self, seg_logits, frame_logits, seg_labels):
+        segment_loss = self.loss_fn(seg_logits, seg_labels)
+
+        if self.use_sed:
+            assert frame_logits is not None
+            B, C, T = frame_logits.shape
+            frame_labels = seg_labels.unsqueeze(-1).expand(B, C, T).transpose(1, 2)
+            frame_loss = F.binary_cross_entropy_with_logits(
+                frame_logits.transpose(1, 2), frame_labels, reduction="mean"
+            )
+            segment_loss_weight = 1 - self.cfg.train.frame_loss_weight
+            loss = (
+                segment_loss_weight * segment_loss
+                + self.cfg.train.frame_loss_weight * frame_loss
+            )
+        else:
+            loss = segment_loss
+
+        return loss
+
+    def _ensure_tensor(self, x, device=None):
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x)
+        if not torch.is_tensor(x):
+            raise TypeError(f"Expected tensor or ndarray, got {type(x)}")
+
+        x = x.to(dtype=torch.float32)
+        if device is not None:
+            x = x.to(device)
+        return x

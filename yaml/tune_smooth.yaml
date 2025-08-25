@@ -1,0 +1,6 @@
+- name: pos_label_smoothing
+  type: float
+  bounds:
+  - 0.06
+  - 0.10
+  step: 0.02

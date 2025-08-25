@@ -1,0 +1,8 @@
+audio:
+  sampling_rate: 1000
+  min_freq: 30
+  max_freq: 200
+  spec_height: 64
+  spec_width: 384
+  win_length: 4096
+  freq_scale: "linear"

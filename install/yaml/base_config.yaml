@@ -1,0 +1,129 @@
+!!python/object:britekit.core.base_config.BaseConfig
+audio: !!python/object:britekit.core.base_config.Audio
+  check_seconds: 3.0
+  choose_channel: true
+  db_power: 1.0
+  decibels: false
+  freq_scale: mel
+  max_freq: 13000
+  min_freq: 200
+  power: 1.0
+  sampling_rate: 28000
+  spec_duration: 3.0
+  spec_height: 192
+  spec_width: 384
+  top_db: 80
+  win_length: 0.055
+infer: !!python/object:britekit.core.base_config.Inference
+  audio_power: 0.7
+  autocast: true
+  block_size: 200
+  confirmed_if_seconds: 8.0
+  label_field: codes
+  lower_min_factor: 0.6
+  lower_min_if_confirmed: true
+  min_score: 0.8
+  num_threads: 3
+  openvino_block_size: 100
+  raise_min_to_confirm: 0.5
+  scaling_coefficient: 1.0
+  scaling_intercept: 0.0
+  seed: 99
+  segment_len: null
+  spec_overlap_seconds: 0.0
+misc: !!python/object:britekit.core.base_config.Miscellaneous
+  ckpt_folder: data/ckpt
+  classes_file: data/classes.txt
+  force_cpu: false
+  ignore_file: data/ignore.txt
+  map_codes: null
+  map_names: null
+  search_ckpt_path: data/ckpt-search/v0-e9.ckpt
+  source_regexes:
+  - !!python/tuple
+    - XC\d+
+    - Xeno-Canto
+  - !!python/tuple
+    - N\d+
+    - iNaturalist
+  - !!python/tuple
+    - \d+
+    - Macaulay Library
+  - !!python/tuple
+    - .*
+    - default
+train: !!python/object:britekit.core.base_config.Training
+  augment: true
+  augmentations:
+  - name: add_real_noise
+    params:
+      max_fade2: 0.8
+      min_fade2: 0.2
+      prob_fade2: 0.5
+    prob: 0.34
+  - name: add_white_noise
+    params:
+      std1: 0.08
+    prob: 0
+  - name: flip_horizontal
+    params: {}
+    prob: 0
+  - name: freq_blur
+    params:
+      sigma: 0.4
+    prob: 0
+  - name: freq_mask
+    params:
+      max_width1: 4
+    prob: 0
+  - name: shift_horizontal
+    params:
+      max_shift: 8
+    prob: 0.6
+  - name: speckle
+    params:
+      std2: 0.1
+    prob: 0
+  - name: time_mask
+    params:
+      max_width2: 8
+    prob: 0
+  batch_size: 64
+  compile: false
+  deterministic: false
+  drop_path_rate: null
+  drop_rate: null
+  frame_loss_weight: 0.5
+  freeze_backbone: false
+  head_type: null
+  hidden_channels: 256
+  learning_rate: 0.001
+  load_ckpt_path: null
+  max_fade1: 1.0
+  min_fade1: 0.1
+  mixed_precision: false
+  model_type: effnet.5
+  multi_label: true
+  neg_label_smoothing: 0.01
+  noise_class_name: Noise
+  num_epochs: 10
+  num_folds: 1
+  num_workers: 2
+  offpeak_weight: 0.002
+  opt_beta1: 0.9
+  opt_beta2: 0.999
+  opt_weight_decay: 1.0e-06
+  optimizer: radam
+  pos_label_smoothing: 0.08
+  pretrained: false
+  prob_fade1: 0.5
+  prob_simple_merge: 0.32
+  save_last_n: 3
+  sed_fps: 4
+  seed: null
+  shuffle: true
+  test_pickle: null
+  train_db: data/training.db
+  train_pickle: null
+  val_portion: 0
+  warmup_fraction: 0.0

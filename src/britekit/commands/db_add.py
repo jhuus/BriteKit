@@ -1,0 +1,177 @@
+import click
+
+from britekit.core.config_loader import get_config
+from britekit.core.util import cli_help_from_doc
+from britekit.training_db.training_db import TrainingDatabase
+
+
+def add_cat_impl(db_path, name):
+    """
+    Add a category (class group) record to the training database.
+
+    Categories are used to group related classes together in the database.
+    For example, you might have categories like "Birds", "Mammals", or "Insects"
+    that contain multiple related species classes.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the category to add (e.g., "Birds", "Mammals").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_category({"Name": name})
+        if results:
+            click.echo(f"Error: category {name} already exists.")
+            quit()
+
+        db.insert_category(name)
+        click.echo(f"Successfully added category {name}")
+
+
+@click.command(
+    name="add-cat",
+    short_help="Add a category (class group) record to a database.",
+    help=cli_help_from_doc(add_cat_impl.__doc__),
+)
+@click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
+@click.option("--name", "name", required=True, help="Category name")
+def add_cat_cmd(db_path, name):
+    add_cat_impl(db_path, name)
+
+
+def add_stype_impl(db_path, name):
+    """
+    Add a sound type record to the training database.
+
+    Sound types describe the nature of the audio content, such as "Song", "Call",
+    "Alarm", "Drumming", etc. This helps categorize different types of vocalizations
+    or sounds produced by the same species.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the sound type to add (e.g., "Song", "Call", "Alarm").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_soundtype({"Name": name})
+        if results:
+            click.echo(f"Error: soundtype {name} already exists.")
+            quit()
+
+        db.insert_soundtype(name)
+        click.echo(f"Successfully added soundtype {name}")
+
+
+@click.command(
+    name="add-stype",
+    short_help="Add a soundtype record to a database.",
+    help=cli_help_from_doc(add_stype_impl.__doc__),
+)
+@click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
+@click.option("--name", "name", required=True, help="Soundtype name")
+def add_stype_cmd(db_path, name):
+    add_stype_impl(db_path, name)
+
+
+def add_src_impl(db_path, name):
+    """
+    Add a source record to the training database.
+
+    Sources track where audio recordings originated from, such as "Xeno-Canto",
+    "Macaulay Library", "iNaturalist", or custom field recordings. This helps
+    maintain provenance and can be useful for data quality analysis.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the source to add (e.g., "Xeno-Canto", "Macaulay Library").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_source({"Name": name})
+        if results:
+            click.echo(f"Error: source {name} already exists.")
+            quit()
+
+        db.insert_source(name)
+        click.echo(f"Successfully added source {name}")
+
+
+@click.command(
+    name="add-src",
+    short_help="Add a source (e.g. 'Xeno-Canto') record to a database.",
+    help=cli_help_from_doc(add_src_impl.__doc__),
+)
+@click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
+@click.option("--name", "name", required=True, help="Source name")
+def add_src_cmd(db_path, name):
+    add_src_impl(db_path, name)
+
+
+def add_class_impl(db_path, category, name, code, alt_name, alt_code):
+    """
+    Add a class record to the training database.
+
+    Classes represent the target species or sound categories for training and inference.
+    Each class must belong to a category and can have both primary and alternate names/codes.
+    This is typically used to add new species or sound types to the training database.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        category (str): Name of the category this class belongs to. Defaults to "default".
+        name (str): Primary name of the class (e.g., "Common Yellowthroat").
+        code (str): Primary code for the class (e.g., "COYE").
+        alt_name (str, optional): Alternate name for the class (e.g., scientific name).
+        alt_code (str, optional): Alternate code for the class (e.g., scientific code).
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_category({"Name": category})
+        if not results:
+            click.echo(f"Error: category {category} not found.")
+            quit()
+
+        category_id = results[0].id
+        results = db.get_class({"Name": name})
+        if results:
+            click.echo(f"Error: class {name} already exists.")
+            quit()
+
+        db.insert_class(category_id, name, alt_name, code, alt_code)
+        click.echo(f"Successfully added class {name}")
+
+
+@click.command(
+    name="add-class",
+    short_help="Add a class record to a database.",
+    help=cli_help_from_doc(add_class_impl.__doc__),
+)
+@click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
+@click.option(
+    "--cat", "category", required=False, default="default", help="Category name"
+)
+@click.option("--name", "name", required=True, help="Class name")
+@click.option("--code", "code", required=True, help="Class code")
+@click.option(
+    "--alt_name", "alt_name", required=False, default="", help="Class alternate name"
+)
+@click.option(
+    "--alt_code", "alt_code", required=False, default="", help="Class alternate code"
+)
+def add_class_cmd(db_path, category, name, code, alt_name, alt_code):
+    add_class_impl(db_path, category, name, code, alt_name, alt_code)

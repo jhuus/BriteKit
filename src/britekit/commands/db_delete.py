@@ -1,0 +1,348 @@
+import os
+import re
+
+import click
+
+from britekit.core.config_loader import get_config
+from britekit.core.util import cli_help_from_doc
+from britekit.training_db.training_db import TrainingDatabase
+
+
+def del_cat_impl(db_path, name):
+    """
+    Delete a category and all its associated data from the training database.
+
+    This command performs a cascading delete that removes the category, all its classes,
+    all recordings belonging to those classes, and all spectrograms from those recordings.
+    This is a destructive operation that cannot be undone.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the category to delete (e.g., "Birds", "Mammals").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_category({"Name": name})
+        if not results:
+            click.echo(f"No category found with name {name}")
+        else:
+            cat_id = results[0].id
+            class_results = db.get_class({"CategoryID": cat_id})
+            for c in class_results:
+                click.echo(f'Deleting class "{c.name}"')
+                rec_results = db.get_recording_by_class(c.name)
+                for r in rec_results:
+                    db.delete_recording({"ID": r.id})
+
+            db.delete_category({"Name": name})
+            click.echo(f'Successfully deleted category "{name}"')
+
+
+@click.command(
+    name="del-cat",
+    short_help="Delete a category (class group) and its classes from a database.",
+    help=cli_help_from_doc(del_cat_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--name", "name", required=True, help="Category name.")
+def del_cat_cmd(db_path, name):
+    del_cat_impl(db_path, name)
+
+
+def del_class_impl(db_path, class_name):
+    """
+    Delete a class and all its associated data from the training database.
+
+    This command removes the class, all recordings belonging to that class, and all
+    spectrograms from those recordings. This is a destructive operation that cannot
+    be undone and will affect any training data associated with this class.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        class_name (str): Name of the class to delete (e.g., "Common Yellowthroat").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_class({"Name": class_name})
+        if not results:
+            click.echo(f"No class found with name {class_name}")
+        else:
+            # cascading deletes don't fully handle this case,
+            # so have to delete recordings first
+            results = db.get_recording_by_class(class_name)
+            for r in results:
+                db.delete_recording({"ID": r.id})
+
+            db.delete_class({"Name": class_name})
+            click.echo(f'Successfully deleted class "{class_name}"')
+
+
+@click.command(
+    name="del-class",
+    short_help="Delete a class and associated records from a database.",
+    help=cli_help_from_doc(del_class_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--name", "class_name", required=True, help="Class name.")
+def del_class_cmd(db_path, class_name):
+    del_class_impl(db_path, class_name)
+
+
+def del_rec_impl(db_path, file_name):
+    """
+    Delete a recording and all its spectrograms from the training database.
+
+    This command removes a specific audio recording and all spectrograms that were
+    extracted from it.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_recording({"FileName": file_name})
+        if not results:
+            click.echo(f"No recording found with file name {file_name}")
+        else:
+            db.delete_recording({"FileName": file_name})
+            click.echo(f'Successfully deleted recording "{file_name}"')
+
+
+@click.command(
+    name="del-rec",
+    short_help="Delete a recording and associated records from a database.",
+    help=cli_help_from_doc(del_rec_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--name", "file_name", required=True, help="Recording file name.")
+def del_rec_cmd(db_path, file_name):
+    del_rec_impl(db_path, file_name)
+
+
+def del_sgroup_impl(db_path, name):
+    """
+    Delete a spectrogram group and all its spectrogram values from the training database.
+
+    Spectrogram groups organize spectrograms by processing parameters or extraction method.
+    This command removes the entire group and all spectrograms within it.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_specgroup({"Name": name})
+        if not results:
+            click.echo(f"No spectrogram group found with name {name}")
+        else:
+            db.delete_specgroup({"ID": results[0].id})
+            click.echo(f'Successfully deleted spectrogram group "{name}"')
+
+
+@click.command(
+    name="del-sgroup",
+    short_help="Delete a spectrogram group from the database.",
+    help=cli_help_from_doc(del_sgroup_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--name", "name", required=True, help="Spec group name.")
+def del_sgroup_cmd(db_path, name):
+    del_sgroup_impl(db_path, name)
+
+
+def del_stype_impl(db_path, name):
+    """
+    Delete a sound type from the training database.
+
+    This command removes a sound type definition but preserves the spectrograms that were
+    labeled with this sound type. The spectrograms will have their soundtype_id field set
+    to null, effectively removing the sound type classification while keeping the audio data.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_soundtype({"Name": name})
+        if not results:
+            click.echo(f"No sound type found with name {name}")
+        else:
+            db.delete_soundtype({"Name": name})
+            click.echo(f'Successfully deleted sound type "{name}"')
+
+
+@click.command(
+    name="del-stype",
+    short_help="Delete a sound type from a database.",
+    help=cli_help_from_doc(del_stype_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--name", "name", required=True, help="Sound type name.")
+def del_stype_cmd(db_path, name):
+    del_stype_impl(db_path, name)
+
+
+def del_src_impl(db_path, name):
+    """
+    Delete a recording source and all its associated data from the training database.
+
+    This command performs a cascading delete that removes the source, all recordings
+    from that source, and all spectrograms from those recordings. This is useful for
+    removing entire datasets from a specific source (e.g., removing all Xeno-Canto data).
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        results = db.get_source({"Name": name})
+        if not results:
+            click.echo(f"No source found with name {name}")
+        else:
+            db.delete_source({"Name": name})
+            click.echo(f'Successfully deleted source "{name}"')
+
+
+@click.command(
+    name="del-src",
+    short_help="Delete a recording source and associated records from a database.",
+    help=cli_help_from_doc(del_src_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--name", "name", required=True, help="Source name.")
+def del_src_cmd(db_path, name):
+    del_src_impl(db_path, name)
+
+
+def del_spec_impl(db_path, class_name, dir_path):
+    """
+    Delete spectrograms that correspond to images in a given directory.
+
+    This command parses image filenames to identify and delete corresponding spectrograms
+    from the database. Images are typically generated by the plot-db or search commands,
+    and their filenames contain the recording name and time offset.
+
+    This is useful for removal of spectrograms based on visual inspection of plots,
+    allowing you to remove low-quality or incorrectly labeled spectrograms.
+
+    Args:
+        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+        class_name (str): Name of the class whose spectrograms should be considered for deletion.
+        dir_path (str): Path to directory containing spectrogram image files (typically .jpeg files).
+    """
+    cfg, fn_cfg = get_config()
+    fn_cfg.echo = click.echo
+    if db_path is None:
+        db_path = cfg.train.train_db
+
+    with TrainingDatabase(db_path) as db:
+        count = db.get_class_count({"Name": class_name})
+        if count == 0:
+            click.echo(f"Error: class {class_name} not found")
+            return
+        elif count > 1:
+            click.echo(f"Error: found multiple classes called {class_name}")
+            return
+
+        recording_dict = {}
+        results = db.get_recording_by_class(class_name)
+        click.echo(f"Found {len(results)} recordings")
+        for r in results:
+            tokens = r.filename.split(".")
+            recording_dict[tokens[0]] = r.id
+
+        file_names = os.listdir(dir_path)
+        spec_names = []
+        for file_name in file_names:
+            if os.path.isfile(os.path.join(dir_path, file_name)):
+                base, ext = os.path.splitext(file_name)
+                if ext == ".jpeg":
+                    spec_names.append(base)
+
+        deleted = 0
+        for spec_name in spec_names:
+            if "~" in spec_name:
+                result = re.split("\\S+~(\\S+)-(\\S+)~.*", spec_name)
+            else:
+                result = re.split("(.+)-(.+)", spec_name)
+
+            if len(result) != 4:
+                click.echo(f"Error: unknown file name format: {spec_name}")
+                continue
+            else:
+                recording_name = result[1]
+                offset = float(result[2])
+
+            if recording_name in recording_dict.keys():
+                recording_id = recording_dict[recording_name]
+            else:
+                click.echo(f"recording not found: {recording_name}")
+                return
+
+            result = db.get_spectrogram({"RecordingID": recording_id, "Offset": offset})
+            if result is None:
+                click.echo(f"Spectrogram not found: {recording_name}-{offset}")
+            else:
+                # should only be one, but conceivably more
+                for r in result:
+                    click.echo(f"Deleting spectrogram ID {r.id}")
+                    db.delete_spectrogram({"ID": r.id})
+                    deleted += 1
+
+        click.echo(f"Deleted {deleted} spectrograms")
+
+
+@click.command(
+    name="del-spec",
+    short_help="Delete spectrograms that match given images.",
+    help=cli_help_from_doc(del_spec_impl.__doc__),
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option("--class", "class_name", required=True, help="Class name.")
+@click.option(
+    "--dir", "dir_path", required=True, help="Path to directory containing images."
+)
+def del_spec_cmd(db_path, class_name, dir_path):
+    del_spec_impl(db_path, class_name, dir_path)

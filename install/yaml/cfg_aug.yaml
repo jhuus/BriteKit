@@ -1,0 +1,45 @@
+train:
+  train_pickle: "data/small-combined-test.pkl"
+  num_epochs: 2
+  num_folds: 1
+  val_portion: 0.2
+  model_size: 2.0
+  deterministic: True
+  seed: 42
+  augment: False
+  prob_simple_merge: 0.35
+  prob_fade: 1
+  min_fade: .1
+  max_fade: 1.0
+  augmentations:
+  - name: add_real_noise
+    prob: 0
+    params:
+      prob_fade: 0.3
+      min_fade: 0.1
+      max_fade: 0.8
+  - name: add_white_noise
+    prob: 0
+    params:
+      std: 0.05
+  - name: freq_blur
+    prob: 0
+    params:
+      sigma: 0.5
+  - name: freq_mask
+    prob: 0
+    params:
+      max_width: 8
+  - name: shift_horizontal
+    prob: 0
+    params:
+      max_shift: 6
+  - name: speckle
+    prob: 0
+    params:
+      variance: .012
+  - name: time_mask
+    prob: 0
+    params:
+      max_width: 8
+

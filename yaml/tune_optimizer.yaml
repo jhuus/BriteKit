@@ -1,0 +1,5 @@
+- name: optimizer
+  type: categorical
+  choices:
+  - "radam"
+  - "adamw"

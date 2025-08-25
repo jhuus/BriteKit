@@ -1,0 +1,8 @@
+train:
+  train_pickle: "data/training_test.pkl"
+  num_epochs: 2
+  model_size: 1.0
+  multi_label: true
+  num_folds: 1
+  val_portion: 0
+  seed: 1

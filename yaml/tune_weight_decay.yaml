@@ -1,0 +1,6 @@
+- name: opt_weight_decay
+  type: float
+  bounds:
+  - .000005
+  - .000005
+  step: .000005

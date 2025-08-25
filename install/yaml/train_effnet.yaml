@@ -1,0 +1,13 @@
+# Sample for training scaled EfficientNet, with recommended hyperparameters.
+train:
+  train_pickle: "data/small_combined_test.pkl"
+  model_type: "effnet.1"
+  head_type: "basic_sed"
+
+  learning_rate: .002
+  drop_rate: 0.1
+  drop_path_rate: 0.1
+
+  num_epochs: 1
+  save_last_n: 3
+  num_workers: 8

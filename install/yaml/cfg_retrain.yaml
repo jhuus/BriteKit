@@ -1,0 +1,6 @@
+train:
+  train_pickle: "data/training.pkl"
+  num_epochs: 5
+  load_ckpt_path: "data/ckpt/epoch=9-step=790.ckpt"
+  learning_rate: .00001
+  freeze_backbone: true

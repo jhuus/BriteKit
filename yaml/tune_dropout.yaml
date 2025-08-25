@@ -1,0 +1,6 @@
+- name: drop_rate
+  type: float
+  bounds:
+  - 0.2
+  - 0.2
+  step: 0.1
