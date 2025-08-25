@@ -5,13 +5,13 @@ audio: !!python/object:britekit.core.base_config.Audio
   db_power: 1.0
   decibels: false
   freq_scale: mel
-  max_freq: 13000
-  min_freq: 200
+  max_freq: 8000
+  min_freq: 100
   power: 1.0
-  sampling_rate: 28000
-  spec_duration: 3.0
-  spec_height: 192
-  spec_width: 384
+  sampling_rate: 18000
+  spec_duration: 5.0
+  spec_height: 128
+  spec_width: 500
   top_db: 80
   win_length: 0.055
 infer: !!python/object:britekit.core.base_config.Inference
@@ -38,7 +38,7 @@ misc: !!python/object:britekit.core.base_config.Miscellaneous
   ignore_file: data/ignore.txt
   map_codes: null
   map_names: null
-  search_ckpt_path: data/ckpt-search/v0-e9.ckpt
+  search_ckpt_path: null
   source_regexes:
   - !!python/tuple
     - XC\d+
@@ -102,7 +102,7 @@ train: !!python/object:britekit.core.base_config.Training
   max_fade1: 1.0
   min_fade1: 0.1
   mixed_precision: false
-  model_type: effnet.5
+  model_type: effnet.2
   multi_label: true
   neg_label_smoothing: 0.01
   noise_class_name: Noise
