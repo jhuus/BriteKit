@@ -70,8 +70,8 @@ def init_impl(dest: Path):
 @click.option(
     "--dest",
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
-    required=True,
-    help="Directory to copy files into.",
+    default=".",
+    help="Root directory to copy under (default is working directory).",
 )
 def init_cmd(dest: Path):
     init_impl(dest)
