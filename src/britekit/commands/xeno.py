@@ -89,7 +89,7 @@ def xeno_impl(
             quit()
 
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
 
     if scientific_name:
         name = f'sp:"{name.lower()}"'

@@ -47,7 +47,7 @@ def audioset_impl(
         quit()
 
     if not do_report and not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
 
     # read class info
     class_label_path = str(Path("data") / "audioset" / "class_list.csv")

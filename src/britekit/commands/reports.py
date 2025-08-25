@@ -312,7 +312,7 @@ def rpt_db_impl(cfg_path, db_path, output_path):
         cfg.train.train_db = db_path
 
     if not os.path.exists(output_path):
-        os.mkdir(output_path)
+        os.makedirs(output_path)
 
     click.echo(f"Generating report for database {cfg.train.train_db}")
     with TrainingDatabase(cfg.train.train_db) as db:

@@ -83,7 +83,7 @@ def plot_db_impl(
         cfg.audio.power = power
 
     if not os.path.exists(output_path):
-        os.mkdir(output_path)
+        os.makedirs(output_path)
 
     if db_path is None:
         db_path = cfg.train.train_db
@@ -242,7 +242,7 @@ def plot_dir_impl(
         overlap = cfg.infer.spec_overlap_seconds
 
     if not os.path.exists(output_path):
-        os.mkdir(output_path)
+        os.makedirs(output_path)
 
     audio_paths = util.get_audio_files(input_path)
     if len(audio_paths) == 0:
@@ -356,7 +356,7 @@ def plot_rec_impl(
         overlap = cfg.infer.spec_overlap_seconds
 
     if not os.path.exists(output_path):
-        os.mkdir(output_path)
+        os.makedirs(output_path)
 
     audio = Audio(cfg=cfg)
     _plot_recording(cfg, audio, input_path, output_path, all, overlap, dims)

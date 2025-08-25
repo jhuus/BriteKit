@@ -56,7 +56,7 @@ def inat_impl(
         no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
     """
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
 
     response = pyinaturalist.get_observations(
         taxon_name=f"{name}", identified=True, sounds=True, photos=False, page="all"
