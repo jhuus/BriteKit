@@ -64,7 +64,7 @@ def init_impl(dest: Path):
 
 @click.command(
     name="init",
-    short_help="Create default directory structure and copy sample files.",
+    short_help="Create default directory structure including sample files.",
     help=cli_help_from_doc(init_impl.__doc__),
 )
 @click.option(
