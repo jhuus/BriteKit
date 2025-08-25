@@ -1,9 +1,0 @@
-train:
-  train_pickle: "data/small-combined-test.pkl"
-  num_epochs: 2
-  num_folds: 1
-  val_portion: 0
-  model_size: 2.0
-  deterministic: True
-  seed: 42
-  augment: True

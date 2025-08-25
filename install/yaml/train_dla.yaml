@@ -6,6 +6,6 @@ train:
   learning_rate: .002
   drop_rate: 0.0
 
-  num_epochs: 1
+  num_epochs: 10
   save_last_n: 3
   num_workers: 8

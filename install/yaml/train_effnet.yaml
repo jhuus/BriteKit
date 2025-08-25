@@ -8,6 +8,6 @@ train:
   drop_rate: 0.1
   drop_path_rate: 0.1
 
-  num_epochs: 1
+  num_epochs: 10
   save_last_n: 3
   num_workers: 8
