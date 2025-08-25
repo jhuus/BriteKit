@@ -1,4 +1,4 @@
 # SPDX-FileCopyrightText: 2025-present Jan Huus <jhuus1@gmail.com>
 #
 # SPDX-License-Identifier: MIT
-__version__ = "0.0.1a3"
+__version__ = "0.0.2a2"

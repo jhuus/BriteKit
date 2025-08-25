@@ -69,7 +69,10 @@ packages = ["src/britekit"]
 # importlib.resources.files("britekit.install") can access them.
 [tool.hatch.build.targets.wheel.force-include]
 "install" = "install"
+"src/britekit/__about__.py" = "britekit/__about__.py"
+"src/britekit/__init__.py" = "britekit/__init__.py"
 "src/britekit/commands/__init__.py" = "britekit/commands/__init__.py"
+"src/britekit/core/__init__.py" = "britekit/core/__init__.py"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
@@ -78,6 +81,7 @@ only-include = [
 ]
 
 [tool.hatch.build.targets.sdist.force-include]
+"src/britekit/__about__.py" = "britekit/__about__.py"
 "src/britekit/__init__.py" = "britekit/__init__.py"
 "src/britekit/commands/__init__.py" = "britekit/commands/__init__.py"
 "src/britekit/core/__init__.py" = "britekit/core/__init__.py"
