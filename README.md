@@ -14,11 +14,16 @@
 - [Configuration Reference](config-reference.md)
 
 ## Installation
-
+Install the BriteKit package using pip:
 ```console
 pip install britekit
 ```
-
+Once BriteKit is installed, initialize a working environment using the init command:
+```console
+britekit init --dest=<directory path>
+```
+This creates the directories needed and installs sample files. If you omit --dest, it will create
+directories under the current working directory.
 ## License
 
 `britekit` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.

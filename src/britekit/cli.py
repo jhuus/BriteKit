@@ -44,7 +44,7 @@ cli.add_command(commands.find_dup_cmd)
 cli.add_command(commands.find_lr_cmd)
 
 cli.add_command(commands.inat_cmd)
-cli.add_command(commands.install_cmd)
+cli.add_command(commands.init_cmd)
 
 cli.add_command(commands.pickle_cmd)
 cli.add_command(commands.plot_dir_cmd)

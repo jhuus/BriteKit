@@ -15,7 +15,7 @@ def _iter_traversable_files(root, prefix=()):
             yield (prefix + (child.name,)), child
 
 
-def install_impl(dest: Path):
+def init_impl(dest: Path):
     """
     Setup default BriteKit directory structure and copy packaged sample files.
 
@@ -27,7 +27,7 @@ def install_impl(dest: Path):
         dest (Path): Directory to copy files into. Subdirectories are created as needed.
 
     Examples:
-        britekit install --dest .
+        britekit init --dest .
     """
     try:
         base = pkg_files(INSTALL_PKG)  # Traversable
@@ -63,9 +63,9 @@ def install_impl(dest: Path):
 
 
 @click.command(
-    name="install",
+    name="init",
     short_help="Create default directory structure and copy sample files.",
-    help=cli_help_from_doc(install_impl.__doc__),
+    help=cli_help_from_doc(init_impl.__doc__),
 )
 @click.option(
     "--dest",
@@ -73,5 +73,5 @@ def install_impl(dest: Path):
     required=True,
     help="Directory to copy files into.",
 )
-def install_cmd(dest: Path):
-    install_impl(dest)
+def init_cmd(dest: Path):
+    init_impl(dest)
