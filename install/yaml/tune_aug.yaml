@@ -1,6 +1,0 @@
-- name: offpeak_weight
-  type: float
-  bounds:
-  - 0.0
-  - 0.006
-  step: .002

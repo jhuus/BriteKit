@@ -1,5 +1,0 @@
-- name: sed_head_type
-  type: categorical
-  choices:
-  - "basic_sed"
-  - "scalable_sed"

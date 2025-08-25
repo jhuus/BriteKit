@@ -1,6 +1,6 @@
 - name: learning_rate
   type: float
   bounds:
-  - 0.0025
+  - 0.0001
   - 0.0025
   step: 0.0005
