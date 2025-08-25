@@ -54,7 +54,7 @@ class Analyzer:
         # Write the manifest
         info_str = yaml.dump(info, sort_keys=False)
         info_str = "# Summary of inference run in YAML format\n" + info_str
-        with open(Path(output_path) / "manifest.txt", "w") as out_file:
+        with open(Path(output_path) / "manifest.yaml", "w") as out_file:
             out_file.write(info_str)
 
     def _process_recordings(self, recording_paths, output_path, rtype, thread_num):
