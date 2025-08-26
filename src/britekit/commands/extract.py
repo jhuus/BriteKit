@@ -1,4 +1,5 @@
 import click
+from typing import Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.util import cli_help_from_doc
@@ -7,16 +8,16 @@ from britekit.training_db.training_db import TrainingDatabase
 
 
 def extract_all_impl(
-    cfg_path: str,
-    db_path: str,
-    cat_name: str,
-    class_code: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    cat_name: Optional[str],
+    class_code: Optional[str],
     class_name: str,
     dir_path: str,
-    overlap: float,
-    src_name: str,
-    spec_group: str,
-):
+    overlap: Optional[float],
+    src_name: Optional[str],
+    spec_group: Optional[str],
+) -> None:
     """
     Extract all spectrograms from audio recordings and insert them into the training database.
 
@@ -105,16 +106,16 @@ def extract_all_impl(
     help="Spectrogram group name. Defaults to 'default'.",
 )
 def extract_all_cmd(
-    cfg_path: str,
-    db_path: str,
-    cat_name: str,
-    class_code: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    cat_name: Optional[str],
+    class_code: Optional[str],
     class_name: str,
     dir_path: str,
-    overlap: float,
-    src_name: str,
-    spec_group: str,
-):
+    overlap: Optional[float],
+    src_name: Optional[str],
+    spec_group: Optional[str],
+) -> None:
     extract_all_impl(
         cfg_path,
         db_path,
@@ -129,17 +130,17 @@ def extract_all_cmd(
 
 
 def extract_by_image_impl(
-    cfg_path: str,
-    db_path: str,
-    cat_name: str,
-    class_code: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    cat_name: Optional[str],
+    class_code: Optional[str],
     class_name: str,
     rec_dir: str,
     spec_dir: str,
-    dest_dir: str,
-    src_name: str,
-    spec_group: str,
-):
+    dest_dir: Optional[str],
+    src_name: Optional[str],
+    spec_group: Optional[str],
+) -> None:
     """
     Extract spectrograms that correspond to existing spectrogram images.
 
@@ -239,17 +240,17 @@ def extract_by_image_impl(
     help="Spectrogram group name. Defaults to 'default'.",
 )
 def extract_by_image_cmd(
-    cfg_path: str,
-    db_path: str,
-    cat_name: str,
-    class_code: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    cat_name: Optional[str],
+    class_code: Optional[str],
     class_name: str,
     rec_dir: str,
     spec_dir: str,
-    dest_dir: str,
-    src_name: str,
-    spec_group: str,
-):
+    dest_dir: Optional[str],
+    src_name: Optional[str],
+    spec_group: Optional[str],
+) -> None:
     extract_by_image_impl(
         cfg_path,
         db_path,

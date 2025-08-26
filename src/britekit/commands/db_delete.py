@@ -2,13 +2,14 @@ import os
 import re
 
 import click
+from typing import Optional, Dict, List
 
 from britekit.core.config_loader import get_config
 from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def del_cat_impl(db_path, name):
+def del_cat_impl(db_path: Optional[str], name: str) -> None:
     """
     Delete a category and all its associated data from the training database.
 
@@ -51,11 +52,11 @@ def del_cat_impl(db_path, name):
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Category name.")
-def del_cat_cmd(db_path, name):
+def del_cat_cmd(db_path: Optional[str], name: str) -> None:
     del_cat_impl(db_path, name)
 
 
-def del_class_impl(db_path, class_name):
+def del_class_impl(db_path: Optional[str], class_name: str) -> None:
     """
     Delete a class and all its associated data from the training database.
 
@@ -96,11 +97,11 @@ def del_class_impl(db_path, class_name):
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "class_name", required=True, help="Class name.")
-def del_class_cmd(db_path, class_name):
+def del_class_cmd(db_path: Optional[str], class_name: str) -> None:
     del_class_impl(db_path, class_name)
 
 
-def del_rec_impl(db_path, file_name):
+def del_rec_impl(db_path: Optional[str], file_name: str) -> None:
     """
     Delete a recording and all its spectrograms from the training database.
 
@@ -134,11 +135,11 @@ def del_rec_impl(db_path, file_name):
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "file_name", required=True, help="Recording file name.")
-def del_rec_cmd(db_path, file_name):
+def del_rec_cmd(db_path: Optional[str], file_name: str) -> None:
     del_rec_impl(db_path, file_name)
 
 
-def del_sgroup_impl(db_path, name):
+def del_sgroup_impl(db_path: Optional[str], name: str) -> None:
     """
     Delete a spectrogram group and all its spectrogram values from the training database.
 
@@ -172,11 +173,11 @@ def del_sgroup_impl(db_path, name):
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Spec group name.")
-def del_sgroup_cmd(db_path, name):
+def del_sgroup_cmd(db_path: Optional[str], name: str) -> None:
     del_sgroup_impl(db_path, name)
 
 
-def del_stype_impl(db_path, name):
+def del_stype_impl(db_path: Optional[str], name: str) -> None:
     """
     Delete a sound type from the training database.
 
@@ -211,11 +212,11 @@ def del_stype_impl(db_path, name):
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Sound type name.")
-def del_stype_cmd(db_path, name):
+def del_stype_cmd(db_path: Optional[str], name: str) -> None:
     del_stype_impl(db_path, name)
 
 
-def del_src_impl(db_path, name):
+def del_src_impl(db_path: Optional[str], name: str) -> None:
     """
     Delete a recording source and all its associated data from the training database.
 
@@ -250,11 +251,11 @@ def del_src_impl(db_path, name):
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Source name.")
-def del_src_cmd(db_path, name):
+def del_src_cmd(db_path: Optional[str], name: str) -> None:
     del_src_impl(db_path, name)
 
 
-def del_spec_impl(db_path, class_name, dir_path):
+def del_spec_impl(db_path: Optional[str], class_name: str, dir_path: str) -> None:
     """
     Delete spectrograms that correspond to images in a given directory.
 
@@ -284,15 +285,15 @@ def del_spec_impl(db_path, class_name, dir_path):
             click.echo(f"Error: found multiple classes called {class_name}")
             return
 
-        recording_dict = {}
+        recording_dict: Dict[str, int] = {}
         results = db.get_recording_by_class(class_name)
         click.echo(f"Found {len(results)} recordings")
         for r in results:
             tokens = r.filename.split(".")
             recording_dict[tokens[0]] = r.id
 
-        file_names = os.listdir(dir_path)
-        spec_names = []
+        file_names: List[str] = os.listdir(dir_path)
+        spec_names: List[str] = []
         for file_name in file_names:
             if os.path.isfile(os.path.join(dir_path, file_name)):
                 base, ext = os.path.splitext(file_name)
@@ -344,5 +345,5 @@ def del_spec_impl(db_path, class_name, dir_path):
 @click.option(
     "--dir", "dir_path", required=True, help="Path to directory containing images."
 )
-def del_spec_cmd(db_path, class_name, dir_path):
+def del_spec_cmd(db_path: Optional[str], class_name: str, dir_path: str) -> None:
     del_spec_impl(db_path, class_name, dir_path)

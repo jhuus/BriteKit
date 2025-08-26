@@ -1,6 +1,7 @@
 import click
 import numpy as np
 import zlib
+from typing import List, Optional
 
 from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core.util import expand_spectrogram, get_device, cli_help_from_doc
@@ -9,11 +10,11 @@ from britekit.training_db.training_db import TrainingDatabase
 
 
 def embed_impl(
-    cfg_path: str,
-    db_path: str,
-    class_name: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    class_name: Optional[str],
     spec_group: str,
-):
+) -> None:
     """
     Generate embeddings for spectrograms and insert them into the database.
 
@@ -29,13 +30,17 @@ def embed_impl(
     """
 
     def embed_block(
-        specs, cfg: BaseConfig, model: BaseModel, db: TrainingDatabase, device: str
-    ):
+        specs: List,
+        cfg: BaseConfig,
+        model: BaseModel,
+        db: TrainingDatabase,
+        device: str,
+    ) -> None:
         """Process embeddings for a block of spectrograms."""
         spec_array = np.zeros(
             (len(specs), 1, cfg.audio.spec_height, cfg.audio.spec_width)
         )
-        value_ids = []
+        value_ids: List[int] = []
         for i, spec in enumerate(specs):
             value_ids.append(spec.specvalue_id)
             spec = expand_spectrogram(spec.value)
@@ -104,9 +109,9 @@ def embed_impl(
     help="Spectrogram group name. Defaults to 'default'.",
 )
 def embed_cmd(
-    cfg_path: str,
-    db_path: str,
-    class_name: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    class_name: Optional[str],
     spec_group: str,
-):
+) -> None:
     embed_impl(cfg_path, db_path, class_name, spec_group)

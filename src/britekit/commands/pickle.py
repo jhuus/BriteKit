@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+from typing import Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.pickler import Pickler
@@ -8,8 +9,14 @@ from britekit.core.util import cli_help_from_doc
 
 
 def pickle_impl(
-    cfg_path, classes_path, db_path, output_path, root_dir, max_per_class, spec_group
-):
+    cfg_path: Optional[str],
+    classes_path: Optional[str],
+    db_path: Optional[str],
+    output_path: Optional[str],
+    root_dir: str,
+    max_per_class: Optional[int],
+    spec_group: Optional[str],
+) -> None:
     """
     Convert database spectrograms to a pickle file for use in training.
 
@@ -90,8 +97,14 @@ def pickle_impl(
     help="Spectrogram group name. Defaults to 'default'.",
 )
 def pickle_cmd(
-    cfg_path, classes_path, db_path, output_path, root_dir, max_per_class, spec_group
-):
+    cfg_path: Optional[str],
+    classes_path: Optional[str],
+    db_path: Optional[str],
+    output_path: Optional[str],
+    root_dir: str,
+    max_per_class: Optional[int],
+    spec_group: Optional[str],
+) -> None:
     pickle_impl(
         cfg_path,
         classes_path,

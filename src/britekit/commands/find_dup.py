@@ -2,6 +2,7 @@ import click
 import numpy as np
 import scipy
 import zlib
+from typing import List, Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.util import cli_help_from_doc
@@ -10,12 +11,12 @@ from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
 def find_dup_impl(
-    cfg_path: str,
-    db_path: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
     class_name: str,
     delete: bool,
     spec_group: str,
-):
+) -> None:
     """
     Find and optionally delete duplicate recordings in the training database.
 
@@ -36,12 +37,15 @@ def find_dup_impl(
     """
 
     class Recording:
-        def __init__(self, id, filename, seconds):
-            self.id = id
-            self.filename = filename
-            self.seconds = seconds
+        def __init__(self, id: int, filename: str, seconds: float):
+            self.id: int = id
+            self.filename: str = filename
+            self.seconds: float = seconds
+            self.embeddings: List[np.ndarray] = []
 
-    def get_spectrogram_embeddings(db: TrainingDatabase, recording, specgroup_id):
+    def get_spectrogram_embeddings(
+        db: TrainingDatabase, recording: Recording, specgroup_id: int
+    ) -> None:
         results = db.get_specvalue(
             {"RecordingID": recording.id, "SpecGroupID": specgroup_id}
         )
@@ -49,7 +53,6 @@ def find_dup_impl(
             click.echo(f"Error: no matching spectrograms for {recording.filename}.")
             quit()
 
-        recording.embeddings = []
         for i in range(min(3, len(results))):  # just need the first few for comparison
             r = results[i]
             if r.embedding is None:
@@ -60,8 +63,10 @@ def find_dup_impl(
                 np.frombuffer(zlib.decompress(r.embedding), dtype=np.float32)
             )
 
-    def get_recordings(db: TrainingDatabase, class_name: str, specgroup_id: int):
-        recordings = []
+    def get_recordings(
+        db: TrainingDatabase, class_name: str, specgroup_id: int
+    ) -> List[Recording]:
+        recordings: List[Recording] = []
         results = db.get_recording_by_class(class_name)
         for r in results:
             recording = Recording(r.id, r.filename, r.seconds)
@@ -71,7 +76,7 @@ def find_dup_impl(
         return recordings
 
     # return true iff the two recordings appear to be duplicates
-    def match_recordings(recording1, recording2):
+    def match_recordings(recording1: Recording, recording2: Recording) -> bool:
         SECONDS_FUDGE = 0.1  # treat durations as equal if within this many seconds
         DISTANCE_FUDGE = 0.02  # treat spectrograms as equal if within this distance
 
@@ -159,10 +164,10 @@ def find_dup_impl(
     help="Spectrogram group name. Defaults to 'default'.",
 )
 def find_dup_cmd(
-    cfg_path: str,
-    db_path: str,
+    cfg_path: Optional[str],
+    db_path: Optional[str],
     class_name: str,
     delete: bool,
     spec_group: str,
-):
+) -> None:
     find_dup_impl(cfg_path, db_path, class_name, delete, spec_group)

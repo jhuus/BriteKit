@@ -1,12 +1,16 @@
 from pathlib import Path
 import click
 from importlib.resources import files as pkg_files
+from importlib.abc import Traversable
+from typing import Iterator, Tuple, List, cast
 from britekit.core.util import cli_help_from_doc
 
 INSTALL_PKG = "britekit.install"
 
 
-def _iter_traversable_files(root, prefix=()):
+def _iter_traversable_files(
+    root: Traversable, prefix: Tuple[str, ...] = ()
+) -> Iterator[Tuple[Tuple[str, ...], Traversable]]:
     """Yield (relative_parts_tuple, traversable_file) for all files under root."""
     for child in root.iterdir():
         if child.is_dir():
@@ -15,7 +19,7 @@ def _iter_traversable_files(root, prefix=()):
             yield (prefix + (child.name,)), child
 
 
-def init_impl(dest: Path):
+def init_impl(dest: Path) -> None:
     """
     Setup default BriteKit directory structure and copy packaged sample files.
 
@@ -30,18 +34,18 @@ def init_impl(dest: Path):
         britekit init --dest .
     """
     try:
-        base = pkg_files(INSTALL_PKG)  # Traversable
+        base: Traversable = pkg_files(INSTALL_PKG)  # Traversable
     except ModuleNotFoundError:
         # Dev/editable install fallback: use repo-root/install
         repo_root = Path(__file__).resolve().parents[3]
         local_install = repo_root / "install"
         if local_install.exists() and local_install.is_dir():
-            base = local_install
+            base = cast(Traversable, local_install)
         else:
             raise click.ClickException("No packaged install found.")
 
     # Collect files
-    files = []
+    files: List[Tuple[str, Traversable]] = []
     for rel_parts, trav_file in _iter_traversable_files(base):
         rel_posix = "/".join(rel_parts)  # stable across OS
         files.append((rel_posix, trav_file))
@@ -73,5 +77,5 @@ def init_impl(dest: Path):
     default=".",
     help="Root directory to copy under (default is working directory).",
 )
-def init_cmd(dest: Path):
+def init_cmd(dest: Path) -> None:
     init_impl(dest)

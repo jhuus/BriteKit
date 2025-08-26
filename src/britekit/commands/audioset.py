@@ -2,14 +2,21 @@ import os
 from pathlib import Path
 
 import click
+import numpy as np
 import librosa
 import pandas as pd
 import soundfile as sf
+from typing import Dict, List, Tuple, Set
 
 from britekit.core.util import cli_help_from_doc
 
 
-def _download_recording(output_dir, youtube_id, start_seconds, sampling_rate):
+def _download_recording(
+    output_dir: str,
+    youtube_id: str,
+    start_seconds: float,
+    sampling_rate: int,
+) -> bool:
     # download it as wav, which is faster than downloading as mp3;
     # then convert to mp3 when the 10-second clip is extracted
     command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
@@ -22,6 +29,8 @@ def _download_recording(output_dir, youtube_id, start_seconds, sampling_rate):
         click.echo("Extracting 10-second clip")
         audio_path2 = os.path.join(output_dir, f"{youtube_id}-{int(start_seconds)}.mp3")
         audio, sr = librosa.load(audio_path1, sr=sampling_rate)
+        assert isinstance(sr, int)
+        assert isinstance(audio, np.ndarray)
         start_sample = int(start_seconds * sr)
         end_sample = int((start_seconds + 10) * sr)
         sf.write(audio_path2, audio[start_sample:end_sample], sr, format="mp3")
@@ -35,17 +44,17 @@ def _download_class(
     class_name: str,
     output_dir: str,
     max_downloads: int,
-    sampling_rate: float,
+    sampling_rate: int,
     num_to_skip: int,
     do_report: bool,
     root_dir: str,
-):
+) -> None:
     # read class info
     class_label_path = str(Path(root_dir) / "data" / "audioset" / "class_list.csv")
-    df = pd.read_csv(class_label_path)
-    name_to_index = {}
-    index_to_label = {}
-    label_to_name = {}
+    df: pd.DataFrame = pd.read_csv(class_label_path)
+    name_to_index: Dict[str, int] = {}
+    index_to_label: Dict[int, str] = {}
+    label_to_name: Dict[str, str] = {}
     for row in df.itertuples(index=False):
         name = str(row.display_name).lower()
         name_to_index[name] = row.index
@@ -70,9 +79,9 @@ def _download_class(
     df = pd.read_csv(
         details_path, quotechar='"', skipinitialspace=True, low_memory=False
     )
-    label_counts = {}
-    num_unique = 0  # number with no other labels
-    class_rows = []
+    label_counts: Dict[str, int] = {}
+    num_unique: int = 0  # number with no other labels
+    class_rows: List[Tuple[str, float, List[str]]] = []
     for row in df.itertuples(index=False):
         labels = row.positive_labels.split(",")
         if class_label in labels:
@@ -104,7 +113,7 @@ def _download_class(
         Path(root_dir) / "data" / "audioset" / "class_inclusion.csv"
     )
     df = pd.read_csv(class_inclusion_path)
-    allowed_labels = set([class_label])
+    allowed_labels: Set[str] = set([class_label])
     for i, row in df.iterrows():
         if row["Name"] == class_name:
             for i in range(1, 11):
@@ -140,11 +149,11 @@ def _download_curated(
     curated_csv_path: str,
     output_dir: str,
     max_downloads: int,
-    sampling_rate: float,
+    sampling_rate: int,
     num_to_skip: int,
-):
+) -> None:
     curated = pd.read_csv(curated_csv_path)
-    count = 0
+    count: int = 0
     for i, row in curated.iterrows():
         if count < num_to_skip:
             count += 1
@@ -166,11 +175,11 @@ def audioset_impl(
     curated_csv_path: str,
     output_dir: str,
     max_downloads: int,
-    sampling_rate: float,
+    sampling_rate: int,
     num_to_skip: int,
     do_report: bool,
     root_dir: str,
-):
+) -> None:
     """
     Download audio recordings from Google AudioSet.
 
@@ -280,11 +289,11 @@ def audioset_cmd(
     curated_csv_path: str,
     output_dir: str,
     max_downloads: int,
-    sampling_rate: float,
+    sampling_rate: int,
     num_to_skip: int,
     do_report: bool,
     root_dir: str,
-):
+) -> None:
     audioset_impl(
         class_name,
         curated_csv_path,

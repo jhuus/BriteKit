@@ -1,11 +1,12 @@
 import click
+from typing import Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def add_cat_impl(db_path, name):
+def add_cat_impl(db_path: Optional[str], name: str) -> None:
     """
     Add a category (class group) record to the training database.
 
@@ -39,11 +40,11 @@ def add_cat_impl(db_path, name):
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option("--name", "name", required=True, help="Category name")
-def add_cat_cmd(db_path, name):
+def add_cat_cmd(db_path: Optional[str], name: str) -> None:
     add_cat_impl(db_path, name)
 
 
-def add_stype_impl(db_path, name):
+def add_stype_impl(db_path: Optional[str], name: str) -> None:
     """
     Add a sound type record to the training database.
 
@@ -77,11 +78,11 @@ def add_stype_impl(db_path, name):
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option("--name", "name", required=True, help="Soundtype name")
-def add_stype_cmd(db_path, name):
+def add_stype_cmd(db_path: Optional[str], name: str) -> None:
     add_stype_impl(db_path, name)
 
 
-def add_src_impl(db_path, name):
+def add_src_impl(db_path: Optional[str], name: str) -> None:
     """
     Add a source record to the training database.
 
@@ -115,11 +116,18 @@ def add_src_impl(db_path, name):
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option("--name", "name", required=True, help="Source name")
-def add_src_cmd(db_path, name):
+def add_src_cmd(db_path: Optional[str], name: str) -> None:
     add_src_impl(db_path, name)
 
 
-def add_class_impl(db_path, category, name, code, alt_name, alt_code):
+def add_class_impl(
+    db_path: Optional[str],
+    category: str,
+    name: str,
+    code: str,
+    alt_name: str,
+    alt_code: str,
+) -> None:
     """
     Add a class record to the training database.
 
@@ -173,5 +181,12 @@ def add_class_impl(db_path, category, name, code, alt_name, alt_code):
 @click.option(
     "--alt_code", "alt_code", required=False, default="", help="Class alternate code"
 )
-def add_class_cmd(db_path, category, name, code, alt_name, alt_code):
+def add_class_cmd(
+    db_path: Optional[str],
+    category: str,
+    name: str,
+    code: str,
+    alt_name: str,
+    alt_code: str,
+) -> None:
     add_class_impl(db_path, category, name, code, alt_name, alt_code)

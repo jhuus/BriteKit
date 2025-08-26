@@ -3,11 +3,12 @@ import pyinaturalist
 import requests
 
 import click
+from typing import Any, Dict, Optional
 
 from britekit.core.util import cli_help_from_doc
 
 
-def download(url, output_dir, no_prefix):
+def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[str]:
     if url is None or len(url.strip()) == 0:
         return None
 
@@ -38,7 +39,7 @@ def inat_impl(
     max_downloads: int,
     name: str,
     no_prefix: bool,
-):
+) -> None:
     """
     Download audio recordings from iNaturalist observations.
 
@@ -58,11 +59,11 @@ def inat_impl(
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    response = pyinaturalist.get_observations(
+    response: Dict[str, Any] = pyinaturalist.get_observations(
         taxon_name=f"{name}", identified=True, sounds=True, photos=False, page="all"
     )
 
-    id_map = {}  # map media IDs to observation IDs
+    id_map: Dict[str, int] = {}  # map media IDs to observation IDs
     click.echo(f"Response contains {len(response['results'])} results")
     num_downloads = 0
     for result in response["results"]:
@@ -76,7 +77,7 @@ def inat_impl(
             if sound["file_url"] is None:
                 continue
 
-            media_id = download(sound["file_url"], output_dir, no_prefix)
+            media_id = _download(sound["file_url"], output_dir, no_prefix)
             if media_id is not None and result["id"] is not None:
                 num_downloads += 1
                 id_map[media_id] = result["id"]
@@ -121,5 +122,5 @@ def inat_cmd(
     max_downloads: int,
     name: str,
     no_prefix: bool,
-):
+) -> None:
     inat_impl(output_dir, max_downloads, name, no_prefix)
