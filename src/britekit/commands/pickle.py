@@ -8,7 +8,7 @@ from britekit.core.util import cli_help_from_doc
 
 
 def pickle_impl(
-    cfg_path, classes_path, db_path, output_path, max_per_class, spec_group
+    cfg_path, classes_path, db_path, output_path, root_dir, max_per_class, spec_group
 ):
     """
     Convert database spectrograms to a pickle file for use in training.
@@ -32,7 +32,7 @@ def pickle_impl(
         db_path = cfg.train.train_db
 
     if output_path is None:
-        output_path = str(Path("data") / "training.pkl")
+        output_path = str(Path(root_dir) / "data" / "training.pkl")
 
     pickler = Pickler(db_path, output_path, classes_path, max_per_class, spec_group)
     pickler.pickle()
@@ -68,6 +68,13 @@ def pickle_impl(
     help='Output file path. Default is "data/training.pkl".',
 )
 @click.option(
+    "--root",
+    "root_dir",
+    default=".",
+    type=click.Path(file_okay=False),
+    help="Root directory containing data directory.",
+)
+@click.option(
     "-m",
     "--max",
     "max_per_class",
@@ -82,5 +89,15 @@ def pickle_impl(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def pickle_cmd(cfg_path, classes_path, db_path, output_path, max_per_class, spec_group):
-    pickle_impl(cfg_path, classes_path, db_path, output_path, max_per_class, spec_group)
+def pickle_cmd(
+    cfg_path, classes_path, db_path, output_path, root_dir, max_per_class, spec_group
+):
+    pickle_impl(
+        cfg_path,
+        classes_path,
+        db_path,
+        output_path,
+        root_dir,
+        max_per_class,
+        spec_group,
+    )

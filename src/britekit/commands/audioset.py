@@ -9,48 +9,39 @@ import soundfile as sf
 from britekit.core.util import cli_help_from_doc
 
 
-def audioset_impl(
+def _download_recording(output_dir, youtube_id, start_seconds, sampling_rate):
+    # download it as wav, which is faster than downloading as mp3;
+    # then convert to mp3 when the 10-second clip is extracted
+    command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
+    click.echo(f"Downloading {youtube_id}")
+    os.system(command)
+
+    # extract the 10-second clip and delete the original
+    audio_path1 = os.path.join(output_dir, f"{youtube_id}.NA.wav")
+    if os.path.exists(audio_path1):
+        click.echo("Extracting 10-second clip")
+        audio_path2 = os.path.join(output_dir, f"{youtube_id}-{int(start_seconds)}.mp3")
+        audio, sr = librosa.load(audio_path1, sr=sampling_rate)
+        start_sample = int(start_seconds * sr)
+        end_sample = int((start_seconds + 10) * sr)
+        sf.write(audio_path2, audio[start_sample:end_sample], sr, format="mp3")
+        os.remove(audio_path1)
+        return True  # succeeded
+    else:
+        return False  # failed
+
+
+def _download_class(
     class_name: str,
-    curated_csv_path: str,
     output_dir: str,
     max_downloads: int,
     sampling_rate: float,
     num_to_skip: int,
     do_report: bool,
+    root_dir: str,
 ):
-    """
-    Download audio recordings from Google AudioSet.
-
-    This command downloads audio clips from Google AudioSet, a large-scale dataset of audio events.
-    You can either download a curated set of recordings or search for a specific audio class.
-    When using --rpt flag with a class name, it generates a report on associated secondary classes
-    instead of downloading recordings.
-
-    Most AudioSet clips contain multiple classes (e.g., "train", "wind", "speech"). The report
-    shows which other classes commonly co-occur with the specified class.
-
-    Args:
-        class_name (str): Name of the audio class to download (e.g., "train", "speech", "music").
-        curated_csv_path (str): Path to CSV file containing a curated list of clips to download.
-        output_dir (str): Directory where downloaded recordings will be saved.
-        max_downloads (int): Maximum number of recordings to download. Default is 500.
-        sampling_rate (float): Output sampling rate in Hz. Default is 32000.
-        num_to_skip (int): Number of initial recordings to skip. Default is 0.
-        do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
-    """
-
-    if class_name is None and curated_csv_path is None:
-        click.echo("Error. You must specify either --name or --curated.")
-        quit()
-    elif class_name is not None and curated_csv_path is not None:
-        click.echo("Error. You may specify only one of --name or --curated.")
-        quit()
-
-    if not do_report and not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
     # read class info
-    class_label_path = str(Path("data") / "audioset" / "class_list.csv")
+    class_label_path = str(Path(root_dir) / "data" / "audioset" / "class_list.csv")
     df = pd.read_csv(class_label_path)
     name_to_index = {}
     index_to_label = {}
@@ -73,7 +64,9 @@ def audioset_impl(
 
     # read info for all clips that match the specified class
     click.echo("Scanning unbalanced_train_segments.csv...")
-    details_path = str(Path("data") / "audioset" / "unbalanced_train_segments.csv")
+    details_path = str(
+        Path(root_dir) / "data" / "audioset" / "unbalanced_train_segments.csv"
+    )
     df = pd.read_csv(
         details_path, quotechar='"', skipinitialspace=True, low_memory=False
     )
@@ -107,7 +100,9 @@ def audioset_impl(
         quit()
 
     # get any allowable secondary labels
-    class_inclusion_path = str(Path("data") / "audioset" / "class_inclusion.csv")
+    class_inclusion_path = str(
+        Path(root_dir) / "data" / "audioset" / "class_inclusion.csv"
+    )
     df = pd.read_csv(class_inclusion_path)
     allowed_labels = set([class_label])
     for i, row in df.iterrows():
@@ -131,30 +126,100 @@ def audioset_impl(
                 count += 1
                 continue
 
-            # download it as wav, which is faster than downloading as mp3;
-            # then convert to mp3 when the 10-second clip is extracted
-            command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
-            click.echo(f"Downloading {youtube_id}")
-            os.system(command)
-
-            # extract the 10-second clip and delete the original
-            audio_path1 = os.path.join(output_dir, f"{youtube_id}.NA.wav")
-            if os.path.exists(audio_path1):
-                click.echo("Extracting 10-second clip")
-                audio_path2 = os.path.join(
-                    output_dir, f"{youtube_id}-{int(start_seconds)}.mp3"
-                )
-                audio, sr = librosa.load(audio_path1, sr=sampling_rate)
-                start_sample = int(start_seconds * sr)
-                end_sample = int((start_seconds + 10) * sr)
-                sf.write(audio_path2, audio[start_sample:end_sample], sr, format="mp3")
-                os.remove(audio_path1)
-
+            if _download_recording(
+                output_dir, youtube_id, start_seconds, sampling_rate
+            ):
                 count += 1
                 if count >= max_downloads + num_to_skip:
                     break
 
     click.echo(f"# downloaded = {count - num_to_skip}")
+
+
+def _download_curated(
+    curated_csv_path: str,
+    output_dir: str,
+    max_downloads: int,
+    sampling_rate: float,
+    num_to_skip: int,
+):
+    curated = pd.read_csv(curated_csv_path)
+    count = 0
+    for i, row in curated.iterrows():
+        if count < num_to_skip:
+            count += 1
+            continue
+
+        youtube_id = row["YTID"]
+        start_seconds = row["start_seconds"]
+
+        if _download_recording(output_dir, youtube_id, start_seconds, sampling_rate):
+            count += 1
+            if count >= max_downloads + num_to_skip:
+                break
+
+    click.echo(f"# downloaded = {count - num_to_skip}")
+
+
+def audioset_impl(
+    class_name: str,
+    curated_csv_path: str,
+    output_dir: str,
+    max_downloads: int,
+    sampling_rate: float,
+    num_to_skip: int,
+    do_report: bool,
+    root_dir: str,
+):
+    """
+    Download audio recordings from Google AudioSet.
+
+    This command downloads audio clips from Google AudioSet, a large-scale dataset of audio events.
+    You can either download a curated set of recordings or search for a specific audio class.
+    When using --rpt flag with a class name, it generates a report on associated secondary classes
+    instead of downloading recordings.
+
+    Most AudioSet clips contain multiple classes (e.g., "train", "wind", "speech"). The report
+    shows which other classes commonly co-occur with the specified class.
+
+    Args:
+        class_name (str): Name of the audio class to download (e.g., "train", "speech", "music").
+        curated_csv_path (str): Path to CSV file containing a curated list of clips to download.
+        output_dir (str): Directory where downloaded recordings will be saved.
+        max_downloads (int): Maximum number of recordings to download. Default is 500.
+        sampling_rate (float): Output sampling rate in Hz. Default is 32000.
+        num_to_skip (int): Number of initial recordings to skip. Default is 0.
+        do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
+    """
+
+    if class_name is None and curated_csv_path is None:
+        click.echo("Error. You must specify either --name or --curated.")
+        quit()
+    elif class_name is not None and curated_csv_path is not None:
+        click.echo("Error. You may specify only one of --name or --curated.")
+        quit()
+
+    if not do_report and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    if class_name:
+        _download_class(
+            class_name,
+            output_dir,
+            max_downloads,
+            sampling_rate,
+            num_to_skip,
+            do_report,
+            root_dir,
+        )
+    else:
+        _download_curated(
+            curated_csv_path,
+            output_dir,
+            max_downloads,
+            sampling_rate,
+            num_to_skip,
+        )
 
 
 @click.command(
@@ -203,6 +268,13 @@ def audioset_impl(
     is_flag=True,
     help="Report on secondary classes associated with the specified class.",
 )
+@click.option(
+    "--root",
+    "root_dir",
+    default=".",
+    type=click.Path(file_okay=False),
+    help="Root directory containing data directory.",
+)
 def audioset_cmd(
     class_name: str,
     curated_csv_path: str,
@@ -211,6 +283,7 @@ def audioset_cmd(
     sampling_rate: float,
     num_to_skip: int,
     do_report: bool,
+    root_dir: str,
 ):
     audioset_impl(
         class_name,
@@ -220,4 +293,5 @@ def audioset_cmd(
         sampling_rate,
         num_to_skip,
         do_report,
+        root_dir,
     )

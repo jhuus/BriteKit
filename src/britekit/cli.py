@@ -1,9 +1,11 @@
 import click
+
 try:
     from .__about__ import __version__  # type: ignore
 except Exception:
     try:
         from importlib.metadata import version as _pkg_version  # type: ignore
+
         __version__ = _pkg_version("britekit")  # type: ignore[assignment]
     except Exception:
         __version__ = "0.0.0"  # last-resort fallback

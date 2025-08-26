@@ -176,7 +176,7 @@ class Miscellaneous:
     # use an ensemble of all checkpoints in this folder for inference
     ckpt_folder: str = "data/ckpt"
     # checkpoint used in searching and clustering
-    search_ckpt_path: str = None
+    search_ckpt_path: str = "data/ckpt-search"
     # list of classes used to generate pickle files
     classes_file: str = "data/classes.txt"
     # classes listed in this file are ignored in analysis
