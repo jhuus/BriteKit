@@ -4,7 +4,7 @@ from typing import Optional
 
 import click
 
-from britekit.core.config_loader import get_config
+from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core.audio import Audio
 from britekit.core.plot import plot_spec
 from britekit.core import util
@@ -12,7 +12,15 @@ from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def _plot_recording(cfg, audio, input_path, output_path, all, overlap, show_dims):
+def _plot_recording(
+    cfg: BaseConfig,
+    audio: Audio,
+    input_path: str,
+    output_path: str,
+    all: bool,
+    overlap: float,
+    ndims: bool,
+):
     click.echo(f'Processing "{input_path}"')
     signal, rate = audio.load(input_path)
     if signal is None:
@@ -30,7 +38,7 @@ def _plot_recording(cfg, audio, input_path, output_path, all, overlap, show_dims
 
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
         plot_spec(
-            specs[0], image_path, show_dims=show_dims, spec_duration=recording_seconds
+            specs[0], image_path, show_dims=not ndims, spec_duration=recording_seconds
         )
     else:
         # plot individual segments
@@ -45,14 +53,14 @@ def _plot_recording(cfg, audio, input_path, output_path, all, overlap, show_dims
             image_path = os.path.join(
                 output_path, f"{Path(input_path).stem}-{offsets[i]:.1f}.jpeg"
             )
-            plot_spec(spec, image_path, show_dims=show_dims)
+            plot_spec(spec, image_path, show_dims=not ndims)
 
 
 def plot_db_impl(
     cfg_path: str,
     class_name: str,
     db_path: Optional[str],
-    dims: bool,
+    ndims: bool,
     max_count: Optional[float],
     output_path: str,
     prefix: Optional[str],
@@ -70,7 +78,7 @@ def plot_db_impl(
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
         class_name (str): Name of the class to plot spectrograms for (e.g., "Common Yellowthroat").
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        dims (bool): If True, show time and frequency dimensions on the spectrogram plots.
+        ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
         max_count (int, optional): Maximum number of spectrograms to plot. If omitted, plots all available.
         output_path (str): Directory where spectrogram images will be saved.
         prefix (str, optional): Only include recordings that start with this filename prefix.
@@ -115,7 +123,7 @@ def plot_db_impl(
                     prev_filename = r.filename
 
                 spec = util.expand_spectrogram(r.value)
-                plot_spec(spec, spec_path, show_dims=dims)
+                plot_spec(spec, spec_path, show_dims=not ndims)
                 num_plotted += 1
 
             if max_count is not None and num_plotted >= max_count:
@@ -144,10 +152,10 @@ def plot_db_impl(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option(
-    "--dims",
-    "dims",
+    "--ndims",
+    "ndims",
     is_flag=True,
-    help="If specified, show seconds on x-axis and frequencies on y-axis.",
+    help="If specified, do not show time and frequency dimensions on the spectrogram plots.",
 )
 @click.option(
     "--max",
@@ -188,7 +196,7 @@ def plot_db_cmd(
     cfg_path: str,
     class_name: str,
     db_path: Optional[str],
-    dims: bool,
+    ndims: bool,
     max_count: Optional[float],
     output_path: str,
     prefix: Optional[str],
@@ -199,7 +207,7 @@ def plot_db_cmd(
         cfg_path,
         class_name,
         db_path,
-        dims,
+        ndims,
         max_count,
         output_path,
         prefix,
@@ -210,7 +218,7 @@ def plot_db_cmd(
 
 def plot_dir_impl(
     cfg_path: str,
-    dims: bool,
+    ndims: bool,
     input_path: str,
     output_path: str,
     all: bool,
@@ -226,7 +234,7 @@ def plot_dir_impl(
 
     Args:
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        dims (bool): If True, show time and frequency dimensions on the spectrogram plots.
+        ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
         input_path (str): Directory containing audio recordings to process.
         output_path (str): Directory where spectrogram images will be saved.
         all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
@@ -251,7 +259,7 @@ def plot_dir_impl(
 
     audio = Audio(cfg=cfg)
     for audio_path in audio_paths:
-        _plot_recording(cfg, audio, audio_path, output_path, all, overlap, dims)
+        _plot_recording(cfg, audio, audio_path, output_path, all, overlap, ndims)
 
 
 @click.command(
@@ -268,8 +276,8 @@ def plot_dir_impl(
     help="Path to YAML file defining config overrides.",
 )
 @click.option(
-    "--dims",
-    "dims",
+    "--ndims",
+    "ndims",
     is_flag=True,
     help="If specified, show seconds on x-axis and frequencies on y-axis.",
 )
@@ -312,19 +320,19 @@ def plot_dir_impl(
 )
 def plot_dir_cmd(
     cfg_path: str,
-    dims: bool,
+    ndims: bool,
     input_path: str,
     output_path: str,
     all: bool,
     overlap: float,
     power: float = 1.0,
 ):
-    plot_dir_impl(cfg_path, dims, input_path, output_path, all, overlap, power)
+    plot_dir_impl(cfg_path, ndims, input_path, output_path, all, overlap, power)
 
 
 def plot_rec_impl(
     cfg_path: str,
-    dims: bool,
+    ndims: bool,
     input_path: str,
     output_path: str,
     all: bool,
@@ -340,7 +348,7 @@ def plot_rec_impl(
 
     Args:
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        dims (bool): If True, show time and frequency dimensions on the spectrogram plots.
+        ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
         input_path (str): Path to the audio recording file to process.
         output_path (str): Directory where spectrogram images will be saved.
         all (bool): If True, plot the entire recording as one spectrogram. If False, break into segments.
@@ -359,7 +367,7 @@ def plot_rec_impl(
         os.makedirs(output_path)
 
     audio = Audio(cfg=cfg)
-    _plot_recording(cfg, audio, input_path, output_path, all, overlap, dims)
+    _plot_recording(cfg, audio, input_path, output_path, all, overlap, ndims)
 
 
 @click.command(
@@ -376,8 +384,8 @@ def plot_rec_impl(
     help="Path to YAML file defining config overrides.",
 )
 @click.option(
-    "--dims",
-    "dims",
+    "--ndims",
+    "ndims",
     is_flag=True,
     help="If specified, show seconds on x-axis and frequencies on y-axis.",
 )
@@ -420,11 +428,11 @@ def plot_rec_impl(
 )
 def plot_rec_cmd(
     cfg_path: str,
-    dims: bool,
+    ndims: bool,
     input_path: str,
     output_path: str,
     all: bool,
     overlap: float,
     power: float = 1.0,
 ):
-    plot_rec_impl(cfg_path, dims, input_path, output_path, all, overlap, power)
+    plot_rec_impl(cfg_path, ndims, input_path, output_path, all, overlap, power)

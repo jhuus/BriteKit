@@ -334,8 +334,9 @@ class Audio:
             spec = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(spec)
             spec **= db_power
 
-        spec = spec[0][: self.cfg.audio.spec_height, : self.cfg.audio.spec_width]
-        return spec
+        # returned spec might be wider than cfg.audio.spec_width,
+        # which is desirable when plotting whole recordings
+        return spec[0]
 
     def _normalize(self, specs):
         """Normalize values between 0 and 1."""
