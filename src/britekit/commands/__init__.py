@@ -7,7 +7,7 @@ from .db_delete import (
     del_class_cmd,
     del_rec_cmd,
     del_sgroup_cmd,
-    del_spec_cmd,
+    del_seg_cmd,
     del_src_cmd,
     del_stype_cmd,
 )
@@ -41,8 +41,8 @@ ckpt_onnx = ckpt_onnx_cmd
 del_cat = del_cat_cmd
 del_class = del_class_cmd
 del_rec = del_rec_cmd
+del_seg = del_seg_cmd
 del_sgroup = del_sgroup_cmd
-del_spec = del_spec_cmd
 del_src = del_src_cmd
 del_stype = del_stype_cmd
 embed = embed_cmd
@@ -82,7 +82,8 @@ __all__ = [
     "del_cat",
     "del_class",
     "del_rec",
-    "del_spec",
+    "del_seg",
+    "del_sgroup",
     "del_src",
     "del_stype",
     "embed",
