@@ -17,6 +17,7 @@ except Exception:
         __version__ = "0.0.0"
 
 from britekit import commands
+from britekit.core import util
 from britekit.core.analyzer import Analyzer
 from britekit.core.audio import Audio
 from britekit.core.base_config import BaseConfig
@@ -36,6 +37,7 @@ from britekit.tuning.tuner import Tuner
 __all__ = [
     "__version__",
     "commands",
+    "util",
     "Analyzer",
     "Audio",
     "BaseConfig",

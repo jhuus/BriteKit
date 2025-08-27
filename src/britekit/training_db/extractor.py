@@ -178,11 +178,12 @@ class Extractor:
                 util.echo(f"Caught exception: {e}")
                 continue
 
-            if seconds < self.cfg.audio.spec_duration / 2:
+            end_offset = max(self.increment, seconds - self.increment)
+            offsets = np.arange(0, end_offset, self.increment)
+            if len(offsets) == 0:
                 util.echo(f"Skipping {filename} (too short)")
                 continue
 
-            offsets = np.arange(0, seconds - self.increment, self.increment)
             num_inserted += self.insert_spectrograms(recording_path, offsets)
 
         return num_inserted
