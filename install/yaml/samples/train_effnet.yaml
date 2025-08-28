@@ -2,7 +2,9 @@
 train:
   train_pickle: "data/training.pkl"
   model_type: "effnet.1"
-  head_type: "basic_sed"
+
+  # If you want a SED head, use this
+  #head_type: "basic_sed"
 
   learning_rate: .002
   drop_rate: 0.1

@@ -2,6 +2,8 @@
 train:
   train_pickle: "data/training.pkl"
   model_type: "hgnet.1"
+
+  # For very small HgNet models, use a basic head
   head_type: "basic"
 
   learning_rate: .001
