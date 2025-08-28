@@ -1,6 +1,6 @@
 # Sample for training scaled HgNet, with recommended hyperparameters.
 train:
-  train_pickle: "data/small_combined_test.pkl"
+  train_pickle: "data/training.pkl"
   model_type: "hgnet.1"
   head_type: "basic"
 

@@ -1,6 +1,6 @@
 # Sample for training scaled VovNet, with recommended hyperparameters.
 train:
-  train_pickle: "data/alignment_test.pkl"
+  train_pickle: "data/training.pkl"
   model_type: "vovnet.1"
 
   learning_rate: .0015

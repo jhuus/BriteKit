@@ -1,6 +1,6 @@
 # Sample for training scaled GerNet, with recommended hyperparameters.
 train:
-  train_pickle: "data/alignment_test.pkl"
+  train_pickle: "data/training.pkl"
   model_type: "gernet.1"
   head_type: "scalable_sed"
   hidden_channels: 256

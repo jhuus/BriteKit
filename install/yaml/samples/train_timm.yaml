@@ -1,6 +1,6 @@
 # Sample for training a timm model.
 train:
-  train_pickle: "data/alignment_test.pkl"
+  train_pickle: "data/training.pkl"
   model_type: "timm.hgnetv2_b0"
 
   learning_rate: .001
