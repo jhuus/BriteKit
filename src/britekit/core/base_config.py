@@ -185,9 +185,10 @@ class Miscellaneous:
     # sample regexes to map recording names to source names
     source_regexes = field(
         default_factory=lambda: [
-            ("XC\\d+", "Xeno-Canto"),
-            ("N\\d+", "iNaturalist"),
-            ("\\d+", "Macaulay Library"),
+            ("^[A-Za-z0-9_-]{11}-\\d+$", "Audioset"),
+            ("^XC\\d+$", "Xeno-Canto"),
+            ("^N\\d+$", "iNaturalist"),
+            ("^\\d+$", "Macaulay Library"),
             (".*", "default"),
         ]
     )
