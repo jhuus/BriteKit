@@ -203,11 +203,12 @@ class Audio:
 
         specs = []
         sr = self.cfg.audio.sampling_rate
+        min_samples = min(1, self.cfg.audio.spec_duration) * sr
         for i, offset in enumerate(start_times):
             start_sample = int(offset * sr)
             end_sample = int((offset + spec_duration) * sr)
 
-            if start_sample < len(self.signal):
+            if start_sample <= len(self.signal) - min_samples:
                 spec = self._get_raw_spectrogram(self.signal[start_sample:end_sample])
                 if spec_duration == self.cfg.audio.spec_duration:
                     spec = spec[
@@ -220,7 +221,7 @@ class Audio:
 
         # Handle empty specs list to prevent torch.stack error
         if not specs:
-            return None, None
+            return torch.empty(0), torch.empty(0)
 
         unnormalized_specs = torch.stack(specs, dim=0).to(self.device)
         normalized_specs = unnormalized_specs.clone().to(self.device)

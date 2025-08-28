@@ -137,14 +137,14 @@ class Extractor:
         for i in range(len(specs)):
             # check for duplicate before inserting
             if recording_id not in self.segments:
-                self.segments[recording_id] = {}
+                self.segments[recording_id] = set()
 
             check_offset = round(offsets[i], 0)
             if check_offset in self.segments[recording_id]:
                 continue  # skip if another one is within a second
 
             num_inserted += 1
-            self.segments[recording_id][check_offset] = 1  # so we don't insert it again
+            self.segments[recording_id].add(round(check_offset))
             compressed = util.compress_spectrogram(specs[i])
             segment_id = self.db.insert_segment(recording_id, offsets[i])
             self.db.insert_segment_class(segment_id, self.class_id)
@@ -179,7 +179,7 @@ class Extractor:
                 continue
 
             end_offset = max(self.increment, seconds - self.increment)
-            offsets = np.arange(0, end_offset, self.increment)
+            offsets = util.get_range(0, end_offset, self.increment)
             if len(offsets) == 0:
                 util.echo(f"Skipping {filename} (too short)")
                 continue
