@@ -62,7 +62,7 @@ def analyze_impl(
             cfg.infer.num_threads = num_threads
 
         if overlap is not None:
-            cfg.infer.spec_overlap_seconds = overlap
+            cfg.infer.overlap = overlap
 
         if segment_len is not None:
             cfg.infer.segment_len = segment_len

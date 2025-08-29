@@ -62,7 +62,7 @@ class Trainer:
                     ModelCheckpoint(
                         save_top_k=self.cfg.train.save_last_n,
                         mode="max",
-                        monitor="epoch_num",
+                        monitor="epoch",
                         filename=f"v{version}-e{{epoch}}",
                         auto_insert_metric_name=False,
                     ),

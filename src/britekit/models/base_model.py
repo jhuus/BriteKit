@@ -87,7 +87,6 @@ class BaseModel(pl.LightningModule):
         self.train_class_alt_codes = train_class_alt_codes
         self.num_train_specs = num_train_specs
         self.num_classes = len(train_class_names)
-        self.epoch_num = 0
         self.learning_rate = self.cfg.train.learning_rate  # needed by lr_finder
 
         # Define loss functions
@@ -267,13 +266,6 @@ class BaseModel(pl.LightningModule):
                 "frequency": 1,
             },
         }
-
-    def on_train_epoch_end(self):
-        """Log epoch number for checkpoint saving."""
-        # Log the epoch_num so we can save checkpoints for the last n epochs
-        epoch_num = torch.tensor(self.epoch_num).type(torch.float32)
-        self.log("epoch_num", epoch_num, prog_bar=False)
-        self.epoch_num += 1
 
     def on_save_checkpoint(self, checkpoint):
         """Save model metadata to checkpoint."""

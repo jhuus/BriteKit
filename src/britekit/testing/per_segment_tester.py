@@ -723,7 +723,7 @@ class PerSegmentTester(BaseTester):
 
         return pr_table_dict
 
-    def _initialize(self):
+    def initialize(self):
         """
         Initialize
         """
@@ -813,7 +813,7 @@ class PerSegmentTester(BaseTester):
         plt.savefig(output_path, dpi=150)
         plt.close()
 
-        print(f"Saved calibration plot to {output_path}")
+        util.echo(f"Saved calibration plot to {output_path}")
 
     def do_calibration(self):
         """
@@ -888,7 +888,7 @@ class PerSegmentTester(BaseTester):
             All output files will be written to self.output_dir.
         """
 
-        self._initialize()
+        self.initialize()
 
         if self.calibrate:
             self.do_calibration()

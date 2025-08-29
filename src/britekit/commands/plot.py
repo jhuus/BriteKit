@@ -247,7 +247,7 @@ def plot_dir_impl(
         cfg.audio.power = power
 
     if overlap is None:
-        overlap = cfg.infer.spec_overlap_seconds
+        overlap = cfg.infer.overlap
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -361,7 +361,7 @@ def plot_rec_impl(
         cfg.audio.power = power
 
     if overlap is None:
-        overlap = cfg.infer.spec_overlap_seconds
+        overlap = cfg.infer.overlap
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)

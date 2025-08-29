@@ -32,7 +32,7 @@ class Tuner:
         recording_dir,
         annotation_path,
         train_log_dir,
-        trained_species_codes,
+        trained_class_codes,
         metric,
         param_space,
         num_trials: int = 0,
@@ -43,7 +43,7 @@ class Tuner:
         self.recording_dir = recording_dir
         self.annotation_path = annotation_path
         self.train_log_dir = train_log_dir
-        self.trained_species_codes = trained_species_codes
+        self.trained_class_codes = trained_class_codes
         self.metric = metric
         self.param_space = param_space
         self.num_trials = num_trials
@@ -239,21 +239,21 @@ class Tuner:
         inference_output_dir = str(Path(self.recording_dir) / label_dir)
         Analyzer().run(self.recording_dir, inference_output_dir)
 
-        output_dir = tempfile.gettempdir()
-        tester = PerSegmentTester(
-            self.annotation_path,
-            self.recording_dir,
-            inference_output_dir,
-            output_dir,
-            self.cfg.infer.min_score,
-            self.trained_species_codes,
-        )
-        tester.initialize()
+        with tempfile.TemporaryDirectory() as output_dir:
+            tester = PerSegmentTester(
+                self.annotation_path,
+                self.recording_dir,
+                inference_output_dir,
+                output_dir,
+                self.cfg.infer.min_score,
+                self.trained_class_codes,
+            )
+            tester.initialize()
 
-        if "_map" in self.metric:
-            stats = tester.get_map_stats()
-        else:
-            stats = tester.get_roc_stats()
+            if "_map" in self.metric:
+                stats = tester.get_map_stats()
+            else:
+                stats = tester.get_roc_stats()
 
         self.fn_cfg.echo = echo  # restore console output
         return stats[self.metric]

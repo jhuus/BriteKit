@@ -4,8 +4,6 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
-
 from britekit.core import audio, util
 from britekit.core.config_loader import get_config
 from britekit.training_db.training_db import TrainingDatabase
@@ -48,7 +46,7 @@ class Extractor:
         self.audio = audio.Audio()
 
         if overlap is None:
-            overlap = self.cfg.infer.spec_overlap_seconds
+            overlap = self.cfg.infer.overlap
         self.increment = max(0.5, self.cfg.audio.spec_duration - overlap)
 
         self.category_id = self.provider.category_id(self.cat_name)

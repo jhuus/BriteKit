@@ -19,7 +19,14 @@ from .init import init_cmd
 from .pickle import pickle_cmd
 from .plot import plot_db_cmd, plot_dir_cmd, plot_rec_cmd
 from .reextract import reextract_cmd
-from .reports import rpt_ann_cmd, rpt_cal_cmd, rpt_db_cmd, rpt_labels_cmd, rpt_test_cmd
+from .reports import (
+    rpt_ann_cmd,
+    rpt_cal_cmd,
+    rpt_db_cmd,
+    rpt_epochs_cmd,
+    rpt_labels_cmd,
+    rpt_test_cmd
+)
 from .search import search_cmd
 from .train import train_cmd, find_lr_cmd
 from .tune import tune_cmd
@@ -60,6 +67,7 @@ reextract = reextract_cmd
 rpt_ann = rpt_ann_cmd
 rpt_cal = rpt_cal_cmd
 rpt_db = rpt_db_cmd
+rpt_epochs = rpt_epochs_cmd
 rpt_labels = rpt_labels_cmd
 rpt_test = rpt_test_cmd
 search = search_cmd
@@ -99,6 +107,7 @@ __all__ = [
     "rpt_ann",
     "rpt_cal",
     "rpt_db",
+    "rpt_epochs",
     "rpt_labels",
     "rpt_test",
     "search",

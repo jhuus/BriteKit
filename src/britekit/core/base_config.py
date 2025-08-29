@@ -139,12 +139,12 @@ class Inference:
     # that match the sounds detected, otherwise output tags of length segment_len seconds.
     # For non-SED models, segment_len is defined by the model.
     segment_len: Optional[float] = None
+    # number of seconds overlap for adjacent spectrograms
+    overlap: float = 0.0
+    min_score: float = 0.80  # only generate labels when score is at least this
     num_threads: int = 3  # more threads = faster but more VRAM
     autocast: bool = True  # faster and less VRAM but less precision
     audio_power: float = 0.7  # audio power parameter during inference
-    # number of seconds overlap for adjacent spectrograms
-    spec_overlap_seconds: float = 0.0
-    min_score: float = 0.80  # only generate labels when score is at least this
     # Platt scaling coefficient, to align predictions with probabilities
     scaling_coefficient: float = 1.0
     # Platt scaling intercept, to align predictions with probabilities

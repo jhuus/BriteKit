@@ -110,7 +110,8 @@ class BaseTester:
                 if self.segment_len is None:
                     self.segment_len = row.end_time - row.start_time
                 elif not math.isclose(row.end_time - row.start_time, self.segment_len):
-                    util.echo(
+                    # use print instead of util.echo so it isn't suppressed
+                    print(
                         f"Error: detected different label durations ({self.segment_len} and {row.end_time - row.start_time})"
                     )
                     quit()
@@ -134,7 +135,8 @@ class BaseTester:
                 max_labels = len(self.labels_per_recording[recording])
 
         if longest_recording is None:
-            util.echo("Error: no labels found")
+            # use print instead of util.echo so it isn't suppressed
+            print("Error: no labels found")
             quit()
 
         self.overlap = self._calculate_overlap(
@@ -301,7 +303,8 @@ class BaseTester:
         """
 
         if self.y_true_annotated_df is None or self.y_pred_annotated_df is None:
-            util.echo("y_true_annotated_df and y_pred_df are not both defined")
+            # use print instead of util.echo so it isn't suppressed
+            print("y_true_annotated_df and y_pred_df are not both defined")
             quit()
 
         if self.y_true_annotated_df.shape[0] != self.y_pred_annotated_df.shape[0]:
@@ -915,7 +918,8 @@ class BaseTester:
         """
 
         if self.recordings is None:
-            util.echo("Error: subclass failed to initialize self.recordings")
+            # use print instead of util.echo so it isn't suppressed
+            print("Error: subclass failed to initialize self.recordings")
             quit()
 
         tp_seconds = 0  # total TP seconds
