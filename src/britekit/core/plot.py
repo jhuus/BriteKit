@@ -12,6 +12,8 @@ def plot_spec(
     output_path: str,
     show_dims: bool = False,
     spec_duration: Optional[float] = None,
+    height: Optional[int] = None,
+    width: Optional[int] = None,
 ):
     """
     Plot and save a spectrogram image.
@@ -20,7 +22,11 @@ def plot_spec(
         spec (np.ndarray): Spectrogram of shape (height, width)
         output_path (str): Path to save the image (e.g., "output.png")
         show_dims (bool): Whether to show frequency and time scales
-        spec_duration (int): Number of seconds represented.
+        spec_duration (float, optional): Number of seconds represented.
+        height (int, optional): Output image height in pixels. If not specified,
+            the existing square behavior is preserved.
+        width (int, optional): Output image width in pixels. If not specified,
+            the existing square behavior is preserved.
     """
 
     cfg, _ = get_config()
@@ -100,14 +106,25 @@ def plot_spec(
 
                 mult += 1
 
+    # Optionally set explicit output dimensions (in pixels).
+    # Defaults preserve prior behavior (square output without explicit sizing).
+    DPI = 100
     plt.clf()  # clear any existing plot data
+    if height is not None and width is not None:
+        fig = plt.gcf()
+        fig.set_dpi(DPI)
+        fig.set_size_inches(width / DPI, height / DPI)
 
     # 'flat' is much faster than 'gouraud'
     plt.pcolormesh(spec, shading="flat")
     if show_dims:
         plt.xticks(x_tick_locations, x_tick_labels)
         plt.yticks(y_tick_locations, y_tick_labels)
-        plt.savefig(output_path)
+        if height is not None and width is not None:
+            # Preserve requested size; avoid tight bbox which can change dimensions
+            plt.savefig(output_path)
+        else:
+            plt.savefig(output_path, bbox_inches="tight", pad_inches=0.1)
     else:
         plt.tick_params(
             axis="both",  # apply to both axes
@@ -121,7 +138,10 @@ def plot_spec(
             labelleft=False,
             labelright=False,
         )
-
-        plt.savefig(output_path, bbox_inches="tight", pad_inches=0)
+        if height is not None and width is not None:
+            # Preserve requested size; avoid tight bbox which can change dimensions
+            plt.savefig(output_path)
+        else:
+            plt.savefig(output_path, bbox_inches="tight", pad_inches=0.1)
 
     plt.close()
