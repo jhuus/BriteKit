@@ -170,7 +170,7 @@ class BaseModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         """Perform a single validation step."""
-        x, y = batch
+        x, y = batch["input"], batch["segment_labels"]
         seg_logits, frame_logits = self(x)  # Get both segment and frame logits
         loss = self.loss_fn(seg_logits, y)  # Use only segment logits for loss
         if self.multi_label:
