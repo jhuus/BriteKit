@@ -59,6 +59,7 @@ cli.add_command(commands.reextract)
 cli.add_command(commands.rpt_ann)
 cli.add_command(commands.rpt_cal)
 cli.add_command(commands.rpt_db)
+cli.add_command(commands.rpt_epochs)
 cli.add_command(commands.rpt_labels)
 cli.add_command(commands.rpt_test)
 
