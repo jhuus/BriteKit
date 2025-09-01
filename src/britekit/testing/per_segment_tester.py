@@ -797,17 +797,17 @@ class PerSegmentTester(BaseTester):
         )
 
         # Plot
-        plt.figure(figsize=(6, 6))
+        plt.figure(figsize=(8, 6))
         plt.plot(mean_pred_uncal, frac_pos_uncal, label="Uncalibrated", marker="o")
         plt.plot(mean_pred_cal, frac_pos_cal, label="Platt calibrated", marker="o")
         plt.plot(
             [0, 1], [0, 1], linestyle="--", color="gray", label="Perfectly calibrated"
         )
 
-        plt.xlabel("Predicted probability")
-        plt.ylabel("Observed frequency")
-        plt.title("Calibration Curve (Reliability Diagram)")
-        plt.legend()
+        plt.xlabel("Predicted probability", fontsize=20)
+        plt.ylabel("Observed frequency", fontsize=20)
+        plt.title("Calibration Curve (Reliability Diagram)", fontsize=26)
+        plt.legend(fontsize=16)
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(output_path, dpi=150)
