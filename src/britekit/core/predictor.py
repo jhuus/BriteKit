@@ -95,9 +95,7 @@ class Predictor:
         if audio_duration <= 0:
             raise InferenceError(f"Invalid audio duration: {audio_duration} seconds")
 
-        increment = max(
-            0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap
-        )
+        increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
         start_times = np.arange(0, audio_duration - (increment / 2), increment).tolist()
 
         specs, _ = self.audio.get_spectrograms(start_times)

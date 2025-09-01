@@ -1,5 +1,6 @@
 from .analyze import analyze_cmd
 from .audioset import audioset_cmd
+from .calibrate import calibrate_cmd
 from .ckpt_ops import ckpt_avg_cmd, ckpt_freeze_cmd, ckpt_onnx_cmd
 from .db_add import add_cat_cmd, add_class_cmd, add_src_cmd, add_stype_cmd
 from .db_delete import (
@@ -21,7 +22,6 @@ from .plot import plot_db_cmd, plot_dir_cmd, plot_rec_cmd
 from .reextract import reextract_cmd
 from .reports import (
     rpt_ann_cmd,
-    rpt_cal_cmd,
     rpt_db_cmd,
     rpt_epochs_cmd,
     rpt_labels_cmd,
@@ -42,6 +42,7 @@ add_src = add_src_cmd
 add_stype = add_stype_cmd
 analyze = analyze_cmd
 audioset = audioset_cmd
+calibrate = calibrate_cmd
 ckpt_avg = ckpt_avg_cmd
 ckpt_freeze = ckpt_freeze_cmd
 ckpt_onnx = ckpt_onnx_cmd
@@ -65,7 +66,6 @@ plot_dir = plot_dir_cmd
 plot_rec = plot_rec_cmd
 reextract = reextract_cmd
 rpt_ann = rpt_ann_cmd
-rpt_cal = rpt_cal_cmd
 rpt_db = rpt_db_cmd
 rpt_epochs = rpt_epochs_cmd
 rpt_labels = rpt_labels_cmd
@@ -83,6 +83,7 @@ __all__ = [
     "add_stype",
     "analyze",
     "audioset",
+    "calibrate",
     "ckpt_avg",
     "ckpt_freeze",
     "ckpt_onnx",
