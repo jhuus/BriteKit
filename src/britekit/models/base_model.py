@@ -182,12 +182,18 @@ class BaseModel(pl.LightningModule):
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
-        # do it here so it appears after the others on the prog_bar
-        micro_aps = metrics.average_precision_score(
+        pr_auc = metrics.average_precision_score(
             y.cpu(), preds.cpu(), average="micro"
         )
+        roc_auc = metrics.roc_auc_score(
+            y.cpu(), preds.cpu(), average="micro"
+        )
+
         self.log(
-            "val_micro_aps", micro_aps, on_step=False, on_epoch=True, prog_bar=True
+            "val_pr_auc", pr_auc, on_step=False, on_epoch=True, prog_bar=True
+        )
+        self.log(
+            "val_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True
         )
 
         return loss
