@@ -251,9 +251,9 @@ class Tuner:
             tester.initialize()
 
             if "_map" in self.metric:
-                stats = tester.get_map_stats()
+                stats = tester.get_pr_auc_stats()
             else:
-                stats = tester.get_roc_stats()
+                stats = tester.get_roc_auc_stats()
 
         self.fn_cfg.echo = echo  # restore console output
         return stats[self.metric]

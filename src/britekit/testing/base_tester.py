@@ -364,94 +364,96 @@ class BaseTester:
     # Public methods - Statistics and metrics
     # ============================================================================
 
-    def get_map_stats(self):
+    def get_pr_auc_stats(self):
         """
-        Calculate Mean Average Precision (MAP) statistics.
+        Calculate Precision-Recall Area-Under-Curve (PR-AUC) statistics.
 
-        This method calculates MAP scores using different averaging strategies:
-        - macro: Average of MAP scores for each class
-        - micro: MAP calculated on flattened arrays
-        - none: MAP score for each class individually
+        This method calculates PR-AUC scores using different averaging strategies:
+        - macro: Average of PR-AUC scores for each class
+        - micro: PR-AUC calculated on flattened arrays
+        - none: PR-AUC score for each class individually
 
         Returns:
-            dict: Dictionary containing MAP statistics with keys:
-                - macro_map: Macro-averaged MAP for annotated classes
-                - micro_map_annotated: Micro-averaged MAP for annotated classes
-                - micro_map_trained: Micro-averaged MAP for all trained classes
-                - class_map: MAP score for each annotated class
-                - combined_map_annotated: Average of macro and micro MAP for annotated classes
-                - combined_map_trained: Average of macro and micro MAP for trained classes
+            dict: Dictionary containing PR-AUC statistics with keys:
+                - macro_pr_auc: Macro-averaged PR-AUC for annotated classes
+                - micro_pr_auc_annotated: Micro-averaged PR-AUC for annotated classes
+                - micro_pr_auc_trained: Micro-averaged PR-AUC for all trained classes
+                - class_pr_auc: PR-AUC score for each annotated class
+                - combined_pr_auc_annotated: Average of macro and micro PR-AUC for annotated classes
+                - combined_pr_auc_trained: Average of macro and micro PR-AUC for trained classes
 
         Note:
             Macro and none averaging are only defined for classes with annotations,
             but micro averaging is defined for all trained classes
         """
 
-        macro_map = metrics.average_precision_score(
+        macro_pr_auc = metrics.average_precision_score(
             self.y_true_annotated, self.y_pred_annotated, average="macro"
         )
-        micro_map_annotated = metrics.average_precision_score(
+        micro_pr_auc_annotated = metrics.average_precision_score(
             self.y_true_annotated, self.y_pred_annotated, average="micro"
         )
-        micro_map_trained = metrics.average_precision_score(
+        micro_pr_auc_trained = metrics.average_precision_score(
             self.y_true_trained, self.y_pred_trained, average="micro"
         )
-        class_map = metrics.average_precision_score(
+        class_pr_auc = metrics.average_precision_score(
             self.y_true_annotated, self.y_pred_annotated, average=None
         )
-        class_map_score = {}
+        class_pr_auc_score = {}
         if len(self.annotated_classes) == 1:
             # class is a scalar
-            class_map_score[self.annotated_classes[0]] = class_map
+            class_pr_auc_score[self.annotated_classes[0]] = class_pr_auc
         else:
             # class map is an array
             for i, class_code in enumerate(self.annotated_classes):
-                class_map_score[class_code] = class_map[i]
+                class_pr_auc_score[class_code] = class_pr_auc[i]
 
         # create a dictionary with details and return it
         ret_dict = {}
-        ret_dict["macro_map"] = macro_map
-        ret_dict["micro_map_annotated"] = micro_map_annotated
-        ret_dict["micro_map_trained"] = micro_map_trained
-        ret_dict["class_map"] = class_map_score
-        ret_dict["combined_map_annotated"] = (macro_map + micro_map_annotated) / 2
-        ret_dict["combined_map_trained"] = (macro_map + micro_map_trained) / 2
+        ret_dict["macro_pr_auc"] = macro_pr_auc
+        ret_dict["micro_pr_auc_annotated"] = micro_pr_auc_annotated
+        ret_dict["micro_pr_auc_trained"] = micro_pr_auc_trained
+        ret_dict["class_pr_auc"] = class_pr_auc_score
+        ret_dict["combined_pr_auc_annotated"] = (
+            macro_pr_auc + micro_pr_auc_annotated
+        ) / 2
+        ret_dict["combined_pr_auc_trained"] = (macro_pr_auc + micro_pr_auc_trained) / 2
 
         return ret_dict
 
-    def get_roc_stats(self):
+    def get_roc_auc_stats(self):
         """
         Calculate Receiver Operating Characteristic (ROC) statistics.
 
-        This method calculates ROC AUC scores and curves using different averaging strategies:
-        - macro: Average of ROC AUC scores for each class
-        - micro: ROC AUC calculated on flattened arrays
-        - none: ROC AUC score for each class individually
+        This method calculates ROC-AUC scores and curves using different averaging strategies:
+        - macro: Average of ROC-AUC scores for each class
+        - micro: ROC-AUC calculated on flattened arrays
+        - none: ROC-AUC score for each class individually
 
-        The method handles edge cases where ROC AUC is not defined (e.g., when
+        The method handles edge cases where ROC-AUC is not defined (e.g., when
         all samples belong to the same class) by adding synthetic data points.
 
         Returns:
             dict: Dictionary containing ROC statistics with keys:
-                - macro_roc: Macro-averaged ROC AUC for annotated classes
-                - micro_roc_annotated: Micro-averaged ROC AUC for annotated classes
-                - micro_roc_trained: Micro-averaged ROC AUC for all trained classes
-                - class_roc: ROC AUC score for each annotated class
+                - macro_roc_auc: Macro-averaged ROC-AUC for annotated classes
+                - micro_roc_auc_annotated: Micro-averaged ROC-AUC for annotated classes
+                - micro_roc_auc_trained: Micro-averaged ROC-AUC for all trained classes
+                - class_roc_auc: ROC-AUC score for each annotated class
                 - roc_fpr_annotated: False positive rates for annotated classes
                 - roc_tpr_annotated: True positive rates for annotated classes
                 - roc_thresholds_annotated: Thresholds for annotated classes
                 - roc_fpr_trained: False positive rates for trained classes
                 - roc_tpr_trained: True positive rates for trained classes
                 - roc_thresholds_trained: Thresholds for trained classes
-                - combined_roc_annotated: Average of macro and micro ROC AUC for annotated classes
-                - combined_roc_trained: Average of macro and micro ROC AUC for trained classes
+                - combined_roc_auc_annotated: Average of macro and micro ROC-AUC for annotated classes
+                - combined_roc_auc_trained: Average of macro and micro ROC-AUC for trained classes
 
         Note:
             Macro and none averaging are only defined for classes with annotations,
             but micro averaging is defined for all trained classes
         """
 
-        # ROC AUC is not defined if y_true has a column with all ones
+        # ROC-AUC is not defined if y_true has a column with all ones
         y_true_has_column_with_all_ones = False
         column_sum = np.sum(self.y_true_annotated, axis=0)
         num_rows = self.y_true_annotated.shape[0]
@@ -461,7 +463,7 @@ class BaseTester:
                 break
 
         if y_true_has_column_with_all_ones:
-            # append a row with all zeros so ROC AUC is defined
+            # append a row with all zeros so ROC-AUC is defined
             zeros = np.zeros((1, self.y_true_annotated.shape[1]))
             y_true_annotated = np.append(self.y_true_annotated, zeros, axis=0)
             y_pred_annotated = np.append(self.y_pred_annotated, zeros, axis=0)
@@ -475,26 +477,26 @@ class BaseTester:
             y_true_trained = self.y_true_trained
             y_pred_trained = self.y_pred_trained
 
-        macro_roc = metrics.roc_auc_score(
+        macro_roc_auc = metrics.roc_auc_score(
             y_true_annotated, y_pred_annotated, average="macro"
         )
-        micro_roc_annotated = metrics.roc_auc_score(
+        micro_roc_auc_annotated = metrics.roc_auc_score(
             y_true_annotated, y_pred_annotated, average="micro"
         )
-        micro_roc_trained = metrics.roc_auc_score(
+        micro_roc_auc_trained = metrics.roc_auc_score(
             y_true_trained, y_pred_trained, average="micro"
         )
-        class_roc = metrics.roc_auc_score(
+        class_roc_auc = metrics.roc_auc_score(
             y_true_annotated, y_pred_annotated, average=None
         )
-        class_roc_score = {}
+        class_roc_auc_score = {}
         if len(self.annotated_classes) == 1:
-            # class_roc is a scalar
-            class_roc_score[self.annotated_classes[0]] = class_roc
+            # class_roc_auc is a scalar
+            class_roc_auc_score[self.annotated_classes[0]] = class_roc_auc
         else:
-            # class_roc is an array
+            # class_roc_auc is an array
             for i, class_code in enumerate(self.annotated_classes):
-                class_roc_score[class_code] = class_roc[i]
+                class_roc_auc_score[class_code] = class_roc_auc[i]
 
         # get the ROC curve
         fpr_annotated, tpr_annotated, thresholds_annotated = metrics.roc_curve(
@@ -506,18 +508,22 @@ class BaseTester:
 
         # create a dictionary with details and return it
         ret_dict = {}
-        ret_dict["macro_roc"] = macro_roc
-        ret_dict["micro_roc_annotated"] = micro_roc_annotated
-        ret_dict["micro_roc_trained"] = micro_roc_trained
-        ret_dict["class_roc"] = class_roc_score
+        ret_dict["macro_roc_auc"] = macro_roc_auc
+        ret_dict["micro_roc_auc_annotated"] = micro_roc_auc_annotated
+        ret_dict["micro_roc_auc_trained"] = micro_roc_auc_trained
+        ret_dict["class_roc_auc"] = class_roc_auc_score
         ret_dict["roc_fpr_annotated"] = fpr_annotated
         ret_dict["roc_tpr_annotated"] = tpr_annotated
         ret_dict["roc_thresholds_annotated"] = thresholds_annotated
         ret_dict["roc_fpr_trained"] = fpr_trained
         ret_dict["roc_tpr_trained"] = tpr_trained
         ret_dict["roc_thresholds_trained"] = thresholds_trained
-        ret_dict["combined_roc_annotated"] = (macro_roc + micro_roc_annotated) / 2
-        ret_dict["combined_roc_trained"] = (macro_roc + micro_roc_trained) / 2
+        ret_dict["combined_roc_auc_annotated"] = (
+            macro_roc_auc + micro_roc_auc_annotated
+        ) / 2
+        ret_dict["combined_roc_auc_trained"] = (
+            macro_roc_auc + micro_roc_auc_trained
+        ) / 2
 
         return ret_dict
 

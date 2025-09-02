@@ -446,9 +446,9 @@ class PerSegmentTester(BaseTester):
         self._output_pr_curve(precision_trained, recall_trained, "pr_curve_trained")
 
         # output the ROC curves
-        roc_thresholds = self.roc_dict["roc_thresholds_annotated"]
-        roc_tpr = self.roc_dict["roc_tpr_annotated"]
-        roc_fpr = self.roc_dict["roc_fpr_annotated"]
+        roc_thresholds = self.roc_auc_dict["roc_thresholds_annotated"]
+        roc_tpr = self.roc_auc_dict["roc_tpr_annotated"]
+        roc_fpr = self.roc_auc_dict["roc_fpr_annotated"]
         self._output_roc_curves(
             roc_thresholds,
             roc_tpr,
@@ -458,9 +458,9 @@ class PerSegmentTester(BaseTester):
             "annotated",
         )
 
-        roc_thresholds = self.roc_dict["roc_thresholds_trained"]
-        roc_tpr = self.roc_dict["roc_tpr_trained"]
-        roc_fpr = self.roc_dict["roc_fpr_trained"]
+        roc_thresholds = self.roc_auc_dict["roc_thresholds_trained"]
+        roc_tpr = self.roc_auc_dict["roc_tpr_trained"]
+        roc_fpr = self.roc_auc_dict["roc_fpr_trained"]
         self._output_roc_curves(
             roc_thresholds,
             roc_tpr,
@@ -496,15 +496,17 @@ class PerSegmentTester(BaseTester):
         rpt = []
         rpt.append("For annotated classes only:\n")
 
-        rpt.append(f"   Macro-averaged MAP score = {self.map_dict['macro_map']:.4f}\n")
         rpt.append(
-            f"   Micro-averaged MAP score = {self.map_dict['micro_map_annotated']:.4f}\n"
+            f"   Macro-averaged PR-AUC score = {self.pr_auc_dict['macro_pr_auc']:.4f}\n"
         )
         rpt.append(
-            f"   Macro-averaged ROC AUC score = {self.roc_dict['macro_roc']:.4f}\n"
+            f"   Micro-averaged PR-AUC score = {self.pr_auc_dict['micro_pr_auc_annotated']:.4f}\n"
         )
         rpt.append(
-            f"   Micro-averaged ROC AUC score = {self.roc_dict['micro_roc_annotated']:.4f}\n"
+            f"   Macro-averaged ROC-AUC score = {self.roc_auc_dict['macro_roc_auc']:.4f}\n"
+        )
+        rpt.append(
+            f"   Micro-averaged ROC-AUC score = {self.roc_auc_dict['micro_roc_auc_annotated']:.4f}\n"
         )
         rpt.append(f"   For threshold = {self.threshold}:\n")
         rpt.append(
@@ -517,22 +519,22 @@ class PerSegmentTester(BaseTester):
         rpt.append("\n")
         rpt.append("For all trained classes:\n")
         rpt.append(
-            f"   Micro-averaged MAP score = {self.map_dict['micro_map_trained']:.4f}\n"
+            f"   Micro-averaged PR-AUC score = {self.pr_auc_dict['micro_pr_auc_trained']:.4f}\n"
         )
         rpt.append(
-            f"   Micro-averaged ROC AUC score = {self.roc_dict['micro_roc_trained']:.4f}\n"
+            f"   Micro-averaged ROC-AUC score = {self.roc_auc_dict['micro_roc_auc_trained']:.4f}\n"
         )
         rpt.append(f"   For threshold = {self.threshold}:\n")
         rpt.append(
             f"      Precision = {100 * self.details_dict['precision_trained']:.2f}%\n"
         )
         rpt.append(f"      Recall = {100 * self.details_dict['recall_trained']:.2f}%\n")
-        rpt.append("")
+        rpt.append("\n")
         rpt.append(
-            f"Average of macro-MAP-annotated and micro-MAP-trained = {self.map_dict['combined_map_trained']:.4f}\n"
+            f"Average of macro-PR-AUC-annotated and micro-PR-AUC-trained = {self.pr_auc_dict['combined_pr_auc_trained']:.4f}\n"
         )
         rpt.append(
-            f"Average of macro-ROC-annotated and micro-ROC-trained = {self.roc_dict['combined_roc_trained']:.4f}\n"
+            f"Average of macro-ROC-annotated and micro-ROC-trained = {self.roc_auc_dict['combined_roc_auc_trained']:.4f}\n"
         )
 
         util.echo()
@@ -623,14 +625,14 @@ class PerSegmentTester(BaseTester):
         rpt_path = os.path.join(self.output_dir, "classes_annotated.csv")
         with open(rpt_path, "w") as file:
             file.write(
-                "class,MAP,ROC AUC,precision,recall,annotated segments,TP segments,FP segments\n"
+                "class,PR-AUC,ROC-AUC,precision,recall,annotated segments,TP segments,FP segments\n"
             )
             class_precision = self.details_dict["class_precision"]
             class_recall = self.details_dict["class_recall"]
             class_valid = self.details_dict["class_valid"]
             class_invalid = self.details_dict["class_invalid"]
-            class_map = self.map_dict["class_map"]
-            class_roc = self.roc_dict["class_roc"]
+            class_pr_auc = self.pr_auc_dict["class_pr_auc"]
+            class_roc_auc = self.roc_auc_dict["class_roc_auc"]
 
             segment_len = self.segment_len - self.overlap
             for i, class_code in enumerate(self.annotated_classes):
@@ -642,18 +644,18 @@ class PerSegmentTester(BaseTester):
                     class_invalid[i] / segment_len
                 )  # convert from seconds to segments
 
-                if class_code in class_map:
-                    map_score = class_map[class_code]
+                if class_code in class_pr_auc:
+                    pr_auc_score = class_pr_auc[class_code]
                 else:
-                    map_score = 0
+                    pr_auc_score = 0
 
-                if class_code in class_roc:
-                    roc_score = class_roc[class_code]
+                if class_code in class_roc_auc:
+                    roc_auc_score = class_roc_auc[class_code]
                 else:
-                    roc_score = 0
+                    roc_auc_score = 0
 
                 file.write(
-                    f"{class_code},{map_score:.3f},{roc_score:.3f},{precision:.3f},{recall:.3f},{annotations},{valid},{invalid}\n"
+                    f"{class_code},{pr_auc_score:.3f},{roc_auc_score:.3f},{precision:.3f},{recall:.3f},{annotations},{valid},{invalid}\n"
                 )
 
         # calculate and output details per non-annotated class
@@ -873,8 +875,8 @@ class PerSegmentTester(BaseTester):
         This method orchestrates the entire testing process by:
         1. Initializing the tester and loading data
         2. If calibrate=True, performing calibration analysis and returning early
-        3. Calculating MAP (Mean Average Precision) statistics
-        4. Calculating ROC (Receiver Operating Characteristic) statistics
+        3. Calculating PR-AUC (Precision-Recall Area-Under-Curve) statistics
+        4. Calculating ROC-AUC (Receiver Operating Characteristic Area-Under-Curve) statistics
         5. Calculating precision-recall statistics at the specified threshold
         6. Generating a precision-recall table across multiple thresholds
         7. Producing comprehensive output reports
@@ -895,11 +897,11 @@ class PerSegmentTester(BaseTester):
             return
 
         # calculate stats
-        util.echo("Calculating MAP stats")
-        self.map_dict = self.get_map_stats()
+        util.echo("Calculating PR-AUC stats")
+        self.pr_auc_dict = self.get_pr_auc_stats()
 
         util.echo("Calculating ROC stats")
-        self.roc_dict = self.get_roc_stats()
+        self.roc_auc_dict = self.get_roc_auc_stats()
 
         util.echo("Calculating PR stats")
         self.details_dict = self.get_precision_recall(

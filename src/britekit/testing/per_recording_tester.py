@@ -74,8 +74,8 @@ class PerRecordingTester(BaseTester):
 
         This method orchestrates the entire testing process by:
         1. Initializing the tester and loading data
-        2. Calculating MAP (Mean Average Precision) statistics
-        3. Calculating ROC (Receiver Operating Characteristic) statistics
+        2. Calculating PR-AUC (Precision-Recall Area-Under-Curve) statistics
+        3. Calculating ROC-AUC (Receiver Operating Characteristic Area-Under-Curve) statistics
         4. Calculating precision-recall statistics at the specified threshold
         5. Generating a precision-recall table across multiple thresholds
         6. Producing comprehensive output reports
@@ -91,11 +91,11 @@ class PerRecordingTester(BaseTester):
         self._initialize()
 
         # calculate stats
-        util.echo("Calculating MAP stats")
-        self.map_dict = self.get_map_stats()
+        util.echo("Calculating PR-AUC stats")
+        self.map_dict = self.get_pr_auc_stats()
 
-        util.echo("Calculating ROC stats")
-        self.roc_dict = self.get_roc_stats()
+        util.echo("Calculating ROC-AUC stats")
+        self.roc_dict = self.get_roc_auc_stats()
 
         util.echo("Calculating PR stats")
         self.details_dict = self.get_precision_recall(
@@ -144,7 +144,7 @@ class PerRecordingTester(BaseTester):
                 self.annotations[recording] = []
 
             input_class_list = []
-            for code in row["class"].split(","):
+            for code in row["classes"].split(","):
                 input_class_list.append(code.strip())
 
             for class_code in input_class_list:
@@ -306,14 +306,14 @@ class PerRecordingTester(BaseTester):
         rpt.append(
             "value, especially if the recordings are of different durations.\n\n"
         )
-        rpt.append(f"Macro-averaged MAP score = {self.map_dict['macro_map']:.4f}\n")
+        rpt.append(f"Macro-averaged PR-AUC score = {self.map_dict['macro_pr_auc']:.4f}\n")
         rpt.append(
-            f"Micro-averaged MAP score = {self.map_dict['micro_map_annotated']:.4f}\n"
+            f"Micro-averaged PR-AUC score = {self.map_dict['micro_pr_auc_annotated']:.4f}\n"
         )
 
-        rpt.append(f"Macro-averaged ROC AUC score = {self.roc_dict['macro_roc']:.4f}\n")
+        rpt.append(f"Macro-averaged ROC-AUC score = {self.roc_dict['macro_roc_auc']:.4f}\n")
         rpt.append(
-            f"Micro-averaged ROC AUC score = {self.roc_dict['micro_roc_annotated']:.4f}\n"
+            f"Micro-averaged ROC-AUC score = {self.roc_dict['micro_roc_auc_annotated']:.4f}\n"
         )
 
         rpt.append(f"Details for threshold = {self.threshold}:\n")
@@ -397,14 +397,14 @@ class PerRecordingTester(BaseTester):
         rpt_path = os.path.join(self.output_dir, "class.csv")
         with open(rpt_path, "w") as file:
             file.write(
-                "class,MAP,ROC AUC,precision,recall,annotated recordings,TP seconds,FP seconds\n"
+                "class,PR-AUC,ROC-AUC,precision,recall,annotated recordings,TP seconds,FP seconds\n"
             )
             class_precision = self.details_dict["class_precision"]
             class_recall = self.details_dict["class_recall"]
             class_valid = self.details_dict["class_valid"]
             class_invalid = self.details_dict["class_invalid"]
-            class_map = self.map_dict["class_map"]
-            class_roc = self.roc_dict["class_roc"]
+            class_pr_auc = self.map_dict["class_pr_auc"]
+            class_roc_auc = self.roc_dict["class_roc_auc"]
 
             for i, class_code in enumerate(self.annotated_classes):
                 annotations = self.y_true_annotated_df[class_code].sum()
@@ -413,18 +413,18 @@ class PerRecordingTester(BaseTester):
                 valid = class_valid[i]
                 invalid = class_invalid[i]
 
-                if class_code in class_map:
-                    map_score = class_map[class_code]
+                if class_code in class_pr_auc:
+                    pr_auc_score = class_pr_auc[class_code]
                 else:
-                    map_score = 0
+                    pr_auc_score = 0
 
-                if class_code in class_roc:
-                    roc_score = class_roc[class_code]
+                if class_code in class_roc_auc:
+                    roc_auc_score = class_roc_auc[class_code]
                 else:
-                    roc_score = 0
+                    roc_auc_score = 0
 
                 file.write(
-                    f"{class_code},{map_score:.3f},{roc_score:.3f},{precision:.3f},{recall:.3f},{annotations},{valid},{invalid}\n"
+                    f"{class_code},{pr_auc_score:.3f},{roc_auc_score:.3f},{precision:.3f},{recall:.3f},{annotations},{valid},{invalid}\n"
                 )
 
     # ============================================================================

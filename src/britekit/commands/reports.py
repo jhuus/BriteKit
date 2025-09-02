@@ -270,14 +270,14 @@ def rpt_epochs_impl(
             )
             tester.initialize()
 
-            map_stats = tester.get_map_stats()
+            map_stats = tester.get_pr_auc_stats()
             map_score = map_stats["macro_map"]
             map_scores.append(map_score)
             if map_score > max_map_score:
                 max_map_score = map_score
                 max_map_epoch = epoch_num
 
-            roc_stats = tester.get_roc_stats()
+            roc_stats = tester.get_roc_auc_stats()
             roc_score = roc_stats["macro_roc"]
             roc_scores.append(roc_score)
             if roc_score > max_roc_score:

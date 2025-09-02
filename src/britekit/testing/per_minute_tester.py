@@ -82,8 +82,8 @@ class PerMinuteTester(BaseTester):
 
         This method orchestrates the entire testing process by:
         1. Initializing the tester and loading data
-        2. Calculating MAP (Mean Average Precision) statistics
-        3. Calculating ROC (Receiver Operating Characteristic) statistics
+        2. Calculating PR-AUC (Precision-Recall Area-Under-Curve) statistics
+        3. Calculating ROC-AUC (Receiver Operating Characteristic Area-Under-Curve) statistics
         4. Calculating precision-recall statistics at the specified threshold
         5. Generating a precision-recall table across multiple thresholds (if gen_pr_table=True)
         6. Producing comprehensive output reports
@@ -100,11 +100,11 @@ class PerMinuteTester(BaseTester):
         self._initialize()
 
         # calculate stats
-        util.echo("Calculating MAP stats")
-        self.map_dict = self.get_map_stats()
+        util.echo("Calculating PR-AUC stats")
+        self.pr_auc_dict = self.get_pr_auc_stats()
 
-        util.echo("Calculating ROC stats")
-        self.roc_dict = self.get_roc_stats()
+        util.echo("Calculating ROC-AUC stats")
+        self.roc_auc_dict = self.get_roc_auc_stats()
 
         util.echo("Calculating PR stats")
         self.details_dict = self.get_precision_recall(
@@ -164,7 +164,7 @@ class PerMinuteTester(BaseTester):
                 self.segments_per_recording[recording].append(minute - 1)
 
             input_class_list = []
-            for code in row["class"].split(","):
+            for code in row["classes"].split(","):
                 input_class_list.append(code.strip())
 
             for class_code in input_class_list:
@@ -280,7 +280,7 @@ class PerMinuteTester(BaseTester):
 
         This method creates multiple output files containing detailed analysis results:
         - Precision-recall tables and curves (if gen_pr_table=True)
-        - ROC curves and analysis
+        - ROC-AUC curves and analysis
         - Summary report with key metrics
         - Recording-level details and summaries
         - Class-level performance statistics
@@ -289,7 +289,7 @@ class PerMinuteTester(BaseTester):
         The method generates the following files in the output directory:
         - pr_per_threshold_*.csv/png: Precision-recall data at different thresholds
         - pr_curve_*.csv/png: Precision-recall curves
-        - roc_*.csv/png: ROC curve analysis
+        - roc_*.csv/png: ROC-AUC curve analysis
         - summary_report.txt: Human-readable summary with key metrics
         - recording_details_trained.csv: Detailed statistics per recording/segment
         - recording_summary_trained.csv: Summary statistics per recording
@@ -336,9 +336,9 @@ class PerMinuteTester(BaseTester):
             self._output_pr_curve(precision_trained, recall_trained, "pr_curve_trained")
 
             # output the ROC curves
-            roc_thresholds = self.roc_dict["roc_thresholds_annotated"]
-            roc_tpr = self.roc_dict["roc_tpr_annotated"]
-            roc_fpr = self.roc_dict["roc_fpr_annotated"]
+            roc_thresholds = self.roc_auc_dict["roc_thresholds_annotated"]
+            roc_tpr = self.roc_auc_dict["roc_tpr_annotated"]
+            roc_fpr = self.roc_auc_dict["roc_fpr_annotated"]
             precision_annotated_fine = self.pr_table_dict["annotated_precisions_fine"]
             recall_annotated_fine = self.pr_table_dict["annotated_recalls_fine"]
             self._output_roc_curves(
@@ -350,9 +350,9 @@ class PerMinuteTester(BaseTester):
                 "annotated",
             )
 
-            roc_thresholds = self.roc_dict["roc_thresholds_trained"]
-            roc_tpr = self.roc_dict["roc_tpr_trained"]
-            roc_fpr = self.roc_dict["roc_fpr_trained"]
+            roc_thresholds = self.roc_auc_dict["roc_thresholds_trained"]
+            roc_tpr = self.roc_auc_dict["roc_tpr_trained"]
+            roc_fpr = self.roc_auc_dict["roc_fpr_trained"]
             precision_trained_fine = self.pr_table_dict["trained_precisions_fine"]
             recall_trained_fine = self.pr_table_dict["trained_recalls_fine"]
             self._output_roc_curves(
@@ -390,15 +390,17 @@ class PerMinuteTester(BaseTester):
         rpt = []
 
         rpt.append("For annotated classes only:\n")
-        rpt.append(f"   Macro-averaged MAP score = {self.map_dict['macro_map']:.4f}\n")
         rpt.append(
-            f"   Micro-averaged MAP score = {self.map_dict['micro_map_annotated']:.4f}\n"
+            f"   Macro-averaged PR-AUC score = {self.pr_auc_dict['macro_pr_auc']:.4f}\n"
         )
         rpt.append(
-            f"   Macro-averaged ROC AUC score = {self.roc_dict['macro_roc']:.4f}\n"
+            f"   Micro-averaged PR-AUC score = {self.pr_auc_dict['micro_pr_auc_annotated']:.4f}\n"
         )
         rpt.append(
-            f"   Micro-averaged ROC AUC score = {self.roc_dict['micro_roc_annotated']:.4f}\n"
+            f"   Macro-averaged ROC-AUC score = {self.roc_auc_dict['macro_roc_auc']:.4f}\n"
+        )
+        rpt.append(
+            f"   Micro-averaged ROC-AUC score = {self.roc_auc_dict['micro_roc_auc_annotated']:.4f}\n"
         )
         rpt.append(f"   For threshold = {self.threshold}:\n")
         rpt.append(
@@ -414,10 +416,10 @@ class PerMinuteTester(BaseTester):
         rpt.append("\n")
         rpt.append("For all trained classes:\n")
         rpt.append(
-            f"   Micro-averaged MAP score = {self.map_dict['micro_map_trained']:.4f}\n"
+            f"   Micro-averaged PR-AUC score = {self.pr_auc_dict['micro_pr_auc_trained']:.4f}\n"
         )
         rpt.append(
-            f"   Micro-averaged ROC AUC score = {self.roc_dict['micro_roc_trained']:.4f}\n"
+            f"   Micro-averaged ROC-AUC score = {self.roc_auc_dict['micro_roc_auc_trained']:.4f}\n"
         )
         rpt.append(f"   For threshold = {self.threshold}:\n")
         rpt.append(
@@ -490,14 +492,14 @@ class PerMinuteTester(BaseTester):
         rpt_path = os.path.join(self.output_dir, "class_annotated.csv")
         with open(rpt_path, "w") as file:
             file.write(
-                "class,MAP,ROC AUC,precision,recall,annotated segments,TP seconds,FP seconds\n"
+                "class,PR-AUC,ROC-AUC,precision,recall,annotated segments,TP seconds,FP seconds\n"
             )
             class_precision = self.details_dict["class_precision"]
             class_recall = self.details_dict["class_recall"]
             class_valid = self.details_dict["class_valid"]
             class_invalid = self.details_dict["class_invalid"]
-            class_map = self.map_dict["class_map"]
-            class_roc = self.roc_dict["class_roc"]
+            class_pr_auc = self.pr_auc_dict["class_pr_auc"]
+            class_roc_auc = self.roc_auc_dict["class_roc_auc"]
 
             for i, class_code in enumerate(self.annotated_classes):
                 annotations = self.y_true_annotated_df[class_code].sum()
@@ -506,18 +508,18 @@ class PerMinuteTester(BaseTester):
                 valid = class_valid[i]  # TP seconds
                 invalid = class_invalid[i]  # FP seconds
 
-                if class_code in class_map:
-                    map_score = class_map[class_code]
+                if class_code in class_pr_auc:
+                    pr_auc_score = class_pr_auc[class_code]
                 else:
-                    map_score = 0
+                    pr_auc_score = 0
 
-                if class_code in class_roc:
-                    roc_score = class_roc[class_code]
+                if class_code in class_roc_auc:
+                    roc_auc_score = class_roc_auc[class_code]
                 else:
-                    roc_score = 0
+                    roc_auc_score = 0
 
                 file.write(
-                    f"{class_code},{map_score:.3f},{roc_score:.3f},{precision:.3f},{recall:.3f},{annotations},{valid},{invalid}\n"
+                    f"{class_code},{pr_auc_score:.3f},{roc_auc_score:.3f},{precision:.3f},{recall:.3f},{annotations},{valid},{invalid}\n"
                 )
 
         # calculate and output details per non-annotated class
