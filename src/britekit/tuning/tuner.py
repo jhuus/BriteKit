@@ -3,6 +3,7 @@ from pathlib import Path
 import random
 import re
 import tempfile
+from typing import Any, Optional
 
 import numpy as np
 
@@ -29,12 +30,11 @@ class Tuner:
 
     def __init__(
         self,
-        recording_dir,
-        annotation_path,
-        train_log_dir,
-        trained_class_codes,
-        metric,
-        param_space,
+        recording_dir: str,
+        annotation_path: str,
+        train_log_dir: str,
+        metric: str,
+        param_space: Optional[Any],
         num_trials: int = 0,
         num_runs: int = 1,
     ):
@@ -43,25 +43,29 @@ class Tuner:
         self.recording_dir = recording_dir
         self.annotation_path = annotation_path
         self.train_log_dir = train_log_dir
-        self.trained_class_codes = trained_class_codes
-        self.metric = metric
         self.param_space = param_space
         self.num_trials = num_trials
         self.num_runs = num_runs
 
-        if self.metric not in {
-            "macro_map",
-            "micro_map_annotated",
-            "micro_map_trained",
-            "combined_map_annotated",
-            "combined_map_trained",
-            "macro_roc",
-            "micro_roc_annotated",
-            "micro_roc_trained",
-            "combined_roc_annotated",
-            "combined_roc_trained",
-        }:
+        # lists to track and report all scores
+        self.macro_pr_scores = []
+        self.micro_pr_scores = []
+        self.macro_roc_scores = []
+        self.micro_roc_scores = []
+
+        # map short metric name to full name
+        metric_dict = {
+            "macro_pr": "macro_pr_auc",
+            "micro_pr": "micro_pr_auc_trained",
+            "macro_roc": "macro_roc_auc",
+            "micro_roc": "micro_roc_auc_trained",
+        }
+
+        if metric not in metric_dict:
             raise InputError(f"Invalid metric: {self.metric}")
+
+        self.metric = metric_dict[metric]
+        util.echo(f"Using metric {metric} (full name = {self.metric})")
 
     def _get_values(self, param_def):
         """
@@ -165,7 +169,6 @@ class Tuner:
                 )
 
                 if self.num_runs > 1:
-                    np.set_printoptions(precision=4, suppress=True)
                     util.echo(f"*** scores={scores}, stdev={np.std(scores):.4f}")
                     util.echo(
                         f"*** best scores={self.best_scores}, stdev={np.std(self.best_scores):.4f}"
@@ -246,17 +249,24 @@ class Tuner:
                 inference_output_dir,
                 output_dir,
                 self.cfg.infer.min_score,
-                self.trained_class_codes,
             )
             tester.initialize()
 
-            if "_map" in self.metric:
-                stats = tester.get_pr_auc_stats()
+            pr_stats = tester.get_pr_auc_stats()
+            roc_stats = tester.get_roc_auc_stats()
+
+            self.macro_pr_scores.append(pr_stats['macro_pr_auc'])
+            self.micro_pr_scores.append(pr_stats['micro_pr_auc_trained'])
+            self.macro_roc_scores.append(roc_stats['macro_roc_auc'])
+            self.micro_roc_scores.append(roc_stats['micro_roc_auc_trained'])
+
+            if "_pr" in self.metric:
+                score = pr_stats[self.metric]
             else:
-                stats = tester.get_roc_auc_stats()
+                score = roc_stats[self.metric]
 
         self.fn_cfg.echo = echo  # restore console output
-        return stats[self.metric]
+        return score
 
     def run(self):
         """
@@ -264,11 +274,33 @@ class Tuner:
         """
         self.best_score = float("-inf")
         self.best_params = None
+        np.set_printoptions(precision=4, suppress=True)
 
-        if self.num_trials == 0:
+        if self.param_space is None:
+            # just loop with the base config
+            scores = self._get_scores()
+            util.echo(f"*** Scores = {scores}")
+            util.echo(f"*** Average = {scores.mean():.4f}, Std Dev = {scores.std():.4f} ")
+        elif self.num_trials == 0:
             # num_trials = 0 means do exhaustive search
             self._recursive_trials(0, {})
         else:
             self._random_trials()
+
+        # Print all the stats
+        macro_pr_scores = np.array(self.macro_pr_scores)
+        micro_pr_scores = np.array(self.micro_pr_scores)
+        macro_roc_scores = np.array(self.macro_roc_scores)
+        micro_roc_scores = np.array(self.micro_roc_scores)
+
+        util.echo()
+        util.echo(f"Macro PR-AUC scores = {macro_pr_scores}")
+        util.echo(f"Macro PR-AUC mean = {macro_pr_scores.mean():.4f}, stdev = {macro_pr_scores.std():.4f}")
+        util.echo(f"Micro PR-AUC scores = {micro_pr_scores}")
+        util.echo(f"Micro PR-AUC mean = {micro_pr_scores.mean():.4f}, stdev = {micro_pr_scores.std():.4f}")
+        util.echo(f"Macro ROC-AUC scores = {macro_roc_scores}")
+        util.echo(f"Macro ROC-AUC mean = {macro_roc_scores.mean():.4f}, stdev = {macro_roc_scores.std():.4f}")
+        util.echo(f"Micro ROC-AUC scores = {micro_roc_scores}")
+        util.echo(f"Micro ROC-AUC mean = {micro_roc_scores.mean():.4f}, stdev = {micro_roc_scores.std():.4f}")
 
         return self.best_score, self.best_params

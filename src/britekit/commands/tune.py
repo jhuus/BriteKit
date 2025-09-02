@@ -1,5 +1,6 @@
 from pathlib import Path
 import time
+from typing import Optional
 import yaml
 
 import click
@@ -12,9 +13,8 @@ from britekit.tuning.tuner import Tuner
 
 def tune_impl(
     cfg_path: str,
-    param_path: str,
+    param_path: Optional[str],
     annotations_path: str,
-    class_csv_path: str,
     metric: str,
     recordings_path: str,
     train_log_path: str,
@@ -42,9 +42,8 @@ def tune_impl(
 
     Args:
         cfg_path (str): Path to YAML file defining configuration overrides.
-        param_path (str): Path to YAML file defining hyperparameters to tune and their search space.
+        param_path (str, optional): Path to YAML file defining hyperparameters to tune and their search space.
         annotations_path (str): Path to CSV file containing ground truth annotations.
-        class_csv_path (str): Path to CSV file listing classes included in training.
         metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
         recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
         train_log_path (str, optional): Training log directory. Defaults to "logs/fold-0".
@@ -56,35 +55,33 @@ def tune_impl(
     fn_cfg.echo = click.echo
 
     try:
-        df = pd.read_csv(class_csv_path)
-        if "Code" not in df:
-            click.echo(f'Error: column "Code" not found in {class_csv_path}.')
-            quit()
-
-        trained_species_codes = df["Code"].to_list()
         if not recordings_path:
             recordings_path = str(Path(annotations_path).parent)
 
         if not train_log_path:
             train_log_path = str(Path("logs") / "fold-0")
 
-        with open(param_path) as input_file:
-            param_space = yaml.safe_load(input_file)
+        if param_path is not None:
+            with open(param_path) as input_file:
+                param_space = yaml.safe_load(input_file)
+        else:
+            param_space = None
 
         start_time = time.time()
         tuner = Tuner(
             recordings_path,
             annotations_path,
             train_log_path,
-            trained_species_codes,
             metric,
             param_space,
             num_trials,
             num_runs,
         )
         best_score, best_params = tuner.run()
-        click.echo(f"\nBest score = {best_score:.4f}")
-        click.echo(f"Best params = {best_params}")
+        if best_params:
+            click.echo(f"\nBest score = {best_score:.4f}")
+            click.echo(f"Best params = {best_params}")
+
         elapsed_time = format_elapsed_time(start_time, time.time())
         click.echo(f"Elapsed time = {elapsed_time}")
 
@@ -109,7 +106,7 @@ def tune_impl(
     "--param",
     "param_path",
     type=click.Path(exists=True),
-    required=True,
+    default=None,
     help="Path to YAML file defining hyperparameters to tune.",
 )
 @click.option(
@@ -121,32 +118,19 @@ def tune_impl(
     help="Path to CSV file containing annotations or ground truth).",
 )
 @click.option(
-    "--classes",
-    "class_csv_path",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False),
-    required=True,
-    help="Path to CSV listing classes included in training.",
-)
-@click.option(
     "-m",
     "--metric",
     "metric",
     type=click.Choice(
         [
-            "macro_map",
-            "micro_map_annotated",
-            "micro_map_trained",
-            "combined_map_annotated",
-            "combined_map_trained",
+            "macro_pr",
+            "micro_pr",
             "macro_roc",
-            "micro_roc_annotated",
-            "micro_roc_trained",
-            "combined_roc_annotated",
-            "combined_roc_trained",
+            "micro_roc",
         ]
     ),
-    default="combined_roc_trained",
-    help="Metric used to compare runs.",
+    default="micro_roc",
+    help="Metric used to compare runs. Macro-averaging uses annotated classes only, but micro-averaging uses all classes.",
 )
 @click.option(
     "-r",
@@ -177,9 +161,8 @@ def tune_impl(
 )
 def tune_cmd(
     cfg_path: str,
-    param_path: str,
+    param_path: Optional[str],
     annotations_path: str,
-    class_csv_path: str,
     metric: str,
     recordings_path: str,
     train_log_path: str,
@@ -190,7 +173,6 @@ def tune_cmd(
         cfg_path,
         param_path,
         annotations_path,
-        class_csv_path,
         metric,
         recordings_path,
         train_log_path,
