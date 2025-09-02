@@ -53,7 +53,6 @@ class PerSegmentTester(BaseTester):
         label_dir: str,
         output_dir: str,
         threshold: float,
-        trained_classes: list,
         calibrate: bool = False,
         cutoff: float = 0.6,
         coef: Optional[float] = None,
@@ -70,8 +69,6 @@ class PerSegmentTester(BaseTester):
         self.label_dir = label_dir
         self.output_dir = output_dir
         self.threshold = threshold
-        self.trained_classes = sorted(trained_classes)
-        self.trained_class_set = set(trained_classes)
         self.calibrate = calibrate
         self.calibration_cutoff = cutoff
         self.coefficient = coef
@@ -733,12 +730,11 @@ class PerSegmentTester(BaseTester):
         if self.output_dir and not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
+        util.echo("Initializing")
+        self.get_labels(self.label_dir)
         self._get_recording_info()
         self.get_annotations()
 
-        # initialize y_true and y_pred and save them as CSV files
-        util.echo("Initializing")
-        self.get_labels(self.label_dir)
         self._init_y_true()
         self.init_y_pred(
             segments_per_recording=self.segments_per_recording, use_max_score=False

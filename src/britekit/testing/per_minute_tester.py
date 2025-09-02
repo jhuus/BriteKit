@@ -41,7 +41,6 @@ class PerMinuteTester(BaseTester):
         label_dir (str): Directory containing Audacity labels.
         output_dir (str): Output directory, where reports will be written.
         threshold (float): Score threshold for precision/recall reporting.
-        trained_classes (list): List of trained class codes.
         gen_pr_table (bool, optional): If true, generate a PR table, which may be slow (default = False).
     """
 
@@ -52,7 +51,6 @@ class PerMinuteTester(BaseTester):
         label_dir: str,
         output_dir: str,
         threshold: float,
-        trained_classes: list,
         gen_pr_table: bool = False,
     ):
         """
@@ -66,8 +64,6 @@ class PerMinuteTester(BaseTester):
         self.label_dir = label_dir
         self.output_dir = output_dir
         self.threshold = threshold
-        self.trained_classes = sorted(trained_classes)
-        self.trained_class_set = set(trained_classes)
         self.gen_pr_table = gen_pr_table
 
         self.cfg, self.fn_cfg = get_config()
@@ -552,11 +548,10 @@ class PerMinuteTester(BaseTester):
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        self.get_annotations()
-
         # initialize y_true and y_pred and save them as CSV files
         util.echo("Initializing")
         self.get_labels(self.label_dir, segment_len=60, overlap=0)
+        self.get_annotations()
         self._init_y_true()
         self.init_y_pred(segments_per_recording=self.segments_per_recording)
         self.convert_to_numpy()

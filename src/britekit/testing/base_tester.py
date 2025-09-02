@@ -96,6 +96,9 @@ class BaseTester:
         # get label info from CSV or text files into a dataframe
         self.label_df = util.inference_output_to_dataframe(label_dir)
         self.prediction_scores = self.label_df["score"]
+        trained_classes = self.label_df["name"].tolist()
+        self.trained_class_set = set(trained_classes)
+        self.trained_classes = sorted(list(self.trained_class_set))
 
         # create list of label objects per recording
         self.labels_per_recording = {}

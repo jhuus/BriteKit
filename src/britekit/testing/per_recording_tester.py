@@ -31,7 +31,6 @@ class PerRecordingTester(BaseTester):
         label_dir (str): Directory containing Audacity labels.
         output_dir (str): Output directory, where reports will be written.
         threshold (float): Score threshold for precision/recall reporting.
-        trained_classes (list): List of trained class codes.
         tp_secs_at_precision (float, optional): Granular recall cannot be calculated with per-recording annotations,
         but reporting TP seconds at this precision is a useful proxy (default=.95).
     """
@@ -43,7 +42,6 @@ class PerRecordingTester(BaseTester):
         label_dir: str,
         output_dir: str,
         threshold: float,
-        trained_classes: list,
         tp_secs_at_precision: float = 0.95,
     ):
         """
@@ -57,8 +55,6 @@ class PerRecordingTester(BaseTester):
         self.label_dir = label_dir
         self.output_dir = output_dir
         self.threshold = threshold
-        self.trained_classes = sorted(trained_classes)
-        self.trained_class_set = set(trained_classes)
         self.tp_secs_at_precision = tp_secs_at_precision
         self.per_recording = True
 
@@ -439,13 +435,10 @@ class PerRecordingTester(BaseTester):
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        self.get_annotations()
-
         # initialize y_true and y_pred and save them as CSV files
         util.echo("Initializing")
-        self.get_labels(
-            self.label_dir
-        )  # read labels first to determine segment_len and overlap
+        self.get_labels(self.label_dir)
+        self.get_annotations()
         self._init_y_true()
         self._init_y_pred()
         self.convert_to_numpy()

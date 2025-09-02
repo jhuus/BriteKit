@@ -517,7 +517,6 @@ def rpt_test_impl(
     annotations_path: str,
     label_dir: str,
     output_path: str,
-    class_csv_path: str,
     recordings_path: Optional[str],
     min_score: Optional[float],
     precision: float,
@@ -540,7 +539,6 @@ def rpt_test_impl(
         annotations_path (str): Path to CSV file containing ground truth annotations.
         label_dir (str): Directory containing model prediction labels (Audacity format).
         output_path (str): Directory where test reports will be saved.
-        class_csv_path (str): Path to CSV file listing classes included in training.
         recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
         min_score (float, optional): Provide detailed reports for this confidence threshold.
         precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
@@ -549,13 +547,6 @@ def rpt_test_impl(
     fn_cfg.echo = click.echo
 
     try:
-        # We could get class codes from the model, but then we'd need a model path
-        df = pd.read_csv(class_csv_path)
-        if "Code" not in df:
-            click.echo(f'Error: column "Code" not found in {class_csv_path}.')
-            quit()
-
-        trained_class_codes = df["Code"].to_list()
         if not recordings_path:
             recordings_path = str(Path(annotations_path).parent)
 
@@ -578,7 +569,6 @@ def rpt_test_impl(
                 labels_path,
                 output_path,
                 min_score,
-                trained_class_codes,
                 precision,
             ).run()
         elif granularity.startswith("min"):
@@ -588,7 +578,6 @@ def rpt_test_impl(
                 labels_path,
                 output_path,
                 min_score,
-                trained_class_codes,
             ).run()
         elif granularity.startswith("seg"):
             PerSegmentTester(
@@ -597,7 +586,6 @@ def rpt_test_impl(
                 labels_path,
                 output_path,
                 min_score,
-                trained_class_codes,
             ).run()
         else:
             click.echo(
@@ -654,13 +642,6 @@ def rpt_test_impl(
     help="Path to output directory.",
 )
 @click.option(
-    "--classes",
-    "class_csv_path",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False),
-    required=True,
-    help="Path to CSV listing classes included in training.",
-)
-@click.option(
     "-r",
     "--recordings",
     "recordings_path",
@@ -689,7 +670,6 @@ def rpt_test_cmd(
     annotations_path: str,
     label_dir: str,
     output_path: str,
-    class_csv_path: str,
     recordings_path: Optional[str],
     min_score: Optional[float],
     precision: float,
@@ -700,7 +680,6 @@ def rpt_test_cmd(
         annotations_path,
         label_dir,
         output_path,
-        class_csv_path,
         recordings_path,
         min_score,
         precision,
