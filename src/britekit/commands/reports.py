@@ -233,9 +233,9 @@ def rpt_epochs_impl(
     recording_dir = str(Path(annotations_path).parent)
 
     # process each ckpt and save the scores
-    max_map_score, max_map_epoch = 0, 0
+    max_pr_score, max_pr_epoch = 0, 0
     max_roc_score, max_roc_epoch = 0, 0
-    map_scores = []
+    pr_scores = []
     roc_scores = []
     fn_cfg.echo = None  # suppress output from Analyzer and PerSegmentTester
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -265,15 +265,15 @@ def rpt_epochs_impl(
             )
             tester.initialize()
 
-            map_stats = tester.get_pr_auc_stats()
-            map_score = map_stats["macro_map"]
-            map_scores.append(map_score)
-            if map_score > max_map_score:
-                max_map_score = map_score
-                max_map_epoch = epoch_num
+            pr_stats = tester.get_pr_auc_stats()
+            pr_score = pr_stats["macro_pr_auc"]
+            pr_scores.append(pr_score)
+            if pr_score > max_pr_score:
+                max_pr_score = pr_score
+                max_pr_epoch = epoch_num
 
             roc_stats = tester.get_roc_auc_stats()
-            roc_score = roc_stats["macro_roc"]
+            roc_score = roc_stats["macro_roc_auc"]
             roc_scores.append(roc_score)
             if roc_score > max_roc_score:
                 max_roc_score = roc_score
@@ -284,22 +284,22 @@ def rpt_epochs_impl(
     # Save CSV
     df = pd.DataFrame()
     df["epoch"] = epoch_nums
-    df["MAP"] = map_scores
-    df["ROC"] = roc_scores
+    df["PR-AUC"] = pr_scores
+    df["ROC-AUC"] = roc_scores
     csv_path = str(Path(output_path) / "training_scores.csv")
     df.to_csv(csv_path, index=False, float_format="%.3f")
 
-    # Plot MAP Score with a solid line
+    # Plot PR-AUC Score with a solid line
     plt.figure(figsize=(8, 6))
-    plt.plot(epoch_nums, map_scores, linestyle="-", marker="o", label="MAP Score")
+    plt.plot(epoch_nums, pr_scores, linestyle="-", marker="o", label="PR-AUC Score")
 
-    # Plot ROC Score with a dashed line
-    plt.plot(epoch_nums, roc_scores, linestyle="--", marker="s", label="ROC Score")
+    # Plot ROC-AUC Score with a dashed line
+    plt.plot(epoch_nums, roc_scores, linestyle="--", marker="s", label="ROC-AUC Score")
 
     # Labels and title
     plt.xlabel("Epoch #")
     plt.ylabel("Score")
-    plt.title("Training Progress: MAP and ROC")
+    plt.title("Training Progress: PR-AUC and ROC-AUC")
 
     # Force integer ticks on the x-axis
     ax = plt.gca()
@@ -313,8 +313,8 @@ def rpt_epochs_impl(
     plot_path = str(Path(output_path) / "training_scores.jpeg")
     plt.savefig(plot_path, dpi=300, bbox_inches="tight")
 
-    click.echo(f"Maximum MAP score = {max_map_score:.3f} at epoch {max_map_epoch}")
-    click.echo(f"Maximum ROC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
+    click.echo(f"Maximum PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}")
+    click.echo(f"Maximum ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
     click.echo(f"See plot at {plot_path}")
 
 
