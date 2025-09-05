@@ -302,12 +302,16 @@ class PerRecordingTester(BaseTester):
         rpt.append(
             "value, especially if the recordings are of different durations.\n\n"
         )
-        rpt.append(f"Macro-averaged PR-AUC score = {self.map_dict['macro_pr_auc']:.4f}\n")
+        rpt.append(
+            f"Macro-averaged PR-AUC score = {self.map_dict['macro_pr_auc']:.4f}\n"
+        )
         rpt.append(
             f"Micro-averaged PR-AUC score = {self.map_dict['micro_pr_auc_annotated']:.4f}\n"
         )
 
-        rpt.append(f"Macro-averaged ROC-AUC score = {self.roc_dict['macro_roc_auc']:.4f}\n")
+        rpt.append(
+            f"Macro-averaged ROC-AUC score = {self.roc_dict['macro_roc_auc']:.4f}\n"
+        )
         rpt.append(
             f"Micro-averaged ROC-AUC score = {self.roc_dict['micro_roc_auc_annotated']:.4f}\n"
         )

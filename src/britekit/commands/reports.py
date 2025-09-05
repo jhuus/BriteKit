@@ -14,7 +14,6 @@ from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
 from britekit.core.util import inference_output_to_dataframe, cli_help_from_doc
-from britekit.models.model_loader import load_from_checkpoint
 from britekit.testing.per_minute_tester import PerMinuteTester
 from britekit.testing.per_recording_tester import PerRecordingTester
 from britekit.testing.per_segment_tester import PerSegmentTester
@@ -228,10 +227,7 @@ def rpt_epochs_impl(
         ckpt_num = int(stem[index + 2 :])
         epoch_to_ckpt[ckpt_num] = ckpt_path
 
-    # get class codes from the first model
     epoch_nums = sorted(epoch_to_ckpt)
-    model = load_from_checkpoint(epoch_to_ckpt[epoch_nums[0]])
-    class_codes = model.train_class_codes
 
     # assume recordings are in the same directory as annotations for now
     recording_dir = str(Path(annotations_path).parent)
@@ -266,7 +262,6 @@ def rpt_epochs_impl(
                 inference_output_dir,
                 temp_dir,
                 threshold=0.8,
-                trained_classes=class_codes,
             )
             tester.initialize()
 

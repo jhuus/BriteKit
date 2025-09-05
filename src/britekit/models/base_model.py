@@ -182,19 +182,11 @@ class BaseModel(pl.LightningModule):
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
-        pr_auc = metrics.average_precision_score(
-            y.cpu(), preds.cpu(), average="micro"
-        )
-        roc_auc = metrics.roc_auc_score(
-            y.cpu(), preds.cpu(), average="micro"
-        )
+        pr_auc = metrics.average_precision_score(y.cpu(), preds.cpu(), average="micro")
+        roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
 
-        self.log(
-            "val_pr_auc", pr_auc, on_step=False, on_epoch=True, prog_bar=True
-        )
-        self.log(
-            "val_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True
-        )
+        self.log("val_pr_auc", pr_auc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import random
 import re
 import tempfile
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import numpy as np
 
@@ -48,10 +48,10 @@ class Tuner:
         self.num_runs = num_runs
 
         # lists to track and report all scores
-        self.macro_pr_scores = []
-        self.micro_pr_scores = []
-        self.macro_roc_scores = []
-        self.micro_roc_scores = []
+        self.macro_pr_scores: List[float] = []
+        self.micro_pr_scores: List[float] = []
+        self.macro_roc_scores: List[float] = []
+        self.micro_roc_scores: List[float] = []
 
         # map short metric name to full name
         metric_dict = {
@@ -62,7 +62,7 @@ class Tuner:
         }
 
         if metric not in metric_dict:
-            raise InputError(f"Invalid metric: {self.metric}")
+            raise InputError(f"Invalid metric: {metric}")
 
         self.metric = metric_dict[metric]
         util.echo(f"Using metric {metric} (full name = {self.metric})")
@@ -255,10 +255,10 @@ class Tuner:
             pr_stats = tester.get_pr_auc_stats()
             roc_stats = tester.get_roc_auc_stats()
 
-            self.macro_pr_scores.append(pr_stats['macro_pr_auc'])
-            self.micro_pr_scores.append(pr_stats['micro_pr_auc_trained'])
-            self.macro_roc_scores.append(roc_stats['macro_roc_auc'])
-            self.micro_roc_scores.append(roc_stats['micro_roc_auc_trained'])
+            self.macro_pr_scores.append(pr_stats["macro_pr_auc"])
+            self.micro_pr_scores.append(pr_stats["micro_pr_auc_trained"])
+            self.macro_roc_scores.append(roc_stats["macro_roc_auc"])
+            self.micro_roc_scores.append(roc_stats["micro_roc_auc_trained"])
 
             if "_pr" in self.metric:
                 score = pr_stats[self.metric]
@@ -280,7 +280,9 @@ class Tuner:
             # just loop with the base config
             scores = self._get_scores()
             util.echo(f"*** Scores = {scores}")
-            util.echo(f"*** Average = {scores.mean():.4f}, Std Dev = {scores.std():.4f} ")
+            util.echo(
+                f"*** Average = {scores.mean():.4f}, Std Dev = {scores.std():.4f} "
+            )
         elif self.num_trials == 0:
             # num_trials = 0 means do exhaustive search
             self._recursive_trials(0, {})
@@ -295,12 +297,20 @@ class Tuner:
 
         util.echo()
         util.echo(f"Macro PR-AUC scores = {macro_pr_scores}")
-        util.echo(f"Macro PR-AUC mean = {macro_pr_scores.mean():.4f}, stdev = {macro_pr_scores.std():.4f}")
+        util.echo(
+            f"Macro PR-AUC mean = {macro_pr_scores.mean():.4f}, stdev = {macro_pr_scores.std():.4f}"
+        )
         util.echo(f"Micro PR-AUC scores = {micro_pr_scores}")
-        util.echo(f"Micro PR-AUC mean = {micro_pr_scores.mean():.4f}, stdev = {micro_pr_scores.std():.4f}")
+        util.echo(
+            f"Micro PR-AUC mean = {micro_pr_scores.mean():.4f}, stdev = {micro_pr_scores.std():.4f}"
+        )
         util.echo(f"Macro ROC-AUC scores = {macro_roc_scores}")
-        util.echo(f"Macro ROC-AUC mean = {macro_roc_scores.mean():.4f}, stdev = {macro_roc_scores.std():.4f}")
+        util.echo(
+            f"Macro ROC-AUC mean = {macro_roc_scores.mean():.4f}, stdev = {macro_roc_scores.std():.4f}"
+        )
         util.echo(f"Micro ROC-AUC scores = {micro_roc_scores}")
-        util.echo(f"Micro ROC-AUC mean = {micro_roc_scores.mean():.4f}, stdev = {micro_roc_scores.std():.4f}")
+        util.echo(
+            f"Micro ROC-AUC mean = {micro_roc_scores.mean():.4f}, stdev = {micro_roc_scores.std():.4f}"
+        )
 
         return self.best_score, self.best_params
