@@ -6,7 +6,7 @@ from typing import Callable, Optional
 class Audio:
     spec_duration: float = 5.0  # spectrogram duration in seconds
     spec_height: int = 128  # spectrogram height
-    spec_width: int = 500  # spectrogram width
+    spec_width: int = 480  # spectrogram width (divisible by 5 and 32)
 
     # window length is specified in seconds,
     # to retain temporal and frequency resolution

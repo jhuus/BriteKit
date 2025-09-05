@@ -48,6 +48,9 @@ class DlaModel(BaseModel):
             in_chans=1, num_classes=self.num_classes, **config, **kwargs
         )
 
+        self.head = nn.Identity()
+
+        """
         if head_type is None:
             self.head = nn.Sequential(
                 copy.deepcopy(self.backbone.global_pool),
@@ -69,6 +72,7 @@ class DlaModel(BaseModel):
         self.backbone.head_drop = nn.Identity()
         self.backbone.fc = nn.Identity()
         self.backbone.flatten = nn.Identity()
+        """
 
 
 # Model size is most affected by number of classes for smaller models
