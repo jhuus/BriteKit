@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import time
 from typing import Optional
@@ -13,6 +14,7 @@ from britekit.core.tuner import Tuner
 def tune_impl(
     cfg_path: str,
     param_path: Optional[str],
+    output_path: str,
     annotations_path: str,
     metric: str,
     recordings_path: str,
@@ -45,6 +47,7 @@ def tune_impl(
     Args:
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
         param_path (str, optional): Path to YAML file defining hyperparameters to tune and their search space.
+        output_path (str): Directory where reports will be saved.
         annotations_path (str): Path to CSV file containing ground truth annotations.
         metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
         recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
@@ -66,6 +69,9 @@ def tune_impl(
             )
             return
 
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+
         if not recordings_path:
             recordings_path = str(Path(annotations_path).parent)
 
@@ -81,6 +87,7 @@ def tune_impl(
         start_time = time.time()
         tuner = Tuner(
             recordings_path,
+            output_path,
             annotations_path,
             train_log_path,
             metric,
@@ -95,6 +102,7 @@ def tune_impl(
         if best_params:
             click.echo(f"\nBest score = {best_score:.4f}")
             click.echo(f"Best params = {best_params}")
+            click.echo(f"See reports in {output_path}")
 
         elapsed_time = format_elapsed_time(start_time, time.time())
         click.echo(f"Elapsed time = {elapsed_time}")
@@ -122,6 +130,14 @@ def tune_impl(
     type=click.Path(exists=True),
     default=None,
     help="Path to YAML file defining hyperparameters to tune.",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=click.Path(file_okay=False, dir_okay=True),
+    required=True,
+    help="Path to output directory.",
 )
 @click.option(
     "-a",
@@ -194,6 +210,7 @@ def tune_impl(
 def tune_cmd(
     cfg_path: str,
     param_path: Optional[str],
+    output_path: str,
     annotations_path: str,
     metric: str,
     recordings_path: str,
@@ -207,6 +224,7 @@ def tune_cmd(
     tune_impl(
         cfg_path,
         param_path,
+        output_path,
         annotations_path,
         metric,
         recordings_path,

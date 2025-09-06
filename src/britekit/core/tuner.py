@@ -1,11 +1,13 @@
+import copy
 import os
 from pathlib import Path
 import random
 import re
 import tempfile
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import numpy as np
+import pandas as pd
 
 from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
@@ -34,6 +36,7 @@ class Tuner:
     def __init__(
         self,
         recording_dir: str,
+        output_dir: str,
         annotation_path: str,
         train_log_dir: str,
         metric: str,
@@ -47,6 +50,7 @@ class Tuner:
         self.cfg, self.fn_cfg = get_config()
         self.original_seed = self.cfg.train.seed
         self.recording_dir = recording_dir
+        self.output_dir = output_dir
         self.annotation_path = annotation_path
         self.train_log_dir = train_log_dir
         self.param_space = param_space
@@ -75,12 +79,6 @@ class Tuner:
                 spec_group=self.spec_group,
             )
 
-        # lists to track and report all scores
-        self.macro_pr_scores: List[float] = []
-        self.micro_pr_scores: List[float] = []
-        self.macro_roc_scores: List[float] = []
-        self.micro_roc_scores: List[float] = []
-
         # map short metric name to full name
         metric_dict = {
             "macro_pr": "macro_pr_auc",
@@ -93,7 +91,7 @@ class Tuner:
             raise InputError(f"Invalid metric: {metric}")
 
         self.metric = metric_dict[metric]
-        util.echo(f"Using metric {metric} (full name = {self.metric})")
+        util.echo(f"Using metric {metric}")
 
     def _get_values(self, param_def):
         """
@@ -127,7 +125,7 @@ class Tuner:
         """
         name = param_def["name"]
 
-        util.echo(f"*** set {name}={value}")
+        util.echo(f"*** Set {name}={value}")
         if hasattr(self.cfg.train, name):
             setattr(self.cfg.train, name, value)
         elif hasattr(self.cfg.audio, name):
@@ -161,7 +159,7 @@ class Tuner:
             util.echo("Extracting spectrograms")
             self.reextractor.run(quiet=True)
             util.echo("Saving pickle file")
-            self.pickler.pickle()
+            self.pickler.pickle(quiet=True)
 
         scores = np.zeros(self.num_runs)
         for i in range(self.num_runs):
@@ -176,7 +174,7 @@ class Tuner:
             scores[i] = self._run_test()
 
             if self.num_runs > 1:
-                util.echo(f"*** current score={scores[i]:.4f}")
+                util.echo(f"*** Current score={scores[i]:.4f}")
 
         return scores
 
@@ -192,6 +190,7 @@ class Tuner:
         for value in values:
             params[param_def["name"]] = value
             self._set_value(param_def, value)
+            self.trial_metrics[self.trial_num]["params"] = copy.deepcopy(params)
 
             if start_index == len(self.param_space) - 1:
                 scores = self._get_scores()
@@ -201,16 +200,13 @@ class Tuner:
                     self.best_scores = scores
                     self.best_params = params.copy()
 
-                util.echo(f"*** score={score:.4f}, params={params}")
+                util.echo(f"*** Score={score:.4f}, params={params}, runs={scores}")
                 util.echo(
-                    f"*** best score={self.best_score:.4f}, best params={self.best_params}"
+                    f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
                 )
 
-                if self.num_runs > 1:
-                    util.echo(f"*** scores={scores}, stdev={np.std(scores):.4f}")
-                    util.echo(
-                        f"*** best scores={self.best_scores}, stdev={np.std(self.best_scores):.4f}"
-                    )
+                self.trial_num += 1
+                self.trial_metrics[self.trial_num] = {}
             else:
                 self._recursive_trials(start_index + 1, params)
 
@@ -231,8 +227,7 @@ class Tuner:
             return
 
         already_tried = set()
-        trial_num = 0
-        while trial_num < self.num_trials:
+        while self.trial_num < self.num_trials:
             trial = []
             for i in range(len(values)):
                 trial.append(random.randint(0, len(values[i]) - 1))
@@ -242,7 +237,8 @@ class Tuner:
                 continue  # try another one
 
             already_tried.add(trial_tuple)
-            trial_num += 1
+            self.trial_num += 1
+            self.trial_metrics[self.trial_num] = {}
 
             params = {}
             for i in range(len(values)):
@@ -250,15 +246,17 @@ class Tuner:
                 params[param_def["name"]] = values[i][trial[i]]
                 self._set_value(param_def, values[i][trial[i]])
 
+            self.trial_metrics[self.trial_num]["params"] = params
+
             scores = self._get_scores()
             score = scores.mean()
             if score > self.best_score:
                 self.best_score = score
                 self.best_params = params.copy()
 
-            util.echo(f"*** score={score:.4f}, params={params}")
+            util.echo(f"*** Score={score:.4f}, params={params}, runs={scores}")
             util.echo(
-                f"*** best score={self.best_score:.4f}, best params={self.best_params}"
+                f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
             )
 
     def _run_test(self):
@@ -293,10 +291,24 @@ class Tuner:
             pr_stats = tester.get_pr_auc_stats()
             roc_stats = tester.get_roc_auc_stats()
 
-            self.macro_pr_scores.append(pr_stats["macro_pr_auc"])
-            self.micro_pr_scores.append(pr_stats["micro_pr_auc_trained"])
-            self.macro_roc_scores.append(roc_stats["macro_roc_auc"])
-            self.micro_roc_scores.append(roc_stats["micro_roc_auc_trained"])
+            if "macro_pr_auc" not in self.trial_metrics[self.trial_num]:
+                self.trial_metrics[self.trial_num]["macro_pr_auc"] = []
+                self.trial_metrics[self.trial_num]["micro_pr_auc"] = []
+                self.trial_metrics[self.trial_num]["macro_roc_auc"] = []
+                self.trial_metrics[self.trial_num]["micro_roc_auc"] = []
+
+            self.trial_metrics[self.trial_num]["macro_pr_auc"].append(
+                pr_stats["macro_pr_auc"]
+            )
+            self.trial_metrics[self.trial_num]["micro_pr_auc"].append(
+                pr_stats["micro_pr_auc_trained"]
+            )
+            self.trial_metrics[self.trial_num]["macro_roc_auc"].append(
+                roc_stats["macro_roc_auc"]
+            )
+            self.trial_metrics[self.trial_num]["micro_roc_auc"].append(
+                roc_stats["micro_roc_auc_trained"]
+            )
 
             if "_pr" in self.metric:
                 score = pr_stats[self.metric]
@@ -309,10 +321,15 @@ class Tuner:
     def run(self):
         """
         Initiate the search and return the best score and best hyperparameter values.
+        A "trial" is a set of parameter values and a "run" is a training/inference run.
+        There may be multiple runs per trial, since results per run are non-deterministic.
         """
         self.best_score = float("-inf")
         self.best_params = None
-        np.set_printoptions(precision=4, suppress=True)
+        self.trial_num = 0
+        self.trial_metrics = {}  # metrics per trial
+        self.trial_metrics[0] = {}
+        np.set_printoptions(precision=4, floatmode="fixed", suppress=True)
 
         if self.param_space is None:
             # just loop with the base config
@@ -327,32 +344,48 @@ class Tuner:
         else:
             self._random_trials()
 
-        # Print all the stats
-        macro_pr_scores = np.array(self.macro_pr_scores)
-        micro_pr_scores = np.array(self.micro_pr_scores)
-        macro_roc_scores = np.array(self.macro_roc_scores)
-        micro_roc_scores = np.array(self.micro_roc_scores)
+        # write reports
+        trials = []
+        params = []
+        macro_pr_mean = []
+        micro_pr_mean = []
+        macro_roc_mean = []
+        micro_roc_mean = []
+        macro_pr_stdev = []
+        micro_pr_stdev = []
+        macro_roc_stdev = []
+        micro_roc_stdev = []
+        for trial_num in range(self.trial_num):
+            m = self.trial_metrics[trial_num]
+            trials.append(trial_num + 1)
+            params.append(m["params"])
+            macro_pr_mean.append(np.array(m["macro_pr_auc"]).mean())
+            micro_pr_mean.append(np.array(m["micro_pr_auc"]).mean())
+            macro_roc_mean.append(np.array(m["macro_roc_auc"]).mean())
+            micro_roc_mean.append(np.array(m["micro_roc_auc"]).mean())
 
-        util.echo()
-        util.echo(f"Macro PR-AUC scores = {macro_pr_scores}")
-        util.echo(
-            f"Macro PR-AUC mean = {macro_pr_scores.mean():.4f}, stdev = {macro_pr_scores.std():.4f}"
-        )
-        util.echo(f"Micro PR-AUC scores = {micro_pr_scores}")
-        util.echo(
-            f"Micro PR-AUC mean = {micro_pr_scores.mean():.4f}, stdev = {micro_pr_scores.std():.4f}"
-        )
-        util.echo(f"Macro ROC-AUC scores = {macro_roc_scores}")
-        util.echo(
-            f"Macro ROC-AUC mean = {macro_roc_scores.mean():.4f}, stdev = {macro_roc_scores.std():.4f}"
-        )
-        util.echo(f"Micro ROC-AUC scores = {micro_roc_scores}")
-        util.echo(
-            f"Micro ROC-AUC mean = {micro_roc_scores.mean():.4f}, stdev = {micro_roc_scores.std():.4f}"
-        )
+            macro_pr_stdev.append(np.array(m["macro_pr_auc"]).std())
+            micro_pr_stdev.append(np.array(m["micro_pr_auc"]).std())
+            macro_roc_stdev.append(np.array(m["macro_roc_auc"]).std())
+            micro_roc_stdev.append(np.array(m["micro_roc_auc"]).std())
 
+        df = pd.DataFrame()
+        df["trial_num"] = trials
+        df["params"] = params
+        df["macro_pr_auc (mean)"] = macro_pr_mean
+        df["macro_pr_auc (stdev)"] = macro_pr_stdev
+        df["micro_pr_auc (mean)"] = micro_pr_mean
+        df["micro_pr_auc (stdev)"] = micro_pr_stdev
+        df["macro_roc_auc (mean)"] = macro_roc_mean
+        df["macro_roc_auc (stdev)"] = macro_roc_stdev
+        df["micro_roc_auc (mean)"] = micro_roc_mean
+        df["micro_roc_auc (stdev)"] = micro_roc_stdev
+
+        csv_path = str(Path(self.output_dir) / "summary.csv")
+        df.to_csv(csv_path, index=False, float_format="%.4f")
+
+        # delete the temporary pickle file and spec_group, if needed
         if self.extract:
-            # delete the temporary pickle file and spec_group
             self.pickle_file.close()
 
             with TrainingDatabase(self.cfg.train.train_db) as db:
