@@ -7,7 +7,7 @@ import click
 
 from britekit.core.config_loader import get_config
 from britekit.core.util import format_elapsed_time, cli_help_from_doc
-from britekit.tuning.tuner import Tuner
+from britekit.core.tuner import Tuner
 
 
 def tune_impl(
