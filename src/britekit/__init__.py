@@ -24,6 +24,7 @@ from britekit.core.base_config import BaseConfig
 from britekit.core.pickler import Pickler
 from britekit.core.predictor import Predictor
 from britekit.core.trainer import Trainer
+from britekit.core.tuner import Tuner
 from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
 from britekit.occurrence_db.occurrence_data_provider import OccurrenceDataProvider
 from britekit.testing.per_minute_tester import PerMinuteTester
@@ -32,7 +33,6 @@ from britekit.testing.per_segment_tester import PerSegmentTester
 from britekit.training_db.extractor import Extractor
 from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
-from britekit.tuning.tuner import Tuner
 
 __all__ = [
     "__version__",
