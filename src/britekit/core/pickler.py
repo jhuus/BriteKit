@@ -48,7 +48,7 @@ class Pickler:
 
         self.db = TrainingDatabase(db_path)
 
-    def pickle(self):
+    def pickle(self, quiet=False):
         """Create the pickle file as specified."""
 
         # read DB and map class name to DB result
@@ -112,7 +112,9 @@ class Pickler:
                 random.shuffle(specs)
                 specs = specs[: self.max_per_class]
 
-            echo(f'Fetched {len(specs)} spectrograms for "{name}"')
+            if not quiet:
+                echo(f'Fetched {len(specs)} spectrograms for "{name}"')
+
             total_count += len(specs)
             if len(specs) == 0:
                 empty_classes.append(name)
@@ -127,7 +129,8 @@ class Pickler:
 
             raise InputError("Not all specified classes have spectrograms")
 
-        echo(f"Total # spectrograms = {total_count}")
+        if not quiet:
+            echo(f"Total # spectrograms = {total_count}")
 
         # create a dict from class name to index
         class_name_dict = {}
@@ -153,4 +156,6 @@ class Pickler:
 
         pickle_file = open(self.output_path, "wb")
         pickle.dump(pickle_dict, pickle_file)
-        echo(f'Saved data in "{self.output_path}"')
+
+        if not quiet:
+            echo(f'Saved data in "{self.output_path}"')

@@ -19,6 +19,9 @@ def tune_impl(
     train_log_path: str,
     num_trials: int,
     num_runs: int,
+    extract: bool,
+    skip_training: bool,
+    classes_path: Optional[str],
 ):
     """
     Find and print the best hyperparameter settings based on exhaustive or random search.
@@ -40,7 +43,7 @@ def tune_impl(
     The name defines a hyperparameter to tune, with given type, bounds and step size.
 
     Args:
-        cfg_path (str): Path to YAML file defining configuration overrides.
+        cfg_path (str, optional): Path to YAML file defining configuration overrides.
         param_path (str, optional): Path to YAML file defining hyperparameters to tune and their search space.
         annotations_path (str): Path to CSV file containing ground truth annotations.
         metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
@@ -48,12 +51,21 @@ def tune_impl(
         train_log_path (str, optional): Training log directory. Defaults to "logs/fold-0".
         num_trials (int): Number of random trials to run. If 0, performs exhaustive search.
         num_runs (int): Number of runs to average for each parameter combination. Default is 1.
+        extract (bool): Extract new spectrograms before training, to tune spectrogram parameters.
+        skip_training (bool): Iterate on inference only, using checkpoints from the last training run.
+        classes_path (str, optional): Path to CSV containing class names for extract option. Default is all classes.
     """
 
     _, fn_cfg = get_config(cfg_path)
     fn_cfg.echo = click.echo
 
     try:
+        if extract and skip_training:
+            click.echo(
+                "Performing spectrogram extract is incompatible with skipping training."
+            )
+            return
+
         if not recordings_path:
             recordings_path = str(Path(annotations_path).parent)
 
@@ -75,6 +87,9 @@ def tune_impl(
             param_space,
             num_trials,
             num_runs,
+            extract,
+            skip_training,
+            classes_path,
         )
         best_score, best_params = tuner.run()
         if best_params:
@@ -128,7 +143,7 @@ def tune_impl(
             "micro_roc",
         ]
     ),
-    default="micro_roc",
+    default="macro_roc",
     help="Metric used to compare runs. Macro-averaging uses annotated classes only, but micro-averaging uses all classes.",
 )
 @click.option(
@@ -158,6 +173,24 @@ def tune_impl(
     default=1,
     help="Use the average score of this many runs in each case. Default = 1.",
 )
+@click.option(
+    "--extract",
+    "extract",
+    is_flag=True,
+    help="Extract new spectrograms before training, to tune spectrogram parameters.",
+)
+@click.option(
+    "--notrain",
+    "skip_training",
+    is_flag=True,
+    help="Iterate on inference only, using checkpoints from the last training run.",
+)
+@click.option(
+    "--classes",
+    "classes_path",
+    required=False,
+    help="Path to CSV containing class names for extract option. Default is all classes.",
+)
 def tune_cmd(
     cfg_path: str,
     param_path: Optional[str],
@@ -167,6 +200,9 @@ def tune_cmd(
     train_log_path: str,
     num_trials: int,
     num_runs: int,
+    extract: bool,
+    skip_training: bool,
+    classes_path: Optional[str],
 ):
     tune_impl(
         cfg_path,
@@ -177,4 +213,7 @@ def tune_cmd(
         train_log_path,
         num_trials,
         num_runs,
+        extract,
+        skip_training,
+        classes_path,
     )

@@ -62,7 +62,7 @@ def pickle_impl(
     "--classes",
     "classes_path",
     required=False,
-    help="Path to CSV containing class names to pickle (optional). Default is all in database.",
+    help="Path to CSV containing class names to pickle (optional). Default is all classes.",
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."

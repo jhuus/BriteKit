@@ -10,9 +10,12 @@ import numpy as np
 from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
+from britekit.core.pickler import Pickler
+from britekit.core.reextractor import Reextractor
 from britekit.core.trainer import Trainer
 from britekit.core import util
 from britekit.testing.per_segment_tester import PerSegmentTester
+from britekit.training_db.training_db import TrainingDatabase
 
 
 def natural_key(s):
@@ -37,6 +40,9 @@ class Tuner:
         param_space: Optional[Any],
         num_trials: int = 0,
         num_runs: int = 1,
+        extract: bool = False,
+        skip_training: bool = False,
+        classes_path: Optional[str] = None,
     ):
         self.cfg, self.fn_cfg = get_config()
         self.original_seed = self.cfg.train.seed
@@ -46,6 +52,28 @@ class Tuner:
         self.param_space = param_space
         self.num_trials = num_trials
         self.num_runs = num_runs
+        self.extract = extract
+        self.skip_training = skip_training
+        self.classes_path = classes_path
+
+        if self.extract:
+            self.spec_group = "__temp__"
+            self.reextractor = Reextractor(
+                db_path=self.cfg.train.train_db,
+                class_name=None,
+                classes_path=self.classes_path,
+                check=False,
+                spec_group=self.spec_group,
+            )
+
+            self.pickle_file = tempfile.NamedTemporaryFile(mode="wb")
+            self.pickler = Pickler(
+                db_path=self.cfg.train.train_db,
+                output_path=self.pickle_file.name,
+                classes_path=self.classes_path,
+                max_per_class=None,
+                spec_group=self.spec_group,
+            )
 
         # lists to track and report all scores
         self.macro_pr_scores: List[float] = []
@@ -128,13 +156,23 @@ class Tuner:
                 raise InputError(f"Augmentation {param_def} not found")
 
     def _get_scores(self):
+        if self.extract:
+            # extract a new set of spectrograms to tune spectrogram parameters
+            util.echo("Extracting spectrograms")
+            self.reextractor.run(quiet=True)
+            util.echo("Saving pickle file")
+            self.pickler.pickle()
+
         scores = np.zeros(self.num_runs)
         for i in range(self.num_runs):
             # set different seed each run, but same seed each trial,
             # for variety across runs and stability across trials
             if self.original_seed is None:
                 self.cfg.train.seed = 100 + i
-            Trainer().run()
+
+            if not self.skip_training:
+                Trainer().run()
+
             scores[i] = self._run_test()
 
             if self.num_runs > 1:
@@ -234,10 +272,10 @@ class Tuner:
         )
         self.cfg.infer.min_score = 0
 
+        # suppress console output during inference and test analysis
         echo = self.fn_cfg.echo
-        self.fn_cfg.echo = (
-            None  # suppress console output during inference and test analysis
-        )
+        self.fn_cfg.echo = None
+
         label_dir = "tuning_labels"
         inference_output_dir = str(Path(self.recording_dir) / label_dir)
         Analyzer().run(self.recording_dir, inference_output_dir)
@@ -312,5 +350,14 @@ class Tuner:
         util.echo(
             f"Micro ROC-AUC mean = {micro_roc_scores.mean():.4f}, stdev = {micro_roc_scores.std():.4f}"
         )
+
+        if self.extract:
+            # delete the temporary pickle file and spec_group
+            self.pickle_file.close()
+
+            with TrainingDatabase(self.cfg.train.train_db) as db:
+                results = db.get_specgroup({"Name": self.spec_group})
+                if results:
+                    db.delete_specgroup({"ID": results[0].id})
 
         return self.best_score, self.best_params
