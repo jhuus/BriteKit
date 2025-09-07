@@ -318,6 +318,76 @@ class Tuner:
         self.fn_cfg.echo = echo  # restore console output
         return score
 
+    def _write_reports(self):
+        # create and write metrics-summary.csv
+        trials = []
+        params = []
+        macro_pr_mean = []
+        micro_pr_mean = []
+        macro_roc_mean = []
+        micro_roc_mean = []
+        macro_pr_stdev = []
+        micro_pr_stdev = []
+        macro_roc_stdev = []
+        micro_roc_stdev = []
+        for trial_num in range(self.trial_num):
+            m = self.trial_metrics[trial_num]
+            trials.append(trial_num + 1)
+            params.append(m["params"])
+            macro_pr_mean.append(np.array(m["macro_pr_auc"]).mean())
+            micro_pr_mean.append(np.array(m["micro_pr_auc"]).mean())
+            macro_roc_mean.append(np.array(m["macro_roc_auc"]).mean())
+            micro_roc_mean.append(np.array(m["micro_roc_auc"]).mean())
+
+            macro_pr_stdev.append(np.array(m["macro_pr_auc"]).std())
+            micro_pr_stdev.append(np.array(m["micro_pr_auc"]).std())
+            macro_roc_stdev.append(np.array(m["macro_roc_auc"]).std())
+            micro_roc_stdev.append(np.array(m["micro_roc_auc"]).std())
+
+        df = pd.DataFrame()
+        df["Trial #"] = trials
+        df["Params"] = params
+        df["Macro PR-AUC (mean)"] = macro_pr_mean
+        df["Macro PR-AUC (stdev)"] = macro_pr_stdev
+        df["Micro PR-AUC (mean)"] = micro_pr_mean
+        df["Micro PR-AUC (stdev)"] = micro_pr_stdev
+        df["Macro ROC-AUC (mean)"] = macro_roc_mean
+        df["Macro ROC-AUC (stdev)"] = macro_roc_stdev
+        df["Micro ROC-AUC (mean)"] = micro_roc_mean
+        df["Micro ROC-AUC (stdev)"] = micro_roc_stdev
+
+        csv_path = str(Path(self.output_dir) / "metrics-summary.csv")
+        df.to_csv(csv_path, index=False, float_format="%.4f")
+
+        # create and write metrics-details.csv
+        trials = []
+        runs = []
+        macro_pr = []
+        micro_pr = []
+        macro_roc = []
+        micro_roc = []
+        for trial_num in range(self.trial_num):
+            m = self.trial_metrics[trial_num]
+            for run_num in range(self.num_runs):
+                trials.append(trial_num + 1)
+                runs.append(run_num + 1)
+
+                macro_pr.append(m["macro_pr_auc"][run_num])
+                micro_pr.append(m["micro_pr_auc"][run_num])
+                macro_roc.append(m["macro_roc_auc"][run_num])
+                micro_roc.append(m["micro_roc_auc"][run_num])
+
+        df = pd.DataFrame()
+        df["Trial #"] = trials
+        df["Run #"] = runs
+        df["Macro PR-AUC"] = macro_pr
+        df["Micro PR-AUC"] = micro_pr
+        df["Macro ROC-AUC"] = macro_roc
+        df["Micro ROC-AUC"] = micro_roc
+
+        csv_path = str(Path(self.output_dir) / "metrics-details.csv")
+        df.to_csv(csv_path, index=False, float_format="%.4f")
+
     def run(self):
         """
         Initiate the search and return the best score and best hyperparameter values.
@@ -344,45 +414,7 @@ class Tuner:
         else:
             self._random_trials()
 
-        # write reports
-        trials = []
-        params = []
-        macro_pr_mean = []
-        micro_pr_mean = []
-        macro_roc_mean = []
-        micro_roc_mean = []
-        macro_pr_stdev = []
-        micro_pr_stdev = []
-        macro_roc_stdev = []
-        micro_roc_stdev = []
-        for trial_num in range(self.trial_num):
-            m = self.trial_metrics[trial_num]
-            trials.append(trial_num + 1)
-            params.append(m["params"])
-            macro_pr_mean.append(np.array(m["macro_pr_auc"]).mean())
-            micro_pr_mean.append(np.array(m["micro_pr_auc"]).mean())
-            macro_roc_mean.append(np.array(m["macro_roc_auc"]).mean())
-            micro_roc_mean.append(np.array(m["micro_roc_auc"]).mean())
-
-            macro_pr_stdev.append(np.array(m["macro_pr_auc"]).std())
-            micro_pr_stdev.append(np.array(m["micro_pr_auc"]).std())
-            macro_roc_stdev.append(np.array(m["macro_roc_auc"]).std())
-            micro_roc_stdev.append(np.array(m["micro_roc_auc"]).std())
-
-        df = pd.DataFrame()
-        df["trial_num"] = trials
-        df["params"] = params
-        df["macro_pr_auc (mean)"] = macro_pr_mean
-        df["macro_pr_auc (stdev)"] = macro_pr_stdev
-        df["micro_pr_auc (mean)"] = micro_pr_mean
-        df["micro_pr_auc (stdev)"] = micro_pr_stdev
-        df["macro_roc_auc (mean)"] = macro_roc_mean
-        df["macro_roc_auc (stdev)"] = macro_roc_stdev
-        df["micro_roc_auc (mean)"] = micro_roc_mean
-        df["micro_roc_auc (stdev)"] = micro_roc_stdev
-
-        csv_path = str(Path(self.output_dir) / "summary.csv")
-        df.to_csv(csv_path, index=False, float_format="%.4f")
+        self._write_reports()
 
         # delete the temporary pickle file and spec_group, if needed
         if self.extract:
