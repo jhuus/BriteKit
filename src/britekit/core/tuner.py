@@ -78,6 +78,7 @@ class Tuner:
                 max_per_class=None,
                 spec_group=self.spec_group,
             )
+            self.cfg.train.train_pickle = self.pickle_file.name
 
         # map short metric name to full name
         metric_dict = {
@@ -174,7 +175,9 @@ class Tuner:
             scores[i] = self._run_test()
 
             if self.num_runs > 1:
-                util.echo(f"*** Current score={scores[i]:.4f}")
+                util.echo(
+                    f"*** Current score={scores[i]:.4f} (trial {self.trial_num + 1}, run {i + 1} of {self.num_runs})"
+                )
 
         return scores
 
@@ -200,7 +203,7 @@ class Tuner:
                     self.best_scores = scores
                     self.best_params = params.copy()
 
-                util.echo(f"*** Score={score:.4f}, params={params}, runs={scores}")
+                util.echo(f"*** Trial score={score:.4f}, params={params}, runs={scores}")
                 util.echo(
                     f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
                 )
