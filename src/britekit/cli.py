@@ -69,3 +69,5 @@ cli.add_command(commands.tune)
 cli.add_command(commands.wav2mp3)
 
 cli.add_command(commands.xeno)
+
+cli.add_command(commands.youtube)

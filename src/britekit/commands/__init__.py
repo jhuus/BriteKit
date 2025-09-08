@@ -32,6 +32,7 @@ from .train import train_cmd, find_lr_cmd
 from .tune import tune_cmd
 from .wav2mp3 import wav2mp3_cmd
 from .xeno import xeno_cmd
+from .youtube import youtube_cmd
 
 # We want to expose them to the API as britekit.commands.analyze etc.
 # But MyPy gets confused when the function name matches the module name,
@@ -75,6 +76,7 @@ train = train_cmd
 tune = tune_cmd
 wav2mp3 = wav2mp3_cmd
 xeno = xeno_cmd
+youtube = youtube_cmd
 
 __all__ = [
     "add_cat",
@@ -116,4 +118,5 @@ __all__ = [
     "tune",
     "wav2mp3",
     "xeno",
+    "youtube",
 ]
