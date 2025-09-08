@@ -2,7 +2,7 @@
 ### add_cat
 **Function**  
 ```python
-add_cat_cmd(db_path, name)
+add_cat_cmd(db_path: Optional[str], name: str) -> None
 ```
 Add a category (class group) record to the training database.
 
@@ -20,7 +20,7 @@ Args:
 ### add_class
 **Function**  
 ```python
-add_class_cmd(db_path, category, name, code, alt_name, alt_code)
+add_class_cmd(db_path: Optional[str], category: str, name: str, code: str, alt_name: str, alt_code: str) -> None
 ```
 Add a class record to the training database.
 
@@ -42,7 +42,7 @@ Args:
 ### add_src
 **Function**  
 ```python
-add_src_cmd(db_path, name)
+add_src_cmd(db_path: Optional[str], name: str) -> None
 ```
 Add a source record to the training database.
 
@@ -60,7 +60,7 @@ Args:
 ### add_stype
 **Function**  
 ```python
-add_stype_cmd(db_path, name)
+add_stype_cmd(db_path: Optional[str], name: str) -> None
 ```
 Add a sound type record to the training database.
 
@@ -102,7 +102,7 @@ Args:
 ### audioset
 **Function**  
 ```python
-audioset_cmd(class_name: str, curated_csv_path: str, output_dir: str, max_downloads: int, sampling_rate: float, num_to_skip: int, do_report: bool)
+audioset_cmd(class_name: str, curated_csv_path: str, output_dir: str, max_downloads: int, sampling_rate: int, num_to_skip: int, do_report: bool, root_dir: str) -> None
 ```
 Download audio recordings from Google AudioSet.
 
@@ -123,6 +123,34 @@ Args:
 - `sampling_rate` *(float)* — Output sampling rate in Hz. Default is 32000.
 - `num_to_skip` *(int)* — Number of initial recordings to skip. Default is 0.
 - `do_report` *(bool)* — If True, generate a report on associated secondary classes instead of downloading.
+
+
+
+### calibrate
+**Function**  
+```python
+calibrate_cmd(cfg_path: str, annotations_path: str, label_dir: str, output_path: str, recordings_path: Optional[str], cutoff: float, coef: Optional[float] = None, inter: Optional[float] = None)
+```
+Calibrate model predictions using per-segment test results.
+
+This command generates calibration plots and analysis to assess how well
+model prediction scores align with actual probabilities. It compares
+predicted scores against ground truth annotations to determine if the
+model is overconfident or underconfident in its predictions.
+
+The calibration process helps improve model reliability by adjusting
+prediction scores to better reflect true probabilities.
+
+Args:
+
+- `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
+- `annotations_path` *(str)* — Path to CSV file containing ground truth annotations.
+- `label_dir` *(str)* — Directory containing model prediction labels (Audacity format).
+- `output_path` *(str)* — Directory where calibration reports will be saved.
+- `recordings_path` *(str, optional)* — Directory containing audio recordings. Defaults to annotations directory.
+- `cutoff` *(float)* — Ignore predictions below this threshold during calibration. Default is 0.4.
+- `coef` *(float, optional)* — Use this coefficient for the calibration plot.
+- `inter` *(float, optional)* — Use this intercept for the calibration plot.
 
 
 
@@ -185,35 +213,10 @@ Args:
 
 
 
-### copy_samples
-**Function**  
-```python
-copy_samples_cmd(dest: pathlib.Path, pattern: str, list_only: bool, overwrite: bool)
-```
-Copy packaged BriteKit sample YAML/CSV files to a destination directory.
-
-This command copies files from the built-in `britekit.samples` package
-(kept alongside the library code) into a folder you specify. You can filter
-by subpaths using a simple glob pattern and optionally do a dry-run list.
-
-Args:
-
-- `dest` *(Path)* — Directory to copy sample files into. Subdirectories are created as needed.
-- `pattern` *(str)* — Glob-like filter relative to the `samples/` root inside the package.
-- `Examples` — `"full/*.yaml"`, `"data/*.csv"`, or `"*"` for everything.
-- `list_only` *(bool)* — If True, only list files that match the pattern and exit.
-- `overwrite` *(bool)* — If True, overwrite files at the destination when they already exist.
-- `Examples` — britekit copy-samples --dest ./examples britekit copy-samples --dest ./examples --pattern 'data/*.csv' britekit copy-samples --dest ./examples --list
-
-Examples:
-    britekit copy-samples --dest ./examples
-    britekit copy-samples --dest ./examples --pattern 'data/*.csv'
-    britekit copy-samples --dest ./examples --list
-
 ### del_cat
 **Function**  
 ```python
-del_cat_cmd(db_path, name)
+del_cat_cmd(db_path: Optional[str], name: str) -> None
 ```
 Delete a category and all its associated data from the training database.
 
@@ -231,7 +234,7 @@ Args:
 ### del_class
 **Function**  
 ```python
-del_class_cmd(db_path, class_name)
+del_class_cmd(db_path: Optional[str], class_name: str) -> None
 ```
 Delete a class and all its associated data from the training database.
 
@@ -249,7 +252,7 @@ Args:
 ### del_rec
 **Function**  
 ```python
-del_rec_cmd(db_path, file_name)
+del_rec_cmd(db_path: Optional[str], file_name: str) -> None
 ```
 Delete a recording and all its spectrograms from the training database.
 
@@ -263,32 +266,49 @@ Args:
 
 
 
-### del_spec
+### del_seg
 **Function**  
 ```python
-del_spec_cmd(db_path, class_name, dir_path)
+del_seg_cmd(db_path: Optional[str], class_name: str, dir_path: str) -> None
 ```
-Delete spectrograms that correspond to images in a given directory.
+Delete segments that correspond to images in a given directory.
 
-This command parses image filenames to identify and delete corresponding spectrograms
+This command parses image filenames to identify and delete corresponding segments
 from the database. Images are typically generated by the plot-db or search commands,
 and their filenames contain the recording name and time offset.
 
-This is useful for removal of spectrograms based on visual inspection of plots,
-allowing you to remove low-quality or incorrectly labeled spectrograms.
+This is useful for removal of segments based on visual inspection of plots,
+allowing you to remove low-quality or incorrectly labeled segments.
 
 Args:
 
 - `db_path` *(str, optional)* — Path to the training database. Defaults to cfg.train.train_db.
-- `class_name` *(str)* — Name of the class whose spectrograms should be considered for deletion.
-- `dir_path` *(str)* — Path to directory containing spectrogram image files (typically .jpeg files).
+- `class_name` *(str)* — Name of the class whose segments should be considered for deletion.
+- `dir_path` *(str)* — Path to directory containing spectrogram image files.
+
+
+
+### del_sgroup
+**Function**  
+```python
+del_sgroup_cmd(db_path: Optional[str], name: str) -> None
+```
+Delete a spectrogram group and all its spectrogram values from the training database.
+
+Spectrogram groups organize spectrograms by processing parameters or extraction method.
+This command removes the entire group and all spectrograms within it.
+
+Args:
+
+- `db_path` *(str, optional)* — Path to the training database. Defaults to cfg.train.train_db.
+- `name` *(str)* — Name of the spectrogram group to delete (e.g., "default", "augmented").
 
 
 
 ### del_src
 **Function**  
 ```python
-del_src_cmd(db_path, name)
+del_src_cmd(db_path: Optional[str], name: str) -> None
 ```
 Delete a recording source and all its associated data from the training database.
 
@@ -306,7 +326,7 @@ Args:
 ### del_stype
 **Function**  
 ```python
-del_stype_cmd(db_path, name)
+del_stype_cmd(db_path: Optional[str], name: str) -> None
 ```
 Delete a sound type from the training database.
 
@@ -324,7 +344,7 @@ Args:
 ### embed
 **Function**  
 ```python
-embed_cmd(cfg_path: str, db_path: str, class_name: str, spec_group: str)
+embed_cmd(cfg_path: Optional[str], db_path: Optional[str], class_name: Optional[str], spec_group: str) -> None
 ```
 Generate embeddings for spectrograms and insert them into the database.
 
@@ -344,7 +364,7 @@ Args:
 ### extract_all
 **Function**  
 ```python
-extract_all_cmd(cfg_path: str, db_path: str, cat_name: str, class_code: str, class_name: str, dir_path: str, overlap: float, src_name: str, spec_group: str)
+extract_all_cmd(cfg_path: Optional[str], db_path: Optional[str], cat_name: Optional[str], class_code: Optional[str], class_name: str, dir_path: str, overlap: Optional[float], src_name: Optional[str], spec_group: Optional[str]) -> None
 ```
 Extract all spectrograms from audio recordings and insert them into the training database.
 
@@ -370,7 +390,7 @@ Args:
 ### extract_by_image
 **Function**  
 ```python
-extract_by_image_cmd(cfg_path: str, db_path: str, cat_name: str, class_code: str, class_name: str, rec_dir: str, spec_dir: str, dest_dir: str, src_name: str, spec_group: str)
+extract_by_image_cmd(cfg_path: Optional[str], db_path: Optional[str], cat_name: Optional[str], class_code: Optional[str], class_name: str, rec_dir: str, spec_dir: str, dest_dir: Optional[str], src_name: Optional[str], spec_group: Optional[str]) -> None
 ```
 Extract spectrograms that correspond to existing spectrogram images.
 
@@ -400,7 +420,7 @@ Args:
 ### find_dup
 **Function**  
 ```python
-find_dup_cmd(cfg_path: str, db_path: str, class_name: str, delete: bool, spec_group: str)
+find_dup_cmd(cfg_path: Optional[str], db_path: Optional[str], class_name: str, delete: bool, spec_group: str) -> None
 ```
 Find and optionally delete duplicate recordings in the training database.
 
@@ -425,7 +445,7 @@ Args:
 ### inat
 **Function**  
 ```python
-inat_cmd(output_dir: str, max_downloads: int, name: str, no_prefix: bool)
+inat_cmd(output_dir: str, max_downloads: int, name: str, no_prefix: bool) -> None
 ```
 Download audio recordings from iNaturalist observations.
 
@@ -448,7 +468,7 @@ Args:
 ### pickle
 **Function**  
 ```python
-pickle_cmd(cfg_path, classes_path, db_path, output_path, max_per_class, spec_group)
+pickle_cmd(cfg_path: Optional[str], classes_path: Optional[str], db_path: Optional[str], output_path: Optional[str], root_dir: str, max_per_class: Optional[int], spec_group: Optional[str]) -> None
 ```
 Convert database spectrograms to a pickle file for use in training.
 
@@ -470,7 +490,7 @@ Args:
 ### plot_db
 **Function**  
 ```python
-plot_db_cmd(cfg_path: str, class_name: str, db_path: Optional[str], dims: bool, max_count: Optional[float], output_path: str, prefix: Optional[str], power: Optional[float], spec_group: Optional[str])
+plot_db_cmd(cfg_path: str, class_name: str, db_path: Optional[str], ndims: bool, max_count: Optional[float], output_path: str, prefix: Optional[str], power: Optional[float], spec_group: Optional[str])
 ```
 Plot spectrograms from a training database for a specific class.
 
@@ -483,7 +503,7 @@ Args:
 - `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
 - `class_name` *(str)* — Name of the class to plot spectrograms for (e.g., "Common Yellowthroat").
 - `db_path` *(str, optional)* — Path to the training database. Defaults to cfg.train.train_db.
-- `dims` *(bool)* — If True, show time and frequency dimensions on the spectrogram plots.
+- `ndims` *(bool)* — If True, do not show time and frequency dimensions on the spectrogram plots.
 - `max_count` *(int, optional)* — Maximum number of spectrograms to plot. If omitted, plots all available.
 - `output_path` *(str)* — Directory where spectrogram images will be saved.
 - `prefix` *(str, optional)* — Only include recordings that start with this filename prefix.
@@ -495,7 +515,7 @@ Args:
 ### plot_dir
 **Function**  
 ```python
-plot_dir_cmd(cfg_path: str, dims: bool, input_path: str, output_path: str, all: bool, overlap: float, power: float = 1.0)
+plot_dir_cmd(cfg_path: str, ndims: bool, input_path: str, output_path: str, all: bool, overlap: float, power: float = 1.0)
 ```
 Plot spectrograms for all audio recordings in a directory.
 
@@ -506,7 +526,7 @@ overlapping segments.
 Args:
 
 - `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
-- `dims` *(bool)* — If True, show time and frequency dimensions on the spectrogram plots.
+- `ndims` *(bool)* — If True, do not show time and frequency dimensions on the spectrogram plots.
 - `input_path` *(str)* — Directory containing audio recordings to process.
 - `output_path` *(str)* — Directory where spectrogram images will be saved.
 - `all` *(bool)* — If True, plot each recording as one spectrogram. If False, break into segments.
@@ -518,7 +538,7 @@ Args:
 ### reextract
 **Function**  
 ```python
-reextract_cmd(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, class_csv_path: Optional[str] = None, check: bool = False, spec_group: str = 'default')
+reextract_cmd(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, classes_path: Optional[str] = None, check: bool = False, spec_group: str = 'default')
 ```
 Re-generate spectrograms from audio recordings and update the training database.
 
@@ -534,7 +554,7 @@ Args:
 - `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
 - `db_path` *(str, optional)* — Path to the training database. Defaults to cfg.train.training_db.
 - `class_name` *(str, optional)* — Name of a specific class to reextract. If omitted, processes all classes.
-- `class_csv_path` *(str, optional)* — Path to CSV file listing classes to reextract. Alternative to class_name.
+- `classes_path` *(str, optional)* — Path to CSV file listing classes to reextract. Alternative to class_name.
 - `check` *(bool)* — If True, only check that all recording paths are accessible without updating database.
 - `spec_group` *(str)* — Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
 
@@ -558,35 +578,6 @@ Args:
 
 
 
-### rpt_cal
-**Function**  
-```python
-rpt_cal_cmd(cfg_path: str, annotations_path: str, label_dir: str, output_path: str, class_csv_path: str, recordings_path: Optional[str], cutoff: float, coef: Optional[float] = None, inter: Optional[float] = None)
-```
-Calibrate model predictions using per-segment test results.
-
-This command generates calibration plots and analysis to assess how well
-model prediction scores align with actual probabilities. It compares
-predicted scores against ground truth annotations to determine if the
-model is overconfident or underconfident in its predictions.
-
-The calibration process helps improve model reliability by adjusting
-prediction scores to better reflect true probabilities.
-
-Args:
-
-- `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
-- `annotations_path` *(str)* — Path to CSV file containing ground truth annotations.
-- `label_dir` *(str)* — Directory containing model prediction labels (Audacity format).
-- `output_path` *(str)* — Directory where calibration reports will be saved.
-- `class_csv_path` *(str)* — Path to CSV file listing classes included in training.
-- `recordings_path` *(str, optional)* — Directory containing audio recordings. Defaults to annotations directory.
-- `cutoff` *(float)* — Ignore predictions below this threshold during calibration. Default is 0.4.
-- `coef` *(float, optional)* — Use this coefficient for the calibration plot.
-- `inter` *(float, optional)* — Use this intercept for the calibration plot.
-
-
-
 ### rpt_db
 **Function**  
 ```python
@@ -604,6 +595,24 @@ Args:
 - `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
 - `db_path` *(str, optional)* — Path to the training database. Defaults to cfg.train.train_db.
 - `output_path` *(str)* — Directory where database reports will be saved.
+
+
+
+### rpt_epochs
+**Function**  
+```python
+rpt_epochs_cmd(cfg_path: str, input_path: str, annotations_path: str, output_path: str)
+```
+Given a checkpoint directory and a test, run every checkpoint against the test
+and measure the macro-averaged ROC and AP scores, and then plot them.
+This is useful to determine the number of training epochs needed.
+
+Args:
+
+- `cfg_path` *(str)* — Path to YAML file defining configuration overrides.
+- `input_path` *(str)* — Checkpoint directory generated by training.
+- `annotations_path` *(str)* — Path to CSV file containing ground truth annotations.
+- `output_path` *(str)* — Directory where the graph image will be saved.
 
 
 
@@ -633,7 +642,7 @@ Args:
 ### rpt_test
 **Function**  
 ```python
-rpt_test_cmd(cfg_path: str, granularity: str, annotations_path: str, label_dir: str, output_path: str, class_csv_path: str, recordings_path: Optional[str], min_score: Optional[float], precision: float)
+rpt_test_cmd(cfg_path: str, granularity: str, annotations_path: str, label_dir: str, output_path: str, recordings_path: Optional[str], min_score: Optional[float], precision: float)
 ```
 Generate comprehensive test metrics and reports comparing model predictions to ground truth.
 
@@ -653,7 +662,6 @@ Args:
 - `annotations_path` *(str)* — Path to CSV file containing ground truth annotations.
 - `label_dir` *(str)* — Directory containing model prediction labels (Audacity format).
 - `output_path` *(str)* — Directory where test reports will be saved.
-- `class_csv_path` *(str)* — Path to CSV file listing classes included in training.
 - `recordings_path` *(str, optional)* — Directory containing audio recordings. Defaults to annotations directory.
 - `min_score` *(float, optional)* — Provide detailed reports for this confidence threshold.
 - `precision` *(float)* — For recording granularity, report true positive seconds at this precision. Default is 0.95.
@@ -712,7 +720,7 @@ Args:
 ### tune
 **Function**  
 ```python
-tune_cmd(cfg_path: str, param_path: str, annotations_path: str, class_csv_path: str, metric: str, recordings_path: str, train_log_path: str, num_trials: int, num_runs: int)
+tune_cmd(cfg_path: str, param_path: Optional[str], output_path: str, annotations_path: str, metric: str, recordings_path: str, train_log_path: str, num_trials: int, num_runs: int, extract: bool, skip_training: bool, classes_path: Optional[str])
 ```
 Find and print the best hyperparameter settings based on exhaustive or random search.
 
@@ -734,15 +742,18 @@ The name defines a hyperparameter to tune, with given type, bounds and step size
 
 Args:
 
-- `cfg_path` *(str)* — Path to YAML file defining configuration overrides.
-- `param_path` *(str)* — Path to YAML file defining hyperparameters to tune and their search space.
+- `cfg_path` *(str, optional)* — Path to YAML file defining configuration overrides.
+- `param_path` *(str, optional)* — Path to YAML file defining hyperparameters to tune and their search space.
+- `output_path` *(str)* — Directory where reports will be saved.
 - `annotations_path` *(str)* — Path to CSV file containing ground truth annotations.
-- `class_csv_path` *(str)* — Path to CSV file listing classes included in training.
 - `metric` *(str)* — Metric used to compare runs. Options include various MAP and ROC metrics.
 - `recordings_path` *(str, optional)* — Directory containing audio recordings. Defaults to annotations directory.
 - `train_log_path` *(str, optional)* — Training log directory. Defaults to "logs/fold-0".
 - `num_trials` *(int)* — Number of random trials to run. If 0, performs exhaustive search.
 - `num_runs` *(int)* — Number of runs to average for each parameter combination. Default is 1.
+- `extract` *(bool)* — Extract new spectrograms before training, to tune spectrogram parameters.
+- `skip_training` *(bool)* — Iterate on inference only, using checkpoints from the last training run.
+- `classes_path` *(str, optional)* — Path to CSV containing class names for extract option. Default is all classes.
 
 
 

@@ -411,7 +411,7 @@ Insert an occurrence record for a given county and class.
 ### PerMinuteTester
 **Class**  
 ```python
-PerMinuteTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, trained_classes: list, gen_pr_table: bool = False)
+PerMinuteTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, gen_pr_table: bool = False)
 ```
 Calculate test metrics when annotations are specified per minute. That is, for selected minutes of
 each recording, a list of classes known to be present is given, and we are to calculate metrics for
@@ -431,7 +431,6 @@ Attributes:
     label_dir (str): Directory containing Audacity labels.
     output_dir (str): Output directory, where reports will be written.
     threshold (float): Score threshold for precision/recall reporting.
-    trained_classes (list): List of trained class codes.
     gen_pr_table (bool, optional): If true, generate a PR table, which may be slow (default = False).
 
 **Public methods & properties**
@@ -480,7 +479,7 @@ Generate comprehensive output reports and CSV files.
 
 This method creates multiple output files containing detailed analysis results:
 - Precision-recall tables and curves (if gen_pr_table=True)
-- ROC curves and analysis
+- ROC-AUC curves and analysis
 - Summary report with key metrics
 - Recording-level details and summaries
 - Class-level performance statistics
@@ -489,7 +488,7 @@ This method creates multiple output files containing detailed analysis results:
 The method generates the following files in the output directory:
 - pr_per_threshold_*.csv/png: Precision-recall data at different thresholds
 - pr_curve_*.csv/png: Precision-recall curves
-- roc_*.csv/png: ROC curve analysis
+- roc_*.csv/png: ROC-AUC curve analysis
 - summary_report.txt: Human-readable summary with key metrics
 - recording_details_trained.csv: Detailed statistics per recording/segment
 - recording_summary_trained.csv: Summary statistics per recording
@@ -510,8 +509,8 @@ Execute the complete testing workflow.
 
 This method orchestrates the entire testing process by:
 1. Initializing the tester and loading data
-2. Calculating MAP (Mean Average Precision) statistics
-3. Calculating ROC (Receiver Operating Characteristic) statistics
+2. Calculating PR-AUC (Precision-Recall Area-Under-Curve) statistics
+3. Calculating ROC-AUC (Receiver Operating Characteristic Area-Under-Curve) statistics
 4. Calculating precision-recall statistics at the specified threshold
 5. Generating a precision-recall table across multiple thresholds (if gen_pr_table=True)
 6. Producing comprehensive output reports
@@ -527,7 +526,7 @@ Note:
 ### PerRecordingTester
 **Class**  
 ```python
-PerRecordingTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, trained_classes: list, tp_secs_at_precision: float = 0.95)
+PerRecordingTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, tp_secs_at_precision: float = 0.95)
 ```
 Calculate test metrics when annotations are specified per recording. That is, the ground truth data
 gives a list of classes per recording, with no indication of where in the recording they are heard.
@@ -550,7 +549,6 @@ Attributes:
     label_dir (str): Directory containing Audacity labels.
     output_dir (str): Output directory, where reports will be written.
     threshold (float): Score threshold for precision/recall reporting.
-    trained_classes (list): List of trained class codes.
     tp_secs_at_precision (float, optional): Granular recall cannot be calculated with per-recording annotations,
     but reporting TP seconds at this precision is a useful proxy (default=.95).
 
@@ -622,8 +620,8 @@ Execute the complete testing workflow.
 
 This method orchestrates the entire testing process by:
 1. Initializing the tester and loading data
-2. Calculating MAP (Mean Average Precision) statistics
-3. Calculating ROC (Receiver Operating Characteristic) statistics
+2. Calculating PR-AUC (Precision-Recall Area-Under-Curve) statistics
+3. Calculating ROC-AUC (Receiver Operating Characteristic Area-Under-Curve) statistics
 4. Calculating precision-recall statistics at the specified threshold
 5. Generating a precision-recall table across multiple thresholds
 6. Producing comprehensive output reports
@@ -638,7 +636,7 @@ Note:
 ### PerSegmentTester
 **Class**  
 ```python
-PerSegmentTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, trained_classes: list, calibrate: bool = False, cutoff: float = 0.6, coef: Optional[float] = None, inter: Optional[float] = None)
+PerSegmentTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, calibrate: bool = False, cutoff: float = 0.6, coef: Optional[float] = None, inter: Optional[float] = None)
 ```
 Calculate test metrics when individual sounds are annotated in the ground truth data.
 Annotations are read as a CSV with four columns: recording, class, start_time and end_time.
@@ -770,6 +768,12 @@ Note:
     Uses self.segment_len and self.overlap to calculate segment boundaries.
     Returns an empty list if no valid segments are found.
 
+**initialize**  
+```python
+PerSegmentTester.initialize(self)
+```
+Initialize
+
 **plot_calibration_curve**  
 ```python
 PerSegmentTester.plot_calibration_curve(self, y_true, y_pred, a, b, n_bins=15)
@@ -803,8 +807,8 @@ Execute the complete testing workflow.
 This method orchestrates the entire testing process by:
 1. Initializing the tester and loading data
 2. If calibrate=True, performing calibration analysis and returning early
-3. Calculating MAP (Mean Average Precision) statistics
-4. Calculating ROC (Receiver Operating Characteristic) statistics
+3. Calculating PR-AUC (Precision-Recall Area-Under-Curve) statistics
+4. Calculating ROC-AUC (Receiver Operating Characteristic Area-Under-Curve) statistics
 5. Calculating precision-recall statistics at the specified threshold
 6. Generating a precision-recall table across multiple thresholds
 7. Producing comprehensive output reports
@@ -834,7 +838,7 @@ Attributes:
 
 **pickle**  
 ```python
-Pickler.pickle(self)
+Pickler.pickle(self, quiet=False)
 ```
 Create the pickle file as specified.
 
@@ -1825,7 +1829,7 @@ Args:
 ### Tuner
 **Class**  
 ```python
-Tuner(recording_dir, annotation_path, train_log_dir, trained_species_codes, metric, param_space, num_trials: int = 0, num_runs: int = 1)
+Tuner(recording_dir: str, output_dir: str, annotation_path: str, train_log_dir: str, metric: str, param_space: Optional[Any], num_trials: int = 0, num_runs: int = 1, extract: bool = False, skip_training: bool = False, classes_path: Optional[str] = None)
 ```
 Tune the joint values of selected hyperparameters, either by exhaustive or random search.
 
@@ -1836,3 +1840,17 @@ Tune the joint values of selected hyperparameters, either by exhaustive or rando
 Tuner.run(self)
 ```
 Initiate the search and return the best score and best hyperparameter values.
+A "trial" is a set of parameter values and a "run" is a training/inference run.
+There may be multiple runs per trial, since results per run are non-deterministic.
+
+### __version__
+str(object='') -> str
+str(bytes_or_buffer[, encoding[, errors]]) -> str
+
+Create a new string object from the given object. If encoding or
+errors is specified, then the object must expose a data buffer
+that will be decoded using the given encoding and error handler.
+Otherwise, returns the result of object.__str__() (if defined)
+or repr(object).
+encoding defaults to sys.getdefaultencoding().
+errors defaults to 'strict'.

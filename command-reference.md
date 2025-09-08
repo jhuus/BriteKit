@@ -7,15 +7,15 @@
 | [britekit add-stype](#britekit-add-stype) | Add a soundtype record to a database. |
 | [britekit analyze](#britekit-analyze) | Run inference. |
 | [britekit audioset](#britekit-audioset) | Download recordings from Google Audioset. |
+| [britekit calibrate](#britekit-calibrate) | Calibrate an ensemble based on per-segment test results. |
 | [britekit ckpt-avg](#britekit-ckpt-avg) | Average the weights of several checkpoints. |
 | [britekit ckpt-freeze](#britekit-ckpt-freeze) | Freeze the backbone weights of a checkpoint. |
 | [britekit ckpt-onnx](#britekit-ckpt-onnx) | Convert a checkpoint to onnx format for use with openvino. |
-| [britekit copy-samples](#britekit-copy-samples) | Copy packaged BriteKit sample YAML/CSV files to a destination directory. |
 | [britekit del-cat](#britekit-del-cat) | Delete a category (class group) and its classes from a database. |
 | [britekit del-class](#britekit-del-class) | Delete a class and associated records from a database. |
 | [britekit del-rec](#britekit-del-rec) | Delete a recording and associated records from a database. |
+| [britekit del-seg](#britekit-del-seg) | Delete segments that match given images. |
 | [britekit del-sgroup](#britekit-del-sgroup) | Delete a spectrogram group from the database. |
-| [britekit del-spec](#britekit-del-spec) | Delete spectrograms that match given images. |
 | [britekit del-src](#britekit-del-src) | Delete a recording source and associated records from a database. |
 | [britekit del-stype](#britekit-del-stype) | Delete a sound type from a database. |
 | [britekit embed](#britekit-embed) | Insert spectrogram embeddings into database. |
@@ -24,14 +24,15 @@
 | [britekit find-dup](#britekit-find-dup) | Find and optionally delete duplicate recordings in a database. |
 | [britekit find-lr](#britekit-find-lr) | Suggest a learning rate. |
 | [britekit inat](#britekit-inat) | Download recordings from iNaturalist. |
+| [britekit init](#britekit-init) | Create default directory structure including sample files. |
 | [britekit pickle](#britekit-pickle) | Convert database records to a pickle file for use in training. |
 | [britekit plot-db](#britekit-plot-db) | Plot spectrograms from a database. |
 | [britekit plot-dir](#britekit-plot-dir) | Plot spectrograms from a directory of recordings. |
 | [britekit plot-rec](#britekit-plot-rec) | Plot spectrograms from a specific recording. |
 | [britekit reextract](#britekit-reextract) | Re-generate the spectrograms in a database, and add them to the database. |
 | [britekit rpt-ann](#britekit-rpt-ann) | Summarize annotations in a per-segment test. |
-| [britekit rpt-cal](#britekit-rpt-cal) | Calibrate an ensemble based on per-segment test results. |
 | [britekit rpt-db](#britekit-rpt-db) | Generate a database summary report. |
+| [britekit rpt-epochs](#britekit-rpt-epochs) | Plot the test score for every training epoch. |
 | [britekit rpt-labels](#britekit-rpt-labels) | Summarize the output of an inference run. |
 | [britekit rpt-test](#britekit-rpt-test) | Generate metrics and reports from test results. |
 | [britekit search](#britekit-search) | Search a database for spectrograms similar to one given. |
@@ -156,7 +157,38 @@ Options:
   --skip INTEGER      Skip this many initial recordings (default = 0).
   --rpt               Report on secondary classes associated with the specified
                       class.
+  --root DIRECTORY    Root directory containing data directory.
   --help              Show this message and exit.
+```
+### britekit calibrate
+```
+Usage: cli calibrate [OPTIONS]
+
+  Calibrate model predictions using per-segment test results.
+
+  This command generates calibration plots and analysis to assess how well model
+  prediction scores align with actual probabilities. It compares predicted
+  scores against ground truth annotations to determine if the model is
+  overconfident or underconfident in its predictions.
+
+  The calibration process helps improve model reliability by adjusting
+  prediction scores to better reflect true probabilities.
+
+Options:
+  -c, --cfg PATH              Path to YAML file defining config overrides.
+  -a, --annotations FILE      Path to CSV file containing annotations or ground
+                              truth).  [required]
+  -l, --labels TEXT           Directory containing Audacity labels. If a
+                              subdirectory of recordings directory, only the
+                              subdirectory name is needed.  [required]
+  -o, --output DIRECTORY      Path to output directory.  [required]
+  -r, --recordings DIRECTORY  Recordings directory. Default is directory
+                              containing annotations file.
+  --cutoff FLOAT              When calibrating, ignore predictions below this
+                              (default = .4)
+  --coef FLOAT                Use this coefficient in the calibration plot.
+  --inter FLOAT               Use this intercept in the calibration plot.
+  --help                      Show this message and exit.
 ```
 ### britekit ckpt-avg
 ```
@@ -212,25 +244,6 @@ Options:
   -i, --input FILE  Path to checkpoint to convert to ONNX format  [required]
   --help            Show this message and exit.
 ```
-### britekit copy-samples
-```
-Usage: cli copy-samples [OPTIONS]
-
-  Copy packaged BriteKit sample YAML/CSV files to a destination directory.
-
-  This command copies files from the built-in `britekit.samples` package (kept
-  alongside the library code) into a folder you specify. You can filter by
-  subpaths using a simple glob pattern and optionally do a dry-run list.
-
-Options:
-  --dest DIRECTORY              Directory to copy sample files into.  [required]
-  --pattern TEXT                Glob-like filter relative to 'samples/' (e.g.
-                                'full/*.yaml' or 'data/*.csv').  [default: *]
-  --list                        List files that would be copied and exit.
-  --overwrite / --no-overwrite  Overwrite existing files in DEST.  [default: no-
-                                overwrite]
-  --help                        Show this message and exit.
-```
 ### britekit del-cat
 ```
 Usage: cli del-cat [OPTIONS]
@@ -275,6 +288,26 @@ Options:
   --name TEXT    Recording file name.  [required]
   --help         Show this message and exit.
 ```
+### britekit del-seg
+```
+Usage: cli del-seg [OPTIONS]
+
+  Delete segments that correspond to images in a given directory.
+
+  This command parses image filenames to identify and delete corresponding
+  segments from the database. Images are typically generated by the plot-db or
+  search commands, and their filenames contain the recording name and time
+  offset.
+
+  This is useful for removal of segments based on visual inspection of plots,
+  allowing you to remove low-quality or incorrectly labeled segments.
+
+Options:
+  -d, --db TEXT  Path to the training database.
+  --class TEXT   Class name.  [required]
+  --dir TEXT     Path to directory containing images.  [required]
+  --help         Show this message and exit.
+```
 ### britekit del-sgroup
 ```
 Usage: cli del-sgroup [OPTIONS]
@@ -289,26 +322,6 @@ Usage: cli del-sgroup [OPTIONS]
 Options:
   -d, --db TEXT  Path to the training database.
   --name TEXT    Spec group name.  [required]
-  --help         Show this message and exit.
-```
-### britekit del-spec
-```
-Usage: cli del-spec [OPTIONS]
-
-  Delete spectrograms that correspond to images in a given directory.
-
-  This command parses image filenames to identify and delete corresponding
-  spectrograms from the database. Images are typically generated by the plot-db
-  or search commands, and their filenames contain the recording name and time
-  offset.
-
-  This is useful for removal of spectrograms based on visual inspection of
-  plots, allowing you to remove low-quality or incorrectly labeled spectrograms.
-
-Options:
-  -d, --db TEXT  Path to the training database.
-  --class TEXT   Class name.  [required]
-  --dir TEXT     Path to directory containing images.  [required]
   --help         Show this message and exit.
 ```
 ### britekit del-src
@@ -487,6 +500,20 @@ Options:
   --name TEXT         Species name.  [required]
   --help              Show this message and exit.
 ```
+### britekit init
+```
+Usage: cli init [OPTIONS]
+
+  Setup default BriteKit directory structure and copy packaged sample files.
+
+  This command copies files from the built-in `britekit.install` package (kept
+  alongside the library code) into a folder you specify, and creates a default
+  directory structure.
+
+Options:
+  --dest DIRECTORY  Root directory to copy under (default is working directory).
+  --help            Show this message and exit.
+```
 ### britekit pickle
 ```
 Usage: cli pickle [OPTIONS]
@@ -501,9 +528,10 @@ Usage: cli pickle [OPTIONS]
 Options:
   -c, --cfg PATH     Path to YAML file defining config overrides.
   --classes TEXT     Path to CSV containing class names to pickle (optional).
-                     Default is all in database.
+                     Default is all classes.
   -d, --db TEXT      Path to the training database.
   -o, --output TEXT  Output file path. Default is "data/training.pkl".
+  --root DIRECTORY   Root directory containing data directory.
   -m, --max INTEGER  Maximum spectrograms per class.
   --sgroup TEXT      Spectrogram group name. Defaults to 'default'.
   --help             Show this message and exit.
@@ -522,8 +550,8 @@ Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
   --name TEXT             Plot spectrograms for this class.  [required]
   -d, --db TEXT           Path to the training database.
-  --dims                  If specified, show seconds on x-axis and frequencies
-                          on y-axis.
+  --ndims                 If specified, do not show time and frequency
+                          dimensions on the spectrogram plots.
   --max INTEGER           Max number of spectrograms to plot.
   -o, --output DIRECTORY  Path to output directory.  [required]
   --prefix TEXT           Only include recordings that start with this prefix.
@@ -544,7 +572,7 @@ Usage: cli plot-dir [OPTIONS]
 
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
-  --dims                  If specified, show seconds on x-axis and frequencies
+  --ndims                 If specified, show seconds on x-axis and frequencies
                           on y-axis.
   -i, --input DIRECTORY   Path to input directory.  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
@@ -567,7 +595,7 @@ Usage: cli plot-rec [OPTIONS]
 
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
-  --dims                  If specified, show seconds on x-axis and frequencies
+  --ndims                 If specified, show seconds on x-axis and frequencies
                           on y-axis.
   -i, --input FILE        Path to input directory.  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
@@ -597,7 +625,7 @@ Options:
   -c, --cfg PATH  Path to YAML file defining config overrides.
   -d, --db FILE   Path to the database. Defaults to value of
                   cfg.train.training_db.
-  --name TEXT     Optional class name. If this and --csv are omitted, do all
+  --name TEXT     Optional class name. If this and --classes are omitted, do all
                   classes.
   --classes FILE  Path to CSV listing classes to reextract. Alternative to
                   --name. If this and --name are omitted, do all classes.
@@ -622,38 +650,6 @@ Options:
   -o, --output DIRECTORY  Path to output directory.  [required]
   --help                  Show this message and exit.
 ```
-### britekit rpt-cal
-```
-Usage: cli rpt-cal [OPTIONS]
-
-  Calibrate model predictions using per-segment test results.
-
-  This command generates calibration plots and analysis to assess how well model
-  prediction scores align with actual probabilities. It compares predicted
-  scores against ground truth annotations to determine if the model is
-  overconfident or underconfident in its predictions.
-
-  The calibration process helps improve model reliability by adjusting
-  prediction scores to better reflect true probabilities.
-
-Options:
-  -c, --cfg PATH              Path to YAML file defining config overrides.
-  -a, --annotations FILE      Path to CSV file containing annotations or ground
-                              truth).  [required]
-  -l, --labels TEXT           Directory containing Audacity labels. If a
-                              subdirectory of recordings directory, only the
-                              subdirectory name is needed.  [required]
-  -o, --output DIRECTORY      Path to output directory.  [required]
-  --classes FILE              Path to CSV listing classes included in training.
-                              [required]
-  -r, --recordings DIRECTORY  Recordings directory. Default is directory
-                              containing annotations file.
-  --cutoff FLOAT              When calibrating, ignore predictions below this
-                              (default = .4)
-  --coef FLOAT                Use this coefficient in the calibration plot.
-  --inter FLOAT               Use this intercept in the calibration plot.
-  --help                      Show this message and exit.
-```
 ### britekit rpt-db
 ```
 Usage: cli rpt-db [OPTIONS]
@@ -668,6 +664,23 @@ Usage: cli rpt-db [OPTIONS]
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
   -d, --db TEXT           Path to the training database.
+  -o, --output DIRECTORY  Path to output directory.  [required]
+  --help                  Show this message and exit.
+```
+### britekit rpt-epochs
+```
+Usage: cli rpt-epochs [OPTIONS]
+
+  Given a checkpoint directory and a test, run every checkpoint against the test
+  and measure the macro-averaged ROC and AP scores, and then plot them. This is
+  useful to determine the number of training epochs needed.
+
+Options:
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  -i, --input DIRECTORY   Path to checkpoint directory generated by training.
+                          [required]
+  -a, --annotations FILE  Path to CSV file containing annotations or ground
+                          truth).  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
   --help                  Show this message and exit.
 ```
@@ -720,8 +733,6 @@ Options:
                               subdirectory of recordings directory, only the
                               subdirectory name is needed.  [required]
   -o, --output DIRECTORY      Path to output directory.  [required]
-  --classes FILE              Path to CSV listing classes included in training.
-                              [required]
   -r, --recordings DIRECTORY  Recordings directory. Default is directory
                               containing annotations file.
   -m, --min_score FLOAT       Provide detailed reports for this threshold.
@@ -805,13 +816,14 @@ Usage: cli tune [OPTIONS]
 Options:
   -c, --cfg PATH                  Path to YAML file defining config overrides.
   -p, --param PATH                Path to YAML file defining hyperparameters to
-                                  tune.  [required]
+                                  tune.
+  -o, --output DIRECTORY          Path to output directory.  [required]
   -a, --annotations FILE          Path to CSV file containing annotations or
                                   ground truth).  [required]
-  --classes FILE                  Path to CSV listing classes included in
-                                  training.  [required]
-  -m, --metric [macro_map|micro_map_annotated|micro_map_trained|combined_map_annotated|combined_map_trained|macro_roc|micro_roc_annotated|micro_roc_trained|combined_roc_annotated|combined_roc_trained]
-                                  Metric used to compare runs.
+  -m, --metric [macro_pr|micro_pr|macro_roc|micro_roc]
+                                  Metric used to compare runs. Macro-averaging
+                                  uses annotated classes only, but micro-
+                                  averaging uses all classes.
   -r, --recordings DIRECTORY      Recordings directory. Default is directory
                                   containing annotations file.
   --log DIRECTORY                 Training log directory.
@@ -819,6 +831,12 @@ Options:
                                   Otherwise do an exhaustive search.
   --runs INTEGER                  Use the average score of this many runs in
                                   each case. Default = 1.
+  --extract                       Extract new spectrograms before training, to
+                                  tune spectrogram parameters.
+  --notrain                       Iterate on inference only, using checkpoints
+                                  from the last training run.
+  --classes TEXT                  Path to CSV containing class names for extract
+                                  option. Default is all classes.
   --help                          Show this message and exit.
 ```
 ### britekit wav2mp3
