@@ -809,14 +809,8 @@ Usage: britekit tune [OPTIONS]
   settings, the --notrain CLI flag (skip_training API parameter) specifies that
   training will be skipped.
 
-  The param_path specifies a YAML file that contains a sequence of parameters
-  such as:
-
-  - name: prob_simple_merge   type: float   bounds:   - 0.36   - 0.42   step:
-  0.02
-
-  The name defines a hyperparameter to tune, with given type, bounds and step
-  size.
+  The param_path specifies a YAML file that defines the parameters to be tuned,
+  as described in the README.
 
 Options:
   -c, --cfg PATH                  Path to YAML file defining config overrides.
