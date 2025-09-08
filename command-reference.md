@@ -44,7 +44,7 @@
 
 ### britekit add-cat
 ```
-Usage: cli add-cat [OPTIONS]
+Usage: britekit add-cat [OPTIONS]
 
   Add a category (class group) record to the training database.
 
@@ -59,7 +59,7 @@ Options:
 ```
 ### britekit add-class
 ```
-Usage: cli add-class [OPTIONS]
+Usage: britekit add-class [OPTIONS]
 
   Add a class record to the training database.
 
@@ -79,7 +79,7 @@ Options:
 ```
 ### britekit add-src
 ```
-Usage: cli add-src [OPTIONS]
+Usage: britekit add-src [OPTIONS]
 
   Add a source record to the training database.
 
@@ -94,7 +94,7 @@ Options:
 ```
 ### britekit add-stype
 ```
-Usage: cli add-stype [OPTIONS]
+Usage: britekit add-stype [OPTIONS]
 
   Add a sound type record to the training database.
 
@@ -109,7 +109,7 @@ Options:
 ```
 ### britekit analyze
 ```
-Usage: cli analyze [OPTIONS]
+Usage: britekit analyze [OPTIONS]
 
   Run inference on audio recordings to detect and classify sounds.
 
@@ -135,7 +135,7 @@ Options:
 ```
 ### britekit audioset
 ```
-Usage: cli audioset [OPTIONS]
+Usage: britekit audioset [OPTIONS]
 
   Download audio recordings from Google AudioSet.
 
@@ -163,7 +163,7 @@ Options:
 ```
 ### britekit calibrate
 ```
-Usage: cli calibrate [OPTIONS]
+Usage: britekit calibrate [OPTIONS]
 
   Calibrate model predictions using per-segment test results.
 
@@ -193,7 +193,7 @@ Options:
 ```
 ### britekit ckpt-avg
 ```
-Usage: cli ckpt-avg [OPTIONS]
+Usage: britekit ckpt-avg [OPTIONS]
 
   Average the weights of multiple model checkpoints to create an ensemble
   checkpoint.
@@ -209,7 +209,7 @@ Options:
 ```
 ### britekit ckpt-freeze
 ```
-Usage: cli ckpt-freeze [OPTIONS]
+Usage: britekit ckpt-freeze [OPTIONS]
 
   Freeze the backbone weights of a checkpoint to reduce file size and improve
   inference speed.
@@ -229,7 +229,7 @@ Options:
 ```
 ### britekit ckpt-onnx
 ```
-Usage: cli ckpt-onnx [OPTIONS]
+Usage: britekit ckpt-onnx [OPTIONS]
 
   Convert a PyTorch checkpoint to ONNX format for deployment with OpenVINO.
 
@@ -247,7 +247,7 @@ Options:
 ```
 ### britekit del-cat
 ```
-Usage: cli del-cat [OPTIONS]
+Usage: britekit del-cat [OPTIONS]
 
   Delete a category and all its associated data from the training database.
 
@@ -262,7 +262,7 @@ Options:
 ```
 ### britekit del-class
 ```
-Usage: cli del-class [OPTIONS]
+Usage: britekit del-class [OPTIONS]
 
   Delete a class and all its associated data from the training database.
 
@@ -277,7 +277,7 @@ Options:
 ```
 ### britekit del-rec
 ```
-Usage: cli del-rec [OPTIONS]
+Usage: britekit del-rec [OPTIONS]
 
   Delete a recording and all its spectrograms from the training database.
 
@@ -291,7 +291,7 @@ Options:
 ```
 ### britekit del-seg
 ```
-Usage: cli del-seg [OPTIONS]
+Usage: britekit del-seg [OPTIONS]
 
   Delete segments that correspond to images in a given directory.
 
@@ -311,7 +311,7 @@ Options:
 ```
 ### britekit del-sgroup
 ```
-Usage: cli del-sgroup [OPTIONS]
+Usage: britekit del-sgroup [OPTIONS]
 
   Delete a spectrogram group and all its spectrogram values from the training
   database.
@@ -327,7 +327,7 @@ Options:
 ```
 ### britekit del-src
 ```
-Usage: cli del-src [OPTIONS]
+Usage: britekit del-src [OPTIONS]
 
   Delete a recording source and all its associated data from the training
   database.
@@ -344,7 +344,7 @@ Options:
 ```
 ### britekit del-stype
 ```
-Usage: cli del-stype [OPTIONS]
+Usage: britekit del-stype [OPTIONS]
 
   Delete a sound type from the training database.
 
@@ -360,7 +360,7 @@ Options:
 ```
 ### britekit embed
 ```
-Usage: cli embed [OPTIONS]
+Usage: britekit embed [OPTIONS]
 
   Generate embeddings for spectrograms and insert them into the database.
 
@@ -378,7 +378,7 @@ Options:
 ```
 ### britekit extract-all
 ```
-Usage: cli extract-all [OPTIONS]
+Usage: britekit extract-all [OPTIONS]
 
   Extract all spectrograms from audio recordings and insert them into the
   training database.
@@ -404,7 +404,7 @@ Options:
 ```
 ### britekit extract-by-image
 ```
-Usage: cli extract-by-image [OPTIONS]
+Usage: britekit extract-by-image [OPTIONS]
 
   Extract spectrograms that correspond to existing spectrogram images.
 
@@ -436,7 +436,7 @@ Options:
 ```
 ### britekit find-dup
 ```
-Usage: cli find-dup [OPTIONS]
+Usage: britekit find-dup [OPTIONS]
 
   Find and optionally delete duplicate recordings in the training database.
 
@@ -459,7 +459,7 @@ Options:
 ```
 ### britekit find-lr
 ```
-Usage: cli find-lr [OPTIONS]
+Usage: britekit find-lr [OPTIONS]
 
   Find an optimal learning rate for model training using the learning rate
   finder.
@@ -480,7 +480,7 @@ Options:
 ```
 ### britekit inat
 ```
-Usage: cli inat [OPTIONS]
+Usage: britekit inat [OPTIONS]
 
   Download audio recordings from iNaturalist observations.
 
@@ -503,7 +503,7 @@ Options:
 ```
 ### britekit init
 ```
-Usage: cli init [OPTIONS]
+Usage: britekit init [OPTIONS]
 
   Setup default BriteKit directory structure and copy packaged sample files.
 
@@ -517,7 +517,7 @@ Options:
 ```
 ### britekit pickle
 ```
-Usage: cli pickle [OPTIONS]
+Usage: britekit pickle [OPTIONS]
 
   Convert database spectrograms to a pickle file for use in training.
 
@@ -539,7 +539,7 @@ Options:
 ```
 ### britekit plot-db
 ```
-Usage: cli plot-db [OPTIONS]
+Usage: britekit plot-db [OPTIONS]
 
   Plot spectrograms from a training database for a specific class.
 
@@ -563,7 +563,7 @@ Options:
 ```
 ### britekit plot-dir
 ```
-Usage: cli plot-dir [OPTIONS]
+Usage: britekit plot-dir [OPTIONS]
 
   Plot spectrograms for all audio recordings in a directory.
 
@@ -586,7 +586,7 @@ Options:
 ```
 ### britekit plot-rec
 ```
-Usage: cli plot-rec [OPTIONS]
+Usage: britekit plot-rec [OPTIONS]
 
   Plot spectrograms for a specific audio recording.
 
@@ -609,7 +609,7 @@ Options:
 ```
 ### britekit reextract
 ```
-Usage: cli reextract [OPTIONS]
+Usage: britekit reextract [OPTIONS]
 
   Re-generate spectrograms from audio recordings and update the training
   database.
@@ -637,7 +637,7 @@ Options:
 ```
 ### britekit rpt-ann
 ```
-Usage: cli rpt-ann [OPTIONS]
+Usage: britekit rpt-ann [OPTIONS]
 
   Summarize per-segment annotations from a test dataset.
 
@@ -653,7 +653,7 @@ Options:
 ```
 ### britekit rpt-db
 ```
-Usage: cli rpt-db [OPTIONS]
+Usage: britekit rpt-db [OPTIONS]
 
   Generate a comprehensive summary report of the training database.
 
@@ -670,7 +670,7 @@ Options:
 ```
 ### britekit rpt-epochs
 ```
-Usage: cli rpt-epochs [OPTIONS]
+Usage: britekit rpt-epochs [OPTIONS]
 
   Given a checkpoint directory and a test, run every checkpoint against the test
   and measure the macro-averaged ROC and AP scores, and then plot them. This is
@@ -687,7 +687,7 @@ Options:
 ```
 ### britekit rpt-labels
 ```
-Usage: cli rpt-labels [OPTIONS]
+Usage: britekit rpt-labels [OPTIONS]
 
   Summarize the output of an inference run.
 
@@ -708,7 +708,7 @@ Options:
 ```
 ### britekit rpt-test
 ```
-Usage: cli rpt-test [OPTIONS]
+Usage: britekit rpt-test [OPTIONS]
 
   Generate comprehensive test metrics and reports comparing model predictions to
   ground truth.
@@ -743,7 +743,7 @@ Options:
 ```
 ### britekit search
 ```
-Usage: cli search [OPTIONS]
+Usage: britekit search [OPTIONS]
 
   Search a database for spectrograms similar to a specified one.
 
@@ -776,7 +776,7 @@ Options:
 ```
 ### britekit train
 ```
-Usage: cli train [OPTIONS]
+Usage: britekit train [OPTIONS]
 
   Train a bioacoustic recognition model using the specified configuration.
 
@@ -795,7 +795,7 @@ Options:
 ```
 ### britekit tune
 ```
-Usage: cli tune [OPTIONS]
+Usage: britekit tune [OPTIONS]
 
   Find and print the best hyperparameter settings based on exhaustive or random
   search.
@@ -842,7 +842,7 @@ Options:
 ```
 ### britekit wav2mp3
 ```
-Usage: cli wav2mp3 [OPTIONS]
+Usage: britekit wav2mp3 [OPTIONS]
 
   Convert uncompressed audio files to MP3 format and replace the originals.
 
@@ -862,7 +862,7 @@ Options:
 ```
 ### britekit xeno
 ```
-Usage: cli xeno [OPTIONS]
+Usage: britekit xeno [OPTIONS]
 
   Download bird song recordings from Xeno-Canto database.
 
@@ -889,7 +889,7 @@ Options:
 ```
 ### britekit youtube
 ```
-Usage: cli youtube [OPTIONS]
+Usage: britekit youtube [OPTIONS]
 
   Download an audio recording from Youtube, given a Youtube ID.
 

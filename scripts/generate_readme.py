@@ -9,8 +9,6 @@ Usage examples:
     --package britekit \
     --cli-module britekit.cli \
     --cli-object cli
-
-If your top-level CLI object isn't named `cli`, pass --cli-object accordingly.
 """
 
 from __future__ import annotations
@@ -597,6 +595,7 @@ def render_command_reference(cli_module: str, cli_object: str) -> str:
         args = [] if full_name == "" else full_name.split(" ")
         result = runner.invoke(root, args + ["--help"])
         help_text = result.output.strip()
+        help_text = help_text.replace("Usage: cli", "Usage: britekit")
         help_text = _link_commands_table(help_text, full_name)
         title = f"britekit {full_name}"
         parts.append(md_h3(title))
