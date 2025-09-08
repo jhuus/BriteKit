@@ -203,7 +203,9 @@ class Tuner:
                     self.best_scores = scores
                     self.best_params = params.copy()
 
-                util.echo(f"*** Trial score={score:.4f}, params={params}, runs={scores}")
+                util.echo(
+                    f"*** Trial score={score:.4f}, params={params}, runs={scores}"
+                )
                 util.echo(
                     f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
                 )
@@ -409,10 +411,8 @@ class Tuner:
             self.trial_metrics[0]["params"] = ""
             scores = self._get_scores()
             util.echo(f"*** Scores = {scores}")
-            util.echo(
-                f"*** Mean = {scores.mean():.4f}, Std Dev = {scores.std():.4f} "
-            )
-            self.trial_num = 1 # so write_reports doesn't skip trial 0
+            util.echo(f"*** Mean = {scores.mean():.4f}, Std Dev = {scores.std():.4f} ")
+            self.trial_num = 1  # so write_reports doesn't skip trial 0
         elif self.num_trials == 0:
             # num_trials = 0 means do exhaustive search
             self._recursive_trials(0, {})
