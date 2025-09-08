@@ -38,12 +38,14 @@ def tune_impl(
 
     The param_path specifies a YAML file that contains a sequence of parameters such as:
 
+    ```
     - name: prob_simple_merge
       type: float
       bounds:
       - 0.36
       - 0.42
       step: 0.02
+    ```
 
     The name defines a hyperparameter to tune, with given type, bounds and step size.
 
