@@ -803,3 +803,18 @@ Args:
 - `ignore_licence` *(bool)* — If True, ignore license restrictions. By default, excludes BY-NC-ND licensed recordings.
 - `scientific_name` *(bool)* — If True, treat the name as a scientific name rather than common name.
 - `seen_only` *(bool)* — If True, only download recordings where the animal was seen (animal-seen=yes).
+
+
+
+### youtube
+**Function**  
+```python
+youtube_cmd(youtube_id: str, output_dir: str, sampling_rate: int) -> None
+```
+Download an audio recording from Youtube, given a Youtube ID.
+
+Args:
+
+- `youtube_id` *(str)* — ID of the clip to download.
+- `output_dir` *(str)* — Directory where downloaded recordings will be saved.
+- `sampling_rate` *(float)* — Output sampling rate in Hz. Default is 32000.

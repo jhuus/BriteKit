@@ -40,6 +40,7 @@
 | [britekit tune](#britekit-tune) | Tune hyperparameters using exhaustive or random search. |
 | [britekit wav2mp3](#britekit-wav2mp3) | Convert uncompressed audio or flac to mp3. |
 | [britekit xeno](#britekit-xeno) | Download recordings from Xeno-Canto. |
+| [britekit youtube](#britekit-youtube) | Download a recording from Youtube. |
 
 ### britekit add-cat
 ```
@@ -884,5 +885,17 @@ Options:
   --sci               Specify this flag when using a scientific name rather than
                       a common name.
   --seen              Specify this flag to download only if animal-seen=yes.
+  --help              Show this message and exit.
+```
+### britekit youtube
+```
+Usage: cli youtube [OPTIONS]
+
+  Download an audio recording from Youtube, given a Youtube ID.
+
+Options:
+  --id TEXT           Youtube ID.  [required]
+  --output DIRECTORY  Output directory.  [required]
+  --sr INTEGER        Output sampling rate (default = 32000).
   --help              Show this message and exit.
 ```

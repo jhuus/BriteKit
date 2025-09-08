@@ -505,7 +505,7 @@ def render_config_reference() -> str:
             desc = descriptions.get(name, {}).get(f.name, "")
             # Escape pipes in desc
             if "|" in desc:
-                desc = desc.replace("|", "\|")
+                desc = desc.replace("|", r"\|")
             rows.append(f"| `{f.name}` | `{ftype}` | { _format_default(default) } | {desc} |")
         parts.append("\n".join(rows) + "\n\n")
 
