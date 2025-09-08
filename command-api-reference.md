@@ -727,7 +727,10 @@ Find and print the best hyperparameter settings based on exhaustive or random se
 This command performs hyperparameter optimization by training models with different
 parameter combinations and evaluating them using the specified metric. It can perform
 either exhaustive search (testing all combinations) or random search (testing a
-specified number of random combinations).
+specified number of random combinations). To tune spectrogram settings, the --extract
+CLI flag or API parameter specifies that new spectrograms will be extracted before training.
+To tune inference settings, the --notrain CLI flag (skip_training API parameter) specifies
+that training will be skipped.
 
 The param_path specifies a YAML file that contains a sequence of parameters such as:
 
