@@ -84,7 +84,7 @@ def extract_all_impl(
     "dir_path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     required=True,
-    help="Path to directory containing recordings..",
+    help="Path to directory containing recordings.",
 )
 @click.option(
     "--overlap",

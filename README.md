@@ -11,7 +11,7 @@
 - [Downloading Recordings](#downloading-recordings)
 - [Managing Training Data](#managing-training-data)
 
-Reference documentation:
+## Reference documentation:
 - [Command Reference](command-reference.md)
 - [Command API Reference](command-api-reference.md)
 - [General API Reference](api-reference.md)
@@ -64,4 +64,11 @@ For Xeno-Canto, use `--name` for the common name or `--sci` for the scientific n
 
 BriteKit also supports downloads using [Google Audioset](https://research.google.com/audioset/), which is metadata that classifies sounds in Youtube videos. Audioset was released in March 2017, so any videos uploaded later than that are not included. Also, some videos that are tagged in Audioset are no longer available. Type `britekit audioset --help` for more information.
 ## Managing Training Data
-TBD
+Once you have a collection of recordings, the steps to prepare it for training are:
+1. Extract spectrograms from recordings and insert them into the training database.
+2. Curate the training spectrograms.
+3. Create a pickle file from the training data.
+Then provide the path to the pickle file when running training.
+
+Suppose we have a folder called `recordings/cow`. To generate spectrograms and insert them into the training database, we could type `britekit extract-all --name Cow --dir recordings/cow`. This will create a SQLite database in `data/training.db` and populate it with spectrograms using the default configuration.
+
