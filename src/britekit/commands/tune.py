@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 import time
 from typing import Optional
 import yaml
@@ -97,6 +98,10 @@ def tune_impl(
             click.echo(f"\nBest score = {best_score:.4f}")
             click.echo(f"Best params = {best_params}")
             click.echo(f"See reports in {output_path}")
+
+        if cfg_path:
+            to_path = os.path.join(output_path, Path(cfg_path).name)
+            shutil.copy(cfg_path, to_path)
 
         elapsed_time = format_elapsed_time(start_time, time.time())
         click.echo(f"Elapsed time = {elapsed_time}")

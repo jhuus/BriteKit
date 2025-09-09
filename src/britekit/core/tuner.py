@@ -242,8 +242,6 @@ class Tuner:
                 continue  # try another one
 
             already_tried.add(trial_tuple)
-            self.trial_num += 1
-            self.trial_metrics[self.trial_num] = {}
 
             params = {}
             for i in range(len(values)):
@@ -263,6 +261,8 @@ class Tuner:
             util.echo(
                 f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
             )
+            self.trial_num += 1
+            self.trial_metrics[self.trial_num] = {}
 
     def _run_test(self):
         """
