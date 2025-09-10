@@ -20,6 +20,7 @@
 - [Spectrograms](#spectrograms)
 - [Backbones and Classifier Heads](#backbones-and-classifier-heads)
 - [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc)
+- [Data Augmentation](#data-augmentation)
 
 ## Reference Documentation:
 
@@ -149,10 +150,71 @@ Specifying head_type="effnet" is sometimes helpful for other models such as DLA 
 You can specify val_portion > 0 to run validation on a portion of the training data, or num_folds > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0, logs/fold-1 etc. Otherwise output is under logs/fold-0. Output from the first training run is saved in logs/fold-0/version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to access it from a web browser.
 
 ## Testing
-TBD
+To run a test, you need to annotate a set of test recordings, analyze them with your model or ensemble, and then run the `rpt-test` command. Annotations must be saved in a CSV file with a defined format. We recommend annotating each relevant sound (per-segment), but you can also do per-minute and per-recording annotations to save time. Per-recording annotations are defined in a CSV file with these columns:
+| Column | Description |
+|---|---|
+| recording | Just the stem of the recording name, e.g. XC12345, not XC12345.mp3. |
+| classes | Defined classes found in the recording, separated by commas. For example "AMCR,BCCH,COYE", but without the quotes.
 
+Per-minute annotations are defined in a CSV file with these columns:
+| Column | Description |
+|---|---|
+| recording | Just the stem of the recording name, as above. |
+| minute | 1 for the first minute, 2 for the second, etc. |
+| classes | Defined classes found in that minute, separated by commas.
+
+Per-segment annotations are recommended, and are defined in a CSV file with these columns:
+| Column | Description |
+|---|---|
+| recording | Just the stem of the recording name, as above. |
+| class | Identified class.
+| start_time | Where the sound starts, in seconds from the start of the recording.
+| end_time | Where the sound ends, in seconds from the start of the recording.
+
+Use the `analyze` command to analyze the recordings with your model or ensemble. For testing, be sure to specify `--min_score 0`. That way all predictions will be saved, not just those above a particular threshold, which is important when calculating metrics. See [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc) for more information.
+
+It's usually best for a test to consist of a single directory of recordings, containing a file called annotations.csv. If that directory is called recordings and you run analyze specifying `--output recordings/labels`, you could generate test reports as follows:
+```
+britekit rpt-test -a recordings/annotations.csv -l labels -o <output-dir>
+```
+If your annotations were per-minute or per-recording, you would specify the `--granularity minute` or `--granularity recording` argument (`--granularity segment` is the default).
 ## Tuning
-TBD
+Before tuning your model, you need to create a good test, as described in the previous section. Then you can use the `tune` command to find optimal settings for a given test. If you are only tuning inference parameters, you can run many iterations very quickly, since no training is needed. To tune training hyperparameters, many training runs are needed, which takes longer. You can also use the `tune` command to tune audio/spectrogram settings. In that case, every iteration extracts a new set of spectrograms, which takes even longer.
+
+Here is a practical approach:
+1. Review spectrogram plots with different settings, especially spec_duration, spec_width, spec_height, min_frequency, max_frequency and win_length. Then choose reasonable-looking initial settings. For example, if all the relevant sounds fall between 1000 and 5000 Hz, set min and max frequency accordingly.
+2. Do an initial tuning pass of the main training hyperparameters, especially model_type, head_type and num_epochs.
+3. Based on the above, carefully tune the audio/spectrogram parameters.
+
+This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc), and then you can proceed to fine-tuning the training and inference. For inference, it is usually worth tuning the `audio_power` parameter. If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`. For traininf, it may be worth tuning the data augmentation hyperparameters, which are described in detail in the [Data Augmentation](#data-augmentation) section below.
+
+To run the `tune` command, you would typically use a config YAML file as described earlier, plus a special tuning YAML file, as in this example:
+```
+- name: spec_width
+  type: int
+  bounds:
+  - 256
+  - 512
+  step: 64
+```
+This gives the name of the parameter to tune, its datatype, and the bounds and step sizes to try. In this case, we want to try spec_width values of 256, 320, 384, 448 and 512. You can also tune multiple parameters at the same time, by simply appending more definitions similar to this one. Parameters that have a choice of defined values rather than a range are specified like this:
+```
+- name: head_type
+  type: categorical
+  choices:
+  - "effnet"
+  - "hgnet"
+  - "basic_sed"
+```
+When running the `tune` command, you can ask it to test all defined combinations based on the input, or to test a random sample. To try 100 random combinations, add the argument `--tries 100`. To tune audio/spectrogram parameters, add the `--extract` argument. To tune inference only, add the `--notrain` argument.
+
+Training is non-deterministic, and results for a given group of settings can vary substantially across multiple training runs. Therefore it is important to specify the `--runs` argument, indicating how often training should be run for a given set of values.
+
+As an example, to find the best `spec_width` value, we could type a command like this:
+```
+britekit tune -c yaml/my_train.yml -p yaml/my_tune.yml -a my_test/annotations.csv -o output/tune-spec-width --runs 5 --extract
+```
+This will perform an extract before each trial, and use the average score from 5 training runs in each case. Scores will be based on the given test, using macro-averaged ROC-AUC, although this can be changed with the `--metric` argument.
 
 ## Ensembling
 TBD
@@ -169,4 +231,6 @@ TBD
 ## Backbones and Classifier Heads
 TBD
 ## Metrics (PR-AUC and ROC-AUC)
+TBD
+## Data Augmentation
 TBD
