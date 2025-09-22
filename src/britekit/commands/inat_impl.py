@@ -1,3 +1,5 @@
+# MyPy gets confused if the file name doesn't have the _impl suffix,
+# since then it would match an exported function name.
 import os
 import pyinaturalist
 import requests
@@ -34,7 +36,7 @@ def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[
     return base
 
 
-def inat_impl(
+def inat(
     output_dir: str,
     max_downloads: int,
     name: str,
@@ -94,7 +96,7 @@ def inat_impl(
 @click.command(
     name="inat",
     short_help="Download recordings from iNaturalist.",
-    help=cli_help_from_doc(inat_impl.__doc__),
+    help=cli_help_from_doc(inat.__doc__),
 )
 @click.option(
     "--output",
@@ -117,10 +119,10 @@ def inat_impl(
     help="By default, filenames use an 'N' prefix and recording number. Specify this flag to skip the prefix.",
 )
 @click.option("--name", required=True, type=str, help="Species name.")
-def inat_cmd(
+def _inat_cmd(
     output_dir: str,
     max_downloads: int,
     name: str,
     no_prefix: bool,
 ) -> None:
-    inat_impl(output_dir, max_downloads, name, no_prefix)
+    inat(output_dir, max_downloads, name, no_prefix)

@@ -10,6 +10,7 @@ except Exception:
     except Exception:
         __version__ = "0.0.0"  # last-resort fallback
 from britekit import commands
+from britekit.commands.inat_impl import _inat_cmd
 
 
 @click.group()
@@ -19,55 +20,55 @@ def cli():
     pass
 
 
-cli.add_command(commands.add_cat)
-cli.add_command(commands.add_stype)
-cli.add_command(commands.add_src)
-cli.add_command(commands.add_class)
-cli.add_command(commands.analyze)
-cli.add_command(commands.audioset)
+cli.add_command(commands.add_cat_cmd)
+cli.add_command(commands.add_stype_cmd)
+cli.add_command(commands.add_src_cmd)
+cli.add_command(commands.add_class_cmd)
+cli.add_command(commands.analyze_cmd)
+cli.add_command(commands.audioset_cmd)
 
-cli.add_command(commands.calibrate)
-cli.add_command(commands.ckpt_avg)
-cli.add_command(commands.ckpt_freeze)
-cli.add_command(commands.ckpt_onnx)
+cli.add_command(commands.calibrate_cmd)
+cli.add_command(commands.ckpt_avg_cmd)
+cli.add_command(commands.ckpt_freeze_cmd)
+cli.add_command(commands.ckpt_onnx_cmd)
 
-cli.add_command(commands.del_cat)
-cli.add_command(commands.del_class)
-cli.add_command(commands.del_rec)
-cli.add_command(commands.del_seg)
-cli.add_command(commands.del_sgroup)
-cli.add_command(commands.del_src)
-cli.add_command(commands.del_stype)
+cli.add_command(commands.del_cat_cmd)
+cli.add_command(commands.del_class_cmd)
+cli.add_command(commands.del_rec_cmd)
+cli.add_command(commands.del_seg_cmd)
+cli.add_command(commands.del_sgroup_cmd)
+cli.add_command(commands.del_src_cmd)
+cli.add_command(commands.del_stype_cmd)
 
-cli.add_command(commands.embed)
-cli.add_command(commands.extract_all)
-cli.add_command(commands.extract_by_image)
+cli.add_command(commands.embed_cmd)
+cli.add_command(commands.extract_all_cmd)
+cli.add_command(commands.extract_by_image_cmd)
 
-cli.add_command(commands.find_dup)
-cli.add_command(commands.find_lr)
+cli.add_command(commands.find_dup_cmd)
+cli.add_command(commands.find_lr_cmd)
 
-cli.add_command(commands.inat_cmd)
-cli.add_command(commands.init)
+cli.add_command(commands._inat_cmd)
+cli.add_command(commands.init_cmd)
 
-cli.add_command(commands.pickle)
-cli.add_command(commands.plot_dir)
-cli.add_command(commands.plot_db)
-cli.add_command(commands.plot_rec)
+cli.add_command(commands.pickle_cmd)
+cli.add_command(commands.plot_dir_cmd)
+cli.add_command(commands.plot_db_cmd)
+cli.add_command(commands.plot_rec_cmd)
 
-cli.add_command(commands.search)
+cli.add_command(commands.search_cmd)
 
-cli.add_command(commands.reextract)
-cli.add_command(commands.rpt_ann)
-cli.add_command(commands.rpt_db)
-cli.add_command(commands.rpt_epochs)
-cli.add_command(commands.rpt_labels)
-cli.add_command(commands.rpt_test)
+cli.add_command(commands.reextract_cmd)
+cli.add_command(commands.rpt_ann_cmd)
+cli.add_command(commands.rpt_db_cmd)
+cli.add_command(commands.rpt_epochs_cmd)
+cli.add_command(commands.rpt_labels_cmd)
+cli.add_command(commands.rpt_test_cmd)
 
-cli.add_command(commands.train)
-cli.add_command(commands.tune)
+cli.add_command(commands.train_cmd)
+cli.add_command(commands.tune_cmd)
 
-cli.add_command(commands.wav2mp3)
+cli.add_command(commands.wav2mp3_cmd)
 
-cli.add_command(commands.xeno)
+cli.add_command(commands.xeno_cmd)
 
-cli.add_command(commands.youtube)
+cli.add_command(commands.youtube_cmd)
