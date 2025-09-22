@@ -79,6 +79,7 @@ packages = ["src/britekit"]
 "src/britekit/__init__.py" = "britekit/__init__.py"
 "src/britekit/commands/__init__.py" = "britekit/commands/__init__.py"
 "src/britekit/core/__init__.py" = "britekit/core/__init__.py"
+"src/britekit/commands/_inat.py" = "britekit/commands/_inat.py"
 
 [tool.hatch.build.targets.sdist]
 only-include = [
@@ -92,6 +93,7 @@ only-include = [
 "src/britekit/__init__.py" = "britekit/__init__.py"
 "src/britekit/commands/__init__.py" = "britekit/commands/__init__.py"
 "src/britekit/core/__init__.py" = "britekit/core/__init__.py"
+"src/britekit/commands/_inat.py" = "britekit/commands/_inat.py"
 
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:src/britekit tests}"
