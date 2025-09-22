@@ -2,11 +2,11 @@
 
 -----
 
-## Quick Guide
+## Getting Started
 
+- [Introduction](#introduction)
 - [License](#license)
 - [Installation](#installation)
-- [Introduction](#introduction)
 - [Configuration](#configuration)
 - [Downloading Recordings](#downloading-recordings)
 - [Managing Training Data](#managing-training-data)
@@ -16,23 +16,38 @@
 - [Ensembling](#ensembling)
 - [Calibrating](#calibrating)
 
-## In-Depth Topics:
+## More Information
+
 - [Spectrograms](#spectrograms)
 - [Backbones and Classifier Heads](#backbones-and-classifier-heads)
 - [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc)
 - [Data Augmentation](#data-augmentation)
+- [Development Environment](#development-environment)
 
-## Reference Documentation:
+## Reference Guides
 
 - [Command Reference](command-reference.md)
 - [Command API Reference](command-api-reference.md)
 - [General API Reference](api-reference.md)
 - [Configuration Reference](config-reference.md)
 
-# Quick Guide
+# Getting Started
 
 -----
 
+## Introduction
+BriteKit (Bioacoustic Recognizer Technology Kit) is a Python package that facilitates the development of bioacoustic recognizers using deep learning.
+It provides a command-line interface (CLI) as well as a Python API, to support functions such as:
+- downloading recordings from Xeno-Canto, iNaturalist, and Youtube (optionally using Google Audioset metadata)
+- managing training data in a SQLite database
+- training models
+- testing, tuning and calibrating models
+- reporting
+- deployment and inference
+
+To view a list of BriteKit commands, type `britekit --help`. You can also get help for individual commands, e.g. `britekit train --help` describes the `train` command.
+When accessing BriteKit from Python, the `britekit.commands` namespace contains a function for each command, as documented [here](command-api-reference.md).
+The classes used by the commands can also be accessed, and are documented [here](api-reference.md).
 ## License
 BriteKit is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
 ## Installation
@@ -46,19 +61,6 @@ britekit init --dest=<directory path>
 ```
 This creates the directories needed and installs sample files. If you omit `--dest`, it will create
 directories under the current working directory.
-## Introduction
-BriteKit (Bioacoustic Recognizer Technology Kit) is a Python package that facilitates the development of bioacoustic recognizers using deep learning.
-It provides a command-line interface (CLI) as well as a Python API, to support functions such as:
-- downloading recordings from Xeno-Canto, iNaturalist, and Youtube (optionally with Google Audioset metadata)
-- managing training data in a SQLite database
-- training models
-- testing, tuning and calibrating your models
-- reporting
-- deployment
-
-To view a list of BriteKit commands, type `britekit --help`. You can also get help for individual commands, e.g. `britekit train --help` describes the `train` command.
-When accessing BriteKit from Python, the `britekit.commands` namespace contains a function for each command, as documented [here](command-api-reference.md).
-The classes used by the commands can also be accessed, and are documented [here](api-reference.md).
 ## Configuration
 Configuration parameters are documented [here](config-reference.md). After running `britekit init`, the file `yaml/base_config.yaml` contains all parameters in YAML format.
 Most CLI commands have a `--config` argument that allows you to specify the path to a YAML file that overrides selected parameters. For example, when running the `train` command,
@@ -222,7 +224,7 @@ TBD
 ## Calibrating
 TBD
 
-# In-Depth Topics
+# More Information
 
 -----
 
@@ -233,4 +235,6 @@ TBD
 ## Metrics (PR-AUC and ROC-AUC)
 TBD
 ## Data Augmentation
+TBD
+## Development Environment
 TBD
