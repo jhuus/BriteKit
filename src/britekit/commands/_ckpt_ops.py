@@ -9,7 +9,7 @@ from britekit.core.util import cli_help_from_doc
 from britekit.models.model_loader import load_from_checkpoint
 
 
-def ckpt_avg_impl(input_path: str, output_path: str):
+def ckpt_avg(input_path: str, output_path: str):
     """
     Average the weights of multiple model checkpoints to create an ensemble checkpoint.
 
@@ -47,7 +47,7 @@ def ckpt_avg_impl(input_path: str, output_path: str):
 @click.command(
     name="ckpt-avg",
     short_help="Average the weights of several checkpoints.",
-    help=cli_help_from_doc(ckpt_avg_impl.__doc__),
+    help=cli_help_from_doc(ckpt_avg.__doc__),
 )
 @click.option(
     "-i",
@@ -65,11 +65,11 @@ def ckpt_avg_impl(input_path: str, output_path: str):
     type=click.Path(file_okay=True, dir_okay=False),
     help="Optional path to output checkpoint. Default is weights.ckpt in the input directory",
 )
-def ckpt_avg_cmd(input_path: str, output_path: str):
-    ckpt_avg_impl(input_path, output_path)
+def _ckpt_avg_cmd(input_path: str, output_path: str):
+    ckpt_avg(input_path, output_path)
 
 
-def ckpt_freeze_impl(input_path: str):
+def ckpt_freeze(input_path: str):
     """
     Freeze the backbone weights of a checkpoint to reduce file size and improve inference speed.
 
@@ -97,7 +97,7 @@ def ckpt_freeze_impl(input_path: str):
 @click.command(
     name="ckpt-freeze",
     short_help="Freeze the backbone weights of a checkpoint.",
-    help=cli_help_from_doc(ckpt_freeze_impl.__doc__),
+    help=cli_help_from_doc(ckpt_freeze.__doc__),
 )
 @click.option(
     "-i",
@@ -107,11 +107,11 @@ def ckpt_freeze_impl(input_path: str):
     type=click.Path(file_okay=True, dir_okay=False),
     help="Path to checkpoint to freeze",
 )
-def ckpt_freeze_cmd(input_path: str):
-    ckpt_freeze_impl(input_path)
+def _ckpt_freeze_cmd(input_path: str):
+    ckpt_freeze(input_path)
 
 
-def ckpt_onnx_impl(
+def ckpt_onnx(
     cfg_path: str,
     input_path: str,
 ):
@@ -142,7 +142,7 @@ def ckpt_onnx_impl(
 @click.command(
     name="ckpt-onnx",
     short_help="Convert a checkpoint to onnx format for use with openvino.",
-    help=cli_help_from_doc(ckpt_onnx_impl.__doc__),
+    help=cli_help_from_doc(ckpt_onnx.__doc__),
 )
 @click.option(
     "-c",
@@ -160,8 +160,8 @@ def ckpt_onnx_impl(
     type=click.Path(file_okay=True, dir_okay=False),
     help="Path to checkpoint to convert to ONNX format",
 )
-def ckpt_onnx_cmd(
+def _ckpt_onnx_cmd(
     cfg_path: str,
     input_path: str,
 ):
-    ckpt_onnx_impl(cfg_path, input_path)
+    ckpt_onnx(cfg_path, input_path)

@@ -12,7 +12,7 @@ from britekit.models.model_loader import load_from_checkpoint
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def search_impl(
+def search(
     cfg_path: str,
     db_path: str,
     class_name: str,
@@ -180,7 +180,7 @@ def search_impl(
 @click.command(
     name="search",
     short_help="Search a database for spectrograms similar to one given.",
-    help=cli_help_from_doc(search_impl.__doc__),
+    help=cli_help_from_doc(search.__doc__),
 )
 @click.option(
     "-c",
@@ -260,7 +260,7 @@ def search_impl(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def search_cmd(
+def _search_cmd(
     cfg_path: str,
     db_path: str,
     class_name: str,
@@ -274,7 +274,7 @@ def search_cmd(
     class_name2: str,
     spec_group: str,
 ):
-    search_impl(
+    search(
         cfg_path,
         db_path,
         class_name,

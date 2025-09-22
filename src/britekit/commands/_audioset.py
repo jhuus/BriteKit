@@ -1,3 +1,4 @@
+# Use _ prefix in filename since MyPy can get confused if filename matches function name.
 import os
 from pathlib import Path
 
@@ -170,7 +171,7 @@ def _download_curated(
     click.echo(f"# downloaded = {count - num_to_skip}")
 
 
-def audioset_impl(
+def audioset(
     class_name: str,
     curated_csv_path: str,
     output_dir: str,
@@ -234,7 +235,7 @@ def audioset_impl(
 @click.command(
     name="audioset",
     short_help="Download recordings from Google Audioset.",
-    help=cli_help_from_doc(audioset_impl.__doc__),
+    help=cli_help_from_doc(audioset.__doc__),
 )
 @click.option("--name", "class_name", type=str, help="Class name.")
 @click.option(
@@ -284,7 +285,7 @@ def audioset_impl(
     type=click.Path(file_okay=False),
     help="Root directory containing data directory.",
 )
-def audioset_cmd(
+def _audioset_cmd(
     class_name: str,
     curated_csv_path: str,
     output_dir: str,
@@ -294,7 +295,7 @@ def audioset_cmd(
     do_report: bool,
     root_dir: str,
 ) -> None:
-    audioset_impl(
+    audioset(
         class_name,
         curated_csv_path,
         output_dir,

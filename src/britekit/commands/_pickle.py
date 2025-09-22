@@ -8,7 +8,7 @@ from britekit.core.pickler import Pickler
 from britekit.core.util import cli_help_from_doc
 
 
-def pickle_impl(
+def pickle(
     cfg_path: Optional[str],
     classes_path: Optional[str],
     db_path: Optional[str],
@@ -48,7 +48,7 @@ def pickle_impl(
 @click.command(
     name="pickle",
     short_help="Convert database records to a pickle file for use in training.",
-    help=cli_help_from_doc(pickle_impl.__doc__),
+    help=cli_help_from_doc(pickle.__doc__),
 )
 @click.option(
     "-c",
@@ -96,7 +96,7 @@ def pickle_impl(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def pickle_cmd(
+def _pickle_cmd(
     cfg_path: Optional[str],
     classes_path: Optional[str],
     db_path: Optional[str],
@@ -105,7 +105,7 @@ def pickle_cmd(
     max_per_class: Optional[int],
     spec_group: Optional[str],
 ) -> None:
-    pickle_impl(
+    pickle(
         cfg_path,
         classes_path,
         db_path,

@@ -10,7 +10,7 @@ from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
-def find_dup_impl(
+def find_dup(
     cfg_path: Optional[str],
     db_path: Optional[str],
     class_name: str,
@@ -132,7 +132,7 @@ def find_dup_impl(
 @click.command(
     name="find-dup",
     short_help="Find and optionally delete duplicate recordings in a database.",
-    help=cli_help_from_doc(find_dup_impl.__doc__),
+    help=cli_help_from_doc(find_dup.__doc__),
 )
 @click.option(
     "-c",
@@ -163,11 +163,11 @@ def find_dup_impl(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def find_dup_cmd(
+def _find_dup_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
     class_name: str,
     delete: bool,
     spec_group: str,
 ) -> None:
-    find_dup_impl(cfg_path, db_path, class_name, delete, spec_group)
+    find_dup(cfg_path, db_path, class_name, delete, spec_group)

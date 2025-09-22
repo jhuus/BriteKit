@@ -9,7 +9,7 @@ from britekit.models.model_loader import load_from_checkpoint, BaseModel
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def embed_impl(
+def embed(
     cfg_path: Optional[str],
     db_path: Optional[str],
     class_name: Optional[str],
@@ -89,7 +89,7 @@ def embed_impl(
 @click.command(
     name="embed",
     short_help="Insert spectrogram embeddings into database.",
-    help=cli_help_from_doc(embed_impl.__doc__),
+    help=cli_help_from_doc(embed.__doc__),
 )
 @click.option(
     "-c",
@@ -108,10 +108,10 @@ def embed_impl(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def embed_cmd(
+def _embed_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
     class_name: Optional[str],
     spec_group: str,
 ) -> None:
-    embed_impl(cfg_path, db_path, class_name, spec_group)
+    embed(cfg_path, db_path, class_name, spec_group)

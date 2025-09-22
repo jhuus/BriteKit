@@ -9,7 +9,7 @@ from britekit.core.reextractor import Reextractor
 from britekit.core.util import cli_help_from_doc
 
 
-def reextract_impl(
+def reextract(
     cfg_path: Optional[str] = None,
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
@@ -55,7 +55,7 @@ def reextract_impl(
 @click.command(
     name="reextract",
     short_help="Re-generate the spectrograms in a database, and add them to the database.",
-    help=cli_help_from_doc(reextract_impl.__doc__),
+    help=cli_help_from_doc(reextract.__doc__),
 )
 @click.option(
     "-c",
@@ -96,7 +96,7 @@ def reextract_impl(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def reextract_cmd(
+def _reextract_cmd(
     cfg_path: Optional[str] = None,
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
@@ -104,4 +104,4 @@ def reextract_cmd(
     check: bool = False,
     spec_group: str = "default",
 ):
-    reextract_impl(cfg_path, db_path, class_name, classes_path, check, spec_group)
+    reextract(cfg_path, db_path, class_name, classes_path, check, spec_group)

@@ -12,7 +12,7 @@ from britekit.core.util import format_elapsed_time, cli_help_from_doc
 from britekit.core.tuner import Tuner
 
 
-def tune_impl(
+def tune(
     cfg_path: str,
     param_path: Optional[str],
     output_path: str,
@@ -113,7 +113,7 @@ def tune_impl(
 @click.command(
     name="tune",
     short_help="Tune hyperparameters using exhaustive or random search.",
-    help=cli_help_from_doc(tune_impl.__doc__),
+    help=cli_help_from_doc(tune.__doc__),
 )
 @click.option(
     "-c",
@@ -206,7 +206,7 @@ def tune_impl(
     required=False,
     help="Path to CSV containing class names for extract option. Default is all classes.",
 )
-def tune_cmd(
+def _tune_cmd(
     cfg_path: str,
     param_path: Optional[str],
     output_path: str,
@@ -220,7 +220,7 @@ def tune_cmd(
     skip_training: bool,
     classes_path: Optional[str],
 ):
-    tune_impl(
+    tune(
         cfg_path,
         param_path,
         output_path,

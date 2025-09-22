@@ -7,7 +7,7 @@ from britekit.training_db.extractor import Extractor
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def extract_all_impl(
+def extract_all(
     cfg_path: Optional[str],
     db_path: Optional[str],
     cat_name: Optional[str],
@@ -53,7 +53,7 @@ def extract_all_impl(
 @click.command(
     name="extract-all",
     short_help="Insert all spectrograms from recordings into database.",
-    help=cli_help_from_doc(extract_all_impl.__doc__),
+    help=cli_help_from_doc(extract_all.__doc__),
 )
 @click.option(
     "-c",
@@ -105,7 +105,7 @@ def extract_all_impl(
     required=False,
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def extract_all_cmd(
+def _extract_all_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
     cat_name: Optional[str],
@@ -116,7 +116,7 @@ def extract_all_cmd(
     src_name: Optional[str],
     spec_group: Optional[str],
 ) -> None:
-    extract_all_impl(
+    extract_all(
         cfg_path,
         db_path,
         cat_name,
@@ -129,7 +129,7 @@ def extract_all_cmd(
     )
 
 
-def extract_by_image_impl(
+def extract_by_image(
     cfg_path: Optional[str],
     db_path: Optional[str],
     cat_name: Optional[str],
@@ -180,7 +180,7 @@ def extract_by_image_impl(
 @click.command(
     name="extract-by-image",
     short_help="Insert spectrograms that correspond to images.",
-    help=cli_help_from_doc(extract_by_image_impl.__doc__),
+    help=cli_help_from_doc(extract_by_image.__doc__),
 )
 @click.option(
     "-c",
@@ -239,7 +239,7 @@ def extract_by_image_impl(
     required=False,
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def extract_by_image_cmd(
+def _extract_by_image_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
     cat_name: Optional[str],
@@ -251,7 +251,7 @@ def extract_by_image_cmd(
     src_name: Optional[str],
     spec_group: Optional[str],
 ) -> None:
-    extract_by_image_impl(
+    extract_by_image(
         cfg_path,
         db_path,
         cat_name,

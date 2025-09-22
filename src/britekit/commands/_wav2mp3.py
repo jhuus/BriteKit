@@ -5,7 +5,7 @@ import click
 from britekit.core.util import cli_help_from_doc
 
 
-def wav2mp3_impl(
+def wav2mp3(
     dir: str,
     sampling_rate: int,
 ):
@@ -50,7 +50,7 @@ def wav2mp3_impl(
 @click.command(
     name="wav2mp3",
     short_help="Convert uncompressed audio or flac to mp3.",
-    help=cli_help_from_doc(wav2mp3_impl.__doc__),
+    help=cli_help_from_doc(wav2mp3.__doc__),
 )
 @click.option(
     "--dir",
@@ -65,8 +65,8 @@ def wav2mp3_impl(
     default=32000,
     help="Output sampling rate (default = 32000).",
 )
-def wav2mp3_cmd(
+def _wav2mp3_cmd(
     dir: str,
     sampling_rate: int,
 ):
-    wav2mp3_impl(dir, sampling_rate)
+    wav2mp3(dir, sampling_rate)

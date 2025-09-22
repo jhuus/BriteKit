@@ -19,7 +19,7 @@ def _iter_traversable_files(
             yield (prefix + (child.name,)), child
 
 
-def init_impl(dest: Path) -> None:
+def init(dest: Path) -> None:
     """
     Setup default BriteKit directory structure and copy packaged sample files.
 
@@ -69,7 +69,7 @@ def init_impl(dest: Path) -> None:
 @click.command(
     name="init",
     short_help="Create default directory structure including sample files.",
-    help=cli_help_from_doc(init_impl.__doc__),
+    help=cli_help_from_doc(init.__doc__),
 )
 @click.option(
     "--dest",
@@ -77,5 +77,5 @@ def init_impl(dest: Path) -> None:
     default=".",
     help="Root directory to copy under (default is working directory).",
 )
-def init_cmd(dest: Path) -> None:
-    init_impl(dest)
+def _init_cmd(dest: Path) -> None:
+    init(dest)

@@ -56,7 +56,7 @@ def _plot_recording(
             plot_spec(spec, image_path, show_dims=not ndims)
 
 
-def plot_db_impl(
+def plot_db(
     cfg_path: str,
     class_name: str,
     db_path: Optional[str],
@@ -135,7 +135,7 @@ def plot_db_impl(
 @click.command(
     name="plot-db",
     short_help="Plot spectrograms from a database.",
-    help=cli_help_from_doc(plot_db_impl.__doc__),
+    help=cli_help_from_doc(plot_db.__doc__),
 )
 @click.option(
     "-c",
@@ -192,7 +192,7 @@ def plot_db_impl(
     required=False,
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def plot_db_cmd(
+def _plot_db_cmd(
     cfg_path: str,
     class_name: str,
     db_path: Optional[str],
@@ -203,7 +203,7 @@ def plot_db_cmd(
     power: Optional[float],
     spec_group: Optional[str],
 ):
-    plot_db_impl(
+    plot_db(
         cfg_path,
         class_name,
         db_path,
@@ -216,7 +216,7 @@ def plot_db_cmd(
     )
 
 
-def plot_dir_impl(
+def plot_dir(
     cfg_path: str,
     ndims: bool,
     input_path: str,
@@ -265,7 +265,7 @@ def plot_dir_impl(
 @click.command(
     name="plot-dir",
     short_help="Plot spectrograms from a directory of recordings.",
-    help=cli_help_from_doc(plot_dir_impl.__doc__),
+    help=cli_help_from_doc(plot_dir.__doc__),
 )
 @click.option(
     "-c",
@@ -318,7 +318,7 @@ def plot_dir_impl(
     required=False,
     help="Raise spectrograms to this power. Lower values show more detail.",
 )
-def plot_dir_cmd(
+def _plot_dir_cmd(
     cfg_path: str,
     ndims: bool,
     input_path: str,
@@ -327,10 +327,10 @@ def plot_dir_cmd(
     overlap: float,
     power: float = 1.0,
 ):
-    plot_dir_impl(cfg_path, ndims, input_path, output_path, all, overlap, power)
+    plot_dir(cfg_path, ndims, input_path, output_path, all, overlap, power)
 
 
-def plot_rec_impl(
+def plot_rec(
     cfg_path: str,
     ndims: bool,
     input_path: str,
@@ -373,7 +373,7 @@ def plot_rec_impl(
 @click.command(
     name="plot-rec",
     short_help="Plot spectrograms from a specific recording.",
-    help=cli_help_from_doc(plot_rec_impl.__doc__),
+    help=cli_help_from_doc(plot_rec.__doc__),
 )
 @click.option(
     "-c",
@@ -426,7 +426,7 @@ def plot_rec_impl(
     required=False,
     help="Raise spectrograms to this power. Lower values show more detail.",
 )
-def plot_rec_cmd(
+def _plot_rec_cmd(
     cfg_path: str,
     ndims: bool,
     input_path: str,
@@ -435,4 +435,4 @@ def plot_rec_cmd(
     overlap: float,
     power: float = 1.0,
 ):
-    plot_rec_impl(cfg_path, ndims, input_path, output_path, all, overlap, power)
+    plot_rec(cfg_path, ndims, input_path, output_path, all, overlap, power)

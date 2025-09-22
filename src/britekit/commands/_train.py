@@ -7,7 +7,7 @@ from britekit.core.util import format_elapsed_time, cli_help_from_doc
 from britekit.core.trainer import Trainer
 
 
-def train_impl(
+def train(
     cfg_path: str,
 ):
     """
@@ -37,7 +37,7 @@ def train_impl(
 
 
 @click.command(
-    name="train", short_help="Run training.", help=cli_help_from_doc(train_impl.__doc__)
+    name="train", short_help="Run training.", help=cli_help_from_doc(train.__doc__)
 )
 @click.option(
     "-c",
@@ -47,13 +47,13 @@ def train_impl(
     required=False,
     help="Path to YAML file defining config overrides.",
 )
-def train_cmd(
+def _train_cmd(
     cfg_path: str,
 ):
-    train_impl(cfg_path)
+    train(cfg_path)
 
 
-def find_lr_impl(cfg_path: str, num_batches: int):
+def find_lr(cfg_path: str, num_batches: int):
     """
     Find an optimal learning rate for model training using the learning rate finder.
 
@@ -85,7 +85,7 @@ def find_lr_impl(cfg_path: str, num_batches: int):
 @click.command(
     name="find-lr",
     short_help="Suggest a learning rate.",
-    help=cli_help_from_doc(find_lr_impl.__doc__),
+    help=cli_help_from_doc(find_lr.__doc__),
 )
 @click.option(
     "-c",
@@ -98,5 +98,5 @@ def find_lr_impl(cfg_path: str, num_batches: int):
 @click.option(
     "-n", "--num-batches", type=int, default=100, help="Number of batches to analyze"
 )
-def find_lr_cmd(cfg_path: str, num_batches: int):
-    find_lr_impl(cfg_path, num_batches)
+def _find_lr_cmd(cfg_path: str, num_batches: int):
+    find_lr(cfg_path, num_batches)

@@ -51,7 +51,7 @@ def process_response(
         return False  # not done
 
 
-def xeno_impl(
+def xeno(
     key: str,
     output_dir: str,
     max_downloads: int,
@@ -144,7 +144,7 @@ def xeno_impl(
 @click.command(
     name="xeno",
     short_help="Download recordings from Xeno-Canto.",
-    help=cli_help_from_doc(xeno_impl.__doc__),
+    help=cli_help_from_doc(xeno.__doc__),
 )
 @click.option("--key", type=str, help="Xeno-Canto API key.")
 @click.option(
@@ -180,7 +180,7 @@ def xeno_impl(
     is_flag=True,
     help="Specify this flag to download only if animal-seen=yes.",
 )
-def xeno_cmd(
+def _xeno_cmd(
     key: str,
     output_dir: str,
     max_downloads: int,
@@ -189,6 +189,6 @@ def xeno_cmd(
     scientific_name: bool,
     seen_only: bool,
 ):
-    xeno_impl(
+    xeno(
         key, output_dir, max_downloads, name, ignore_licence, scientific_name, seen_only
     )

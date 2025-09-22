@@ -6,7 +6,7 @@ from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def add_cat_impl(db_path: Optional[str], name: str) -> None:
+def add_cat(db_path: Optional[str], name: str) -> None:
     """
     Add a category (class group) record to the training database.
 
@@ -36,15 +36,15 @@ def add_cat_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="add-cat",
     short_help="Add a category (class group) record to a database.",
-    help=cli_help_from_doc(add_cat_impl.__doc__),
+    help=cli_help_from_doc(add_cat.__doc__),
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option("--name", "name", required=True, help="Category name")
-def add_cat_cmd(db_path: Optional[str], name: str) -> None:
-    add_cat_impl(db_path, name)
+def _add_cat_cmd(db_path: Optional[str], name: str) -> None:
+    add_cat(db_path, name)
 
 
-def add_stype_impl(db_path: Optional[str], name: str) -> None:
+def add_stype(db_path: Optional[str], name: str) -> None:
     """
     Add a sound type record to the training database.
 
@@ -74,15 +74,15 @@ def add_stype_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="add-stype",
     short_help="Add a soundtype record to a database.",
-    help=cli_help_from_doc(add_stype_impl.__doc__),
+    help=cli_help_from_doc(add_stype.__doc__),
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option("--name", "name", required=True, help="Soundtype name")
-def add_stype_cmd(db_path: Optional[str], name: str) -> None:
-    add_stype_impl(db_path, name)
+def _add_stype_cmd(db_path: Optional[str], name: str) -> None:
+    add_stype(db_path, name)
 
 
-def add_src_impl(db_path: Optional[str], name: str) -> None:
+def add_src(db_path: Optional[str], name: str) -> None:
     """
     Add a source record to the training database.
 
@@ -112,15 +112,15 @@ def add_src_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="add-src",
     short_help="Add a source (e.g. 'Xeno-Canto') record to a database.",
-    help=cli_help_from_doc(add_src_impl.__doc__),
+    help=cli_help_from_doc(add_src.__doc__),
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option("--name", "name", required=True, help="Source name")
-def add_src_cmd(db_path: Optional[str], name: str) -> None:
-    add_src_impl(db_path, name)
+def _add_src_cmd(db_path: Optional[str], name: str) -> None:
+    add_src(db_path, name)
 
 
-def add_class_impl(
+def add_class(
     db_path: Optional[str],
     category: str,
     name: str,
@@ -167,7 +167,7 @@ def add_class_impl(
 @click.command(
     name="add-class",
     short_help="Add a class record to a database.",
-    help=cli_help_from_doc(add_class_impl.__doc__),
+    help=cli_help_from_doc(add_class.__doc__),
 )
 @click.option("-d", "--db", "db_path", required=False, help="Path to the database.")
 @click.option(
@@ -181,7 +181,7 @@ def add_class_impl(
 @click.option(
     "--alt_code", "alt_code", required=False, default="", help="Class alternate code"
 )
-def add_class_cmd(
+def _add_class_cmd(
     db_path: Optional[str],
     category: str,
     name: str,
@@ -189,4 +189,4 @@ def add_class_cmd(
     alt_name: str,
     alt_code: str,
 ) -> None:
-    add_class_impl(db_path, category, name, code, alt_name, alt_code)
+    add_class(db_path, category, name, code, alt_name, alt_code)

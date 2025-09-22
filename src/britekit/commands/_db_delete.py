@@ -9,7 +9,7 @@ from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def del_cat_impl(db_path: Optional[str], name: str) -> None:
+def del_cat(db_path: Optional[str], name: str) -> None:
     """
     Delete a category and all its associated data from the training database.
 
@@ -46,17 +46,17 @@ def del_cat_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="del-cat",
     short_help="Delete a category (class group) and its classes from a database.",
-    help=cli_help_from_doc(del_cat_impl.__doc__),
+    help=cli_help_from_doc(del_cat.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Category name.")
-def del_cat_cmd(db_path: Optional[str], name: str) -> None:
-    del_cat_impl(db_path, name)
+def _del_cat_cmd(db_path: Optional[str], name: str) -> None:
+    del_cat(db_path, name)
 
 
-def del_class_impl(db_path: Optional[str], class_name: str) -> None:
+def del_class(db_path: Optional[str], class_name: str) -> None:
     """
     Delete a class and all its associated data from the training database.
 
@@ -91,17 +91,17 @@ def del_class_impl(db_path: Optional[str], class_name: str) -> None:
 @click.command(
     name="del-class",
     short_help="Delete a class and associated records from a database.",
-    help=cli_help_from_doc(del_class_impl.__doc__),
+    help=cli_help_from_doc(del_class.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "class_name", required=True, help="Class name.")
-def del_class_cmd(db_path: Optional[str], class_name: str) -> None:
-    del_class_impl(db_path, class_name)
+def _del_class_cmd(db_path: Optional[str], class_name: str) -> None:
+    del_class(db_path, class_name)
 
 
-def del_rec_impl(db_path: Optional[str], file_name: str) -> None:
+def del_rec(db_path: Optional[str], file_name: str) -> None:
     """
     Delete a recording and all its spectrograms from the training database.
 
@@ -129,17 +129,17 @@ def del_rec_impl(db_path: Optional[str], file_name: str) -> None:
 @click.command(
     name="del-rec",
     short_help="Delete a recording and associated records from a database.",
-    help=cli_help_from_doc(del_rec_impl.__doc__),
+    help=cli_help_from_doc(del_rec.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "file_name", required=True, help="Recording file name.")
-def del_rec_cmd(db_path: Optional[str], file_name: str) -> None:
-    del_rec_impl(db_path, file_name)
+def _del_rec_cmd(db_path: Optional[str], file_name: str) -> None:
+    del_rec(db_path, file_name)
 
 
-def del_sgroup_impl(db_path: Optional[str], name: str) -> None:
+def del_sgroup(db_path: Optional[str], name: str) -> None:
     """
     Delete a spectrogram group and all its spectrogram values from the training database.
 
@@ -167,17 +167,17 @@ def del_sgroup_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="del-sgroup",
     short_help="Delete a spectrogram group from the database.",
-    help=cli_help_from_doc(del_sgroup_impl.__doc__),
+    help=cli_help_from_doc(del_sgroup.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Spec group name.")
-def del_sgroup_cmd(db_path: Optional[str], name: str) -> None:
-    del_sgroup_impl(db_path, name)
+def _del_sgroup_cmd(db_path: Optional[str], name: str) -> None:
+    del_sgroup(db_path, name)
 
 
-def del_stype_impl(db_path: Optional[str], name: str) -> None:
+def del_stype(db_path: Optional[str], name: str) -> None:
     """
     Delete a sound type from the training database.
 
@@ -206,17 +206,17 @@ def del_stype_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="del-stype",
     short_help="Delete a sound type from a database.",
-    help=cli_help_from_doc(del_stype_impl.__doc__),
+    help=cli_help_from_doc(del_stype.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Sound type name.")
-def del_stype_cmd(db_path: Optional[str], name: str) -> None:
-    del_stype_impl(db_path, name)
+def _del_stype_cmd(db_path: Optional[str], name: str) -> None:
+    del_stype(db_path, name)
 
 
-def del_src_impl(db_path: Optional[str], name: str) -> None:
+def del_src(db_path: Optional[str], name: str) -> None:
     """
     Delete a recording source and all its associated data from the training database.
 
@@ -245,17 +245,17 @@ def del_src_impl(db_path: Optional[str], name: str) -> None:
 @click.command(
     name="del-src",
     short_help="Delete a recording source and associated records from a database.",
-    help=cli_help_from_doc(del_src_impl.__doc__),
+    help=cli_help_from_doc(del_src.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Source name.")
-def del_src_cmd(db_path: Optional[str], name: str) -> None:
-    del_src_impl(db_path, name)
+def _del_src_cmd(db_path: Optional[str], name: str) -> None:
+    del_src(db_path, name)
 
 
-def del_seg_impl(db_path: Optional[str], class_name: str, dir_path: str) -> None:
+def del_seg(db_path: Optional[str], class_name: str, dir_path: str) -> None:
     """
     Delete segments that correspond to images in a given directory.
 
@@ -336,7 +336,7 @@ def del_seg_impl(db_path: Optional[str], class_name: str, dir_path: str) -> None
 @click.command(
     name="del-seg",
     short_help="Delete segments that match given images.",
-    help=cli_help_from_doc(del_seg_impl.__doc__),
+    help=cli_help_from_doc(del_seg.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
@@ -345,5 +345,5 @@ def del_seg_impl(db_path: Optional[str], class_name: str, dir_path: str) -> None
 @click.option(
     "--dir", "dir_path", required=True, help="Path to directory containing images."
 )
-def del_seg_cmd(db_path: Optional[str], class_name: str, dir_path: str) -> None:
-    del_seg_impl(db_path, class_name, dir_path)
+def _del_seg_cmd(db_path: Optional[str], class_name: str, dir_path: str) -> None:
+    del_seg(db_path, class_name, dir_path)

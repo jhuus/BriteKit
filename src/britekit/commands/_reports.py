@@ -21,7 +21,7 @@ from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
-def rpt_ann_impl(
+def rpt_ann(
     annotations_path: str,
     output_path: str,
 ):
@@ -102,7 +102,7 @@ def rpt_ann_impl(
 @click.command(
     name="rpt-ann",
     short_help="Summarize annotations in a per-segment test.",
-    help=cli_help_from_doc(rpt_ann_impl.__doc__),
+    help=cli_help_from_doc(rpt_ann.__doc__),
 )
 @click.option(
     "-a",
@@ -120,14 +120,14 @@ def rpt_ann_impl(
     required=True,
     help="Path to output directory.",
 )
-def rpt_ann_cmd(
+def _rpt_ann_cmd(
     annotations_path: str,
     output_path: str,
 ):
-    rpt_ann_impl(annotations_path, output_path)
+    rpt_ann(annotations_path, output_path)
 
 
-def rpt_db_impl(cfg_path, db_path, output_path):
+def rpt_db(cfg_path, db_path, output_path):
     """
     Generate a comprehensive summary report of the training database.
 
@@ -163,7 +163,7 @@ def rpt_db_impl(cfg_path, db_path, output_path):
 @click.command(
     name="rpt-db",
     short_help="Generate a database summary report.",
-    help=cli_help_from_doc(rpt_db_impl.__doc__),
+    help=cli_help_from_doc(rpt_db.__doc__),
 )
 @click.option(
     "-c",
@@ -184,11 +184,11 @@ def rpt_db_impl(cfg_path, db_path, output_path):
     required=True,
     help="Path to output directory.",
 )
-def rpt_db_cmd(cfg_path, db_path, output_path):
-    rpt_db_impl(cfg_path, db_path, output_path)
+def _rpt_db_cmd(cfg_path, db_path, output_path):
+    rpt_db(cfg_path, db_path, output_path)
 
 
-def rpt_epochs_impl(
+def rpt_epochs(
     cfg_path: str,
     input_path: str,
     annotations_path: str,
@@ -321,7 +321,7 @@ def rpt_epochs_impl(
 @click.command(
     name="rpt-epochs",
     short_help="Plot the test score for every training epoch.",
-    help=cli_help_from_doc(rpt_epochs_impl.__doc__),
+    help=cli_help_from_doc(rpt_epochs.__doc__),
 )
 @click.option(
     "-c",
@@ -355,13 +355,13 @@ def rpt_epochs_impl(
     required=True,
     help="Path to output directory.",
 )
-def rpt_epochs_cmd(
+def _rpt_epochs_cmd(
     cfg_path: str,
     input_path: str,
     annotations_path: str,
     output_path: str,
 ):
-    rpt_epochs_impl(
+    rpt_epochs(
         cfg_path,
         input_path,
         annotations_path,
@@ -369,7 +369,7 @@ def rpt_epochs_cmd(
     )
 
 
-def rpt_labels_impl(
+def rpt_labels(
     label_dir: str,
     output_path: str,
     min_score: Optional[float],
@@ -472,7 +472,7 @@ def rpt_labels_impl(
 @click.command(
     name="rpt-labels",
     short_help="Summarize the output of an inference run.",
-    help=cli_help_from_doc(rpt_labels_impl.__doc__),
+    help=cli_help_from_doc(rpt_labels.__doc__),
 )
 @click.option(
     "-l",
@@ -498,15 +498,15 @@ def rpt_labels_impl(
     required=False,
     help="Ignore scores below this threshold.",
 )
-def rpt_labels_cmd(
+def _rpt_labels_cmd(
     label_dir: str,
     output_path: str,
     min_score: Optional[float],
 ):
-    rpt_labels_impl(label_dir, output_path, min_score)
+    rpt_labels(label_dir, output_path, min_score)
 
 
-def rpt_test_impl(
+def rpt_test(
     cfg_path: str,
     granularity: str,
     annotations_path: str,
@@ -594,7 +594,7 @@ def rpt_test_impl(
 @click.command(
     name="rpt-test",
     short_help="Generate metrics and reports from test results.",
-    help=cli_help_from_doc(rpt_test_impl.__doc__),
+    help=cli_help_from_doc(rpt_test.__doc__),
 )
 @click.option(
     "-c",
@@ -659,7 +659,7 @@ def rpt_test_impl(
     default=0.95,
     help="For granularity=recording, report TP seconds at this precision (default=.95).",
 )
-def rpt_test_cmd(
+def _rpt_test_cmd(
     cfg_path: str,
     granularity: str,
     annotations_path: str,
@@ -669,7 +669,7 @@ def rpt_test_cmd(
     min_score: Optional[float],
     precision: float,
 ):
-    rpt_test_impl(
+    rpt_test(
         cfg_path,
         granularity,
         annotations_path,

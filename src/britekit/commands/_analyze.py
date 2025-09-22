@@ -1,3 +1,4 @@
+# Use _ prefix in filename since MyPy can get confused if filename matches function name.
 import click
 import os
 from pathlib import Path
@@ -11,7 +12,7 @@ from britekit.core import util
 from britekit.core.util import cli_help_from_doc
 
 
-def analyze_impl(
+def analyze(
     cfg_path: str,
     input_path: str,
     output_path: str,
@@ -82,7 +83,7 @@ def analyze_impl(
 @click.command(
     name="analyze",
     short_help="Run inference.",
-    help=cli_help_from_doc(analyze_impl.__doc__),
+    help=cli_help_from_doc(analyze.__doc__),
 )
 @click.option(
     "-c",
@@ -138,7 +139,7 @@ def analyze_impl(
     type=float,
     help="Optional segment length in seconds. If specified, labels are fixed-length. Otherwise they are variable-length.",
 )
-def analyze_cmd(
+def _analyze_cmd(
     cfg_path: str,
     input_path: str,
     output_path: str,
@@ -148,7 +149,7 @@ def analyze_cmd(
     overlap: Optional[float] = None,
     segment_len: Optional[float] = None,
 ):
-    analyze_impl(
+    analyze(
         cfg_path,
         input_path,
         output_path,
