@@ -19,7 +19,7 @@ class Audio:
     choose_channel: bool = True  # Use heuristic to pick the cleanest audio channel
     check_seconds: float = 3.0  # Use this many when picking cleanest channel
     freq_scale: str = "mel"  # "linear", "log" or "mel"
-    power: float = 1.0 # Use 1.0 for magnitude and 2.0 for power spectrograms
+    power: float = 1.0  # Use 1.0 for magnitude and 2.0 for power spectrograms
     decibels: bool = False  # Use decibel amplitude scale?
     top_db: float = 80  # Parameter to decibel conversion
     db_power: float = 1.0  # Raise to this exponent after convert to decibels
@@ -33,37 +33,37 @@ class Training:
     hidden_channels: int = 256  # Used by some non-default classifier heads
     pretrained: bool = False  # For group=timm
     load_ckpt_path: Optional[str] = None  # For transfer learning or fine-tuning
-    freeze_backbone: bool = False # Option when transfer learning
+    freeze_backbone: bool = False  # Option when transfer learning
 
     # general training parameters
-    multi_label: bool = True # Multi-label or multi-class?
-    deterministic: bool = False # Deterministic training?
-    seed: Optional[int] = None # Training seed
+    multi_label: bool = True  # Multi-label or multi-class?
+    deterministic: bool = False  # Deterministic training?
+    seed: Optional[int] = None  # Training seed
     learning_rate: float = 0.001  # Base learning rate
-    batch_size: int = 64 # Mini-batch size
-    shuffle: bool = True # Shuffle data during training?
-    num_epochs: int = 10 # Number of epochs
-    warmup_fraction: float = 0.0 # Learning rate warmup fraction
+    batch_size: int = 64  # Mini-batch size
+    shuffle: bool = True  # Shuffle data during training?
+    num_epochs: int = 10  # Number of epochs
+    warmup_fraction: float = 0.0  # Learning rate warmup fraction
     save_last_n: int = 3  # Save checkpoints for this many last epochs
     num_folds: int = 1  # For k-fold cross-validation
     val_portion: float = 0  # Used only if num_folds = 1
     train_db: str = "data/training.db"  # Path to training database
-    train_pickle: Optional[str] = None # Path to training pickle file
-    test_pickle: Optional[str] = None # Path to test pickle file
-    num_workers: int = 3 # Number of trainer worker threads
-    compile: bool = False # Compile the model?
-    mixed_precision: bool = False # Use mixed precision?
+    train_pickle: Optional[str] = None  # Path to training pickle file
+    test_pickle: Optional[str] = None  # Path to test pickle file
+    num_workers: int = 3  # Number of trainer worker threads
+    compile: bool = False  # Compile the model?
+    mixed_precision: bool = False  # Use mixed precision?
 
-    pos_label_smoothing: float = 0.08 # Positive side of asymmetric label smoothing
-    neg_label_smoothing: float = 0.01 # Negative side of asymmetric label smoothing
+    pos_label_smoothing: float = 0.08  # Positive side of asymmetric label smoothing
+    neg_label_smoothing: float = 0.01  # Negative side of asymmetric label smoothing
 
     # optimizer parameters; other good choices are
     # "adam" with decay = 1e-6
     # "adamp" with decay = 0
     optimizer: str = "radam"  # Any timm optimizer
-    opt_weight_decay: float = 1e-6 # Weight decay option (L2 normalization)
-    opt_beta1: float = 0.9 # Optimizer parameter
-    opt_beta2: float = 0.999 # Optimizer parameter
+    opt_weight_decay: float = 1e-6  # Weight decay option (L2 normalization)
+    opt_beta1: float = 0.9  # Optimizer parameter
+    opt_beta2: float = 0.999  # Optimizer parameter
 
     # dropout parameters are passed to model only if not None
     drop_rate: Optional[float] = None  # Standard dropout
@@ -74,12 +74,12 @@ class Training:
     frame_loss_weight: float = 0.5  # Segment_loss_weight = 1 - frame_loss_weight
 
     # data augmentation
-    augment: bool = True # Use data augmentation?
-    noise_class_name: str = "Noise" # Augmentation treats noise specially
-    prob_simple_merge: float = 0.32 # Prob of simple merge
+    augment: bool = True  # Use data augmentation?
+    noise_class_name: str = "Noise"  # Augmentation treats noise specially
+    prob_simple_merge: float = 0.32  # Prob of simple merge
     prob_fade1: float = 0.5  # Prob of fading after augmentation
-    min_fade1: float = 0.1 # Min factor for fading
-    max_fade1: float = 1.0 # Max factor for fading
+    min_fade1: float = 0.1  # Min factor for fading
+    max_fade1: float = 1.0  # Max factor for fading
 
     # Loss penalty weight for SED models
     offpeak_weight: float = 0.002
@@ -191,9 +191,8 @@ class Miscellaneous:
         ]
     )
 
-
-    map_names: Optional[dict] = None # Map old class names to new names
-    map_codes: Optional[dict] = None# Map old class codes to new codes
+    map_names: Optional[dict] = None  # Map old class names to new names
+    map_codes: Optional[dict] = None  # Map old class codes to new codes
 
 
 @dataclass

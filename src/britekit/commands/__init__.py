@@ -15,7 +15,7 @@ from .db_delete import (
 from .embed import embed_cmd
 from .extract import extract_all_cmd, extract_by_image_cmd
 from .find_dup import find_dup_cmd
-from .inat import inat_cmd
+from .inat import inat_cmd, inat_impl
 from .init import init_cmd
 from .pickle import pickle_cmd
 from .plot import plot_db_cmd, plot_dir_cmd, plot_rec_cmd
@@ -59,7 +59,7 @@ extract_all = extract_all_cmd
 extract_by_image = extract_by_image_cmd
 find_dup = find_dup_cmd
 find_lr = find_lr_cmd
-inat = inat_cmd
+inat = inat_impl
 init = init_cmd
 pickle = pickle_cmd
 plot_db = plot_db_cmd
@@ -102,6 +102,7 @@ __all__ = [
     "extract_by_image",
     "find_dup",
     "inat",
+    "inat_cmd",
     "pickle",
     "plot_db",
     "plot_dir",

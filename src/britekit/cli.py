@@ -46,7 +46,7 @@ cli.add_command(commands.extract_by_image)
 cli.add_command(commands.find_dup)
 cli.add_command(commands.find_lr)
 
-cli.add_command(commands.inat)
+cli.add_command(commands.inat_cmd)
 cli.add_command(commands.init)
 
 cli.add_command(commands.pickle)
