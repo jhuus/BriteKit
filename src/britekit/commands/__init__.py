@@ -15,7 +15,7 @@ from .db_delete import (
 from .embed import embed_cmd
 from .extract import extract_all_cmd, extract_by_image_cmd
 from .find_dup import find_dup_cmd
-from .inat_impl import inat
+from ._inat import inat
 from .init import init_cmd
 from .pickle import pickle_cmd
 from .plot import plot_db_cmd, plot_dir_cmd, plot_rec_cmd

@@ -1,5 +1,4 @@
-# MyPy gets confused if the file name doesn't have the _impl suffix,
-# since then it would match an exported function name.
+# Use _ prefix in filename since MyPy can get confused if filename matches function name.
 import os
 import pyinaturalist
 import requests

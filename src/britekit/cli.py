@@ -10,7 +10,7 @@ except Exception:
     except Exception:
         __version__ = "0.0.0"  # last-resort fallback
 from britekit import commands
-from britekit.commands.inat_impl import _inat_cmd
+from britekit.commands._inat import _inat_cmd
 
 
 @click.group()
@@ -47,7 +47,7 @@ cli.add_command(commands.extract_by_image_cmd)
 cli.add_command(commands.find_dup_cmd)
 cli.add_command(commands.find_lr_cmd)
 
-cli.add_command(commands._inat_cmd)
+cli.add_command(_inat_cmd)
 cli.add_command(commands.init_cmd)
 
 cli.add_command(commands.pickle_cmd)
