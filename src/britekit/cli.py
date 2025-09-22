@@ -10,7 +10,7 @@ except Exception:
     except Exception:
         __version__ = "0.0.0"  # last-resort fallback
 from britekit import commands
-from britekit.commands._inat import _inat_cmd
+from .commands._inat import _inat_cmd
 
 
 @click.group()
