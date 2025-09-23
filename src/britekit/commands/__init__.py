@@ -1,9 +1,9 @@
-from ._analyze import analyze
-from ._audioset import audioset
-from ._calibrate import calibrate
-from ._ckpt_ops import ckpt_avg, ckpt_freeze, ckpt_onnx
-from ._db_add import add_cat, add_class, add_src, add_stype
-from ._db_delete import (
+from .analyze_cmd import analyze
+from .audioset_cmd import audioset
+from .calibrate_cmd import calibrate
+from .ckpt_ops_cmd import ckpt_avg, ckpt_freeze, ckpt_onnx
+from .db_add_cmd import add_cat, add_class, add_src, add_stype
+from .db_delete_cmd import (
     del_cat,
     del_class,
     del_rec,
@@ -12,27 +12,27 @@ from ._db_delete import (
     del_src,
     del_stype,
 )
-from ._embed import embed
-from ._extract import extract_all, extract_by_image
-from ._find_dup import find_dup
-from ._inat import inat
-from ._init import init
-from ._pickle import pickle
-from ._plot import plot_db, plot_dir, plot_rec
-from ._reextract import reextract
-from ._reports import (
+from .embed_cmd import embed
+from .extract_cmd import extract_all, extract_by_image
+from .find_dup_cmd import find_dup
+from .inat_cmd import inat
+from .init_cmd import init
+from .pickle_cmd import pickle
+from .plot_cmd import plot_db, plot_dir, plot_rec
+from .reextract_cmd import reextract
+from .report_cmd import (
     rpt_ann,
     rpt_db,
     rpt_epochs,
     rpt_labels,
     rpt_test
 )
-from ._search import search
-from ._train import train, find_lr
-from ._tune import tune
-from ._wav2mp3 import wav2mp3
-from ._xeno import xeno
-from ._youtube import youtube
+from .search_cmd import search
+from .train_cmd import train, find_lr
+from .tune_cmd import tune
+from .wav2mp3_cmd import wav2mp3
+from .xeno_cmd import xeno
+from .youtube_cmd import youtube
 
 __all__ = [
     "add_cat",

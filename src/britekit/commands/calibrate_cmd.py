@@ -1,4 +1,3 @@
-# Use _ prefix in filename since MyPy can get confused if filename matches function name.
 import os
 from pathlib import Path
 from typing import Optional

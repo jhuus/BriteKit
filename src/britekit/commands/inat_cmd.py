@@ -1,4 +1,3 @@
-# Use _ prefix in filename since MyPy can get confused if filename matches function name.
 import os
 import pyinaturalist
 import requests
