@@ -10,7 +10,7 @@ from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
-def del_cat(db_path: Optional[str], name: str) -> None:
+def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     Delete a category and all its associated data from the training database.
 
@@ -26,6 +26,10 @@ def del_cat(db_path: Optional[str], name: str) -> None:
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if name is None:
+        click.echo(f"Error: category name is missing but required.")
+        quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_category({"Name": name})
@@ -57,7 +61,7 @@ def _del_cat_cmd(db_path: Optional[str], name: str) -> None:
     del_cat(db_path, name)
 
 
-def del_class(db_path: Optional[str], class_name: str) -> None:
+def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     Delete a class and all its associated data from the training database.
 
@@ -67,26 +71,30 @@ def del_class(db_path: Optional[str], class_name: str) -> None:
 
     Args:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        class_name (str): Name of the class to delete (e.g., "Common Yellowthroat").
+        name (str): Name of the class to delete (e.g., "Common Yellowthroat").
     """
     cfg, fn_cfg = get_config()
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
 
+    if name is None:
+        click.echo(f"Error: class name is missing but required.")
+        quit()
+
     with TrainingDatabase(db_path) as db:
-        results = db.get_class({"Name": class_name})
+        results = db.get_class({"Name": name})
         if not results:
-            click.echo(f"No class found with name {class_name}")
+            click.echo(f"No class found with name {name}")
         else:
             # cascading deletes don't fully handle this case,
             # so have to delete recordings first
-            results = db.get_recording_by_class(class_name)
+            results = db.get_recording_by_class(name)
             for r in results:
                 db.delete_recording({"ID": r.id})
 
-            db.delete_class({"Name": class_name})
-            click.echo(f'Successfully deleted class "{class_name}"')
+            db.delete_class({"Name": name})
+            click.echo(f'Successfully deleted class "{name}"')
 
 
 @click.command(
@@ -102,7 +110,7 @@ def _del_class_cmd(db_path: Optional[str], class_name: str) -> None:
     del_class(db_path, class_name)
 
 
-def del_rec(db_path: Optional[str], file_name: str) -> None:
+def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
     """
     Delete a recording and all its spectrograms from the training database.
 
@@ -117,6 +125,10 @@ def del_rec(db_path: Optional[str], file_name: str) -> None:
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if file_name is None:
+        click.echo(f"Error: file name is missing but required.")
+        quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_recording({"FileName": file_name})
@@ -140,7 +152,7 @@ def _del_rec_cmd(db_path: Optional[str], file_name: str) -> None:
     del_rec(db_path, file_name)
 
 
-def del_sgroup(db_path: Optional[str], name: str) -> None:
+def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     Delete a spectrogram group and all its spectrogram values from the training database.
 
@@ -155,6 +167,10 @@ def del_sgroup(db_path: Optional[str], name: str) -> None:
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if name is None:
+        click.echo(f"Error: name is missing but required.")
+        quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_specgroup({"Name": name})
@@ -178,7 +194,7 @@ def _del_sgroup_cmd(db_path: Optional[str], name: str) -> None:
     del_sgroup(db_path, name)
 
 
-def del_stype(db_path: Optional[str], name: str) -> None:
+def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     Delete a sound type from the training database.
 
@@ -194,6 +210,10 @@ def del_stype(db_path: Optional[str], name: str) -> None:
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if name is None:
+        click.echo(f"Error: name is missing but required.")
+        quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_soundtype({"Name": name})
@@ -217,7 +237,7 @@ def _del_stype_cmd(db_path: Optional[str], name: str) -> None:
     del_stype(db_path, name)
 
 
-def del_src(db_path: Optional[str], name: str) -> None:
+def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     Delete a recording source and all its associated data from the training database.
 
@@ -233,6 +253,10 @@ def del_src(db_path: Optional[str], name: str) -> None:
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if name is None:
+        click.echo(f"Error: name is missing but required.")
+        quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_source({"Name": name})
@@ -256,7 +280,7 @@ def _del_src_cmd(db_path: Optional[str], name: str) -> None:
     del_src(db_path, name)
 
 
-def del_seg(db_path: Optional[str], class_name: str, dir_path: str) -> None:
+def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_path: Optional[str]=None) -> None:
     """
     Delete segments that correspond to images in a given directory.
 
@@ -276,6 +300,14 @@ def del_seg(db_path: Optional[str], class_name: str, dir_path: str) -> None:
     fn_cfg.echo = click.echo
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if class_name is None:
+        click.echo(f"Error: class name is missing but required.")
+        quit()
+
+    if dir_path is None:
+        click.echo(f"Error: directory path is missing but required.")
+        quit()
 
     with TrainingDatabase(db_path) as db:
         count = db.get_class_count({"Name": class_name})
