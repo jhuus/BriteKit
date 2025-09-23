@@ -21,6 +21,7 @@ from britekit.core import util
 from britekit.core.analyzer import Analyzer
 from britekit.core.audio import Audio
 from britekit.core.base_config import BaseConfig
+from britekit.core import config_loader
 from britekit.core.pickler import Pickler
 from britekit.core.predictor import Predictor
 from britekit.core.trainer import Trainer
@@ -37,6 +38,7 @@ from britekit.training_db.training_data_provider import TrainingDataProvider
 __all__ = [
     "__version__",
     "commands",
+    "config_loader",
     "util",
     "Analyzer",
     "Audio",

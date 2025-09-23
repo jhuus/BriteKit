@@ -1,11 +1,9 @@
 from typing import cast, Optional
-
 from omegaconf import OmegaConf, DictConfig
 from britekit.core.base_config import BaseConfig, FunctionConfig
 
-# private singleton cache
 _base_config: Optional[BaseConfig] = None
-_func_config: Optional[FunctionConfig] = None
+_func_config: Optional[FunctionConfig] = FunctionConfig()
 
 
 def get_config(cfg_path: Optional[str] = None) -> tuple[BaseConfig, FunctionConfig]:
@@ -23,9 +21,19 @@ def get_config_with_dict(
     if _base_config is None:
         _base_config = OmegaConf.structured(BaseConfig())
         _func_config = FunctionConfig()
-        if cfg_dict is not None:
-            _base_config = cast(
-                BaseConfig, OmegaConf.merge(_base_config, OmegaConf.create(cfg_dict))
-            )
-
+    # allow late merges/overrides even if already initialized
+    if cfg_dict is not None:
+        _base_config = cast(
+            BaseConfig, OmegaConf.merge(_base_config, OmegaConf.create(cfg_dict))
+        )
     return cast(tuple[BaseConfig, FunctionConfig], (_base_config, _func_config))
+
+
+def set_base_config(cfg: BaseConfig) -> None:
+    global _base_config
+    _base_config = cfg
+
+
+def set_func_config(cfg: FunctionConfig) -> None:
+    global _func_config
+    _func_config = cfg

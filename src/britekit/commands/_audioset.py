@@ -120,6 +120,7 @@ def _download_class(
             for i in range(1, 11):
                 label = row[f"Include{i}"]
                 if not pd.isna(label):
+                    label = label.lower()
                     if label not in name_to_index:
                         click.echo(
                             f'Error: value "{label}" in class_inclusion.csv is not a known class name.'
@@ -172,14 +173,14 @@ def _download_curated(
 
 
 def audioset(
-    class_name: str,
-    curated_csv_path: str,
-    output_dir: str,
-    max_downloads: int,
-    sampling_rate: int,
-    num_to_skip: int,
-    do_report: bool,
-    root_dir: str,
+    class_name: str=None,
+    curated_csv_path: str=None,
+    output_dir: str="",
+    max_downloads: int=500,
+    sampling_rate: int=32000,
+    num_to_skip: int=0,
+    do_report: bool=False,
+    root_dir: str=".",
 ) -> None:
     """
     Download audio recordings from Google AudioSet.
@@ -200,6 +201,7 @@ def audioset(
         sampling_rate (float): Output sampling rate in Hz. Default is 32000.
         num_to_skip (int): Number of initial recordings to skip. Default is 0.
         do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
+        root_dir (str): Directory that contains the data directory. Default is working directory.
     """
 
     if class_name is None and curated_csv_path is None:

@@ -9,15 +9,15 @@ from britekit.training_db.training_db import TrainingDatabase
 
 
 def extract_all(
-    cfg_path: Optional[str],
-    db_path: Optional[str],
-    cat_name: Optional[str],
-    class_code: Optional[str],
-    class_name: str,
-    dir_path: str,
-    overlap: Optional[float],
-    src_name: Optional[str],
-    spec_group: Optional[str],
+    cfg_path: Optional[str]=None,
+    db_path: Optional[str]=None,
+    cat_name: Optional[str]=None,
+    class_code: Optional[str]=None,
+    class_name: str="",
+    dir_path: str="",
+    overlap: Optional[float]=None,
+    src_name: Optional[str]=None,
+    spec_group: Optional[str]=None,
 ) -> None:
     """
     Extract all spectrograms from audio recordings and insert them into the training database.
