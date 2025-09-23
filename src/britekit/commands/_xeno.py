@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 import json
 import os
 import requests
@@ -52,13 +53,13 @@ def process_response(
 
 
 def xeno(
-    key: str,
-    output_dir: str,
-    max_downloads: int,
-    name: str,
-    ignore_licence: bool,
-    scientific_name: bool,
-    seen_only: bool,
+    key: str=None,
+    name: str="",
+    output_dir: str="",
+    max_downloads: int=500,
+    ignore_licence: bool=False,
+    scientific_name: bool=False,
+    seen_only: bool=False,
 ):
     """
     Download bird song recordings from Xeno-Canto database.
@@ -147,6 +148,7 @@ def xeno(
     help=cli_help_from_doc(xeno.__doc__),
 )
 @click.option("--key", type=str, help="Xeno-Canto API key.")
+@click.option("--name", required=True, type=str, help="Species name.")
 @click.option(
     "--output",
     "output_dir",
@@ -161,7 +163,6 @@ def xeno(
     default=500,
     help="Maximum number of recordings to download. Default = 500.",
 )
-@click.option("--name", required=True, type=str, help="Species name.")
 @click.option(
     "--nolic",
     "ignore_licence",
@@ -182,13 +183,13 @@ def xeno(
 )
 def _xeno_cmd(
     key: str,
+    name: str,
     output_dir: str,
     max_downloads: int,
-    name: str,
     ignore_licence: bool,
     scientific_name: bool,
     seen_only: bool,
 ):
     xeno(
-        key, output_dir, max_downloads, name, ignore_licence, scientific_name, seen_only
+        key, name, output_dir, max_downloads, ignore_licence, scientific_name, seen_only
     )

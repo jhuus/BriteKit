@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 import os
 from pathlib import Path
 from typing import Optional

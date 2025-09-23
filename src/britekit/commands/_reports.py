@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 import glob
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator

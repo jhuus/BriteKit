@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 from pathlib import Path
 import click
 from importlib.resources import files as pkg_files

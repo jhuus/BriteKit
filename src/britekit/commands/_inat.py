@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 import os
 import pyinaturalist
 import requests
@@ -35,10 +36,10 @@ def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[
 
 
 def inat(
-    output_dir: str,
-    max_downloads: int,
-    name: str,
-    no_prefix: bool,
+    name: str="",
+    output_dir: str="",
+    max_downloads: int=500,
+    no_prefix: bool=False,
 ) -> None:
     """
     Download audio recordings from iNaturalist observations.
@@ -96,6 +97,7 @@ def inat(
     short_help="Download recordings from iNaturalist.",
     help=cli_help_from_doc(inat.__doc__),
 )
+@click.option("--name", required=True, type=str, help="Species name.")
 @click.option(
     "--output",
     "output_dir",
@@ -116,11 +118,10 @@ def inat(
     is_flag=True,
     help="By default, filenames use an 'N' prefix and recording number. Specify this flag to skip the prefix.",
 )
-@click.option("--name", required=True, type=str, help="Species name.")
 def _inat_cmd(
+    name: str,
     output_dir: str,
     max_downloads: int,
-    name: str,
     no_prefix: bool,
 ) -> None:
-    inat(output_dir, max_downloads, name, no_prefix)
+    inat(name, output_dir, max_downloads, no_prefix)

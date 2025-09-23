@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 import click
 import numpy as np
 import scipy

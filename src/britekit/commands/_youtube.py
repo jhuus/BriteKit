@@ -1,3 +1,4 @@
+# File name starts with _ to keep it out of typeahead for API users
 import os
 
 import click
@@ -9,15 +10,15 @@ from britekit.core.util import cli_help_from_doc
 
 
 def youtube(
-    youtube_id: str,
-    output_dir: str,
-    sampling_rate: int,
+    id: str="",
+    output_dir: str="",
+    sampling_rate: int=32000,
 ) -> None:
     """
     Download an audio recording from Youtube, given a Youtube ID.
 
     Args:
-        youtube_id (str): ID of the clip to download.
+        id (str): ID of the clip to download.
         output_dir (str): Directory where downloaded recordings will be saved.
         sampling_rate (float): Output sampling rate in Hz. Default is 32000.
     """
@@ -27,14 +28,14 @@ def youtube(
 
     # download it as wav, which is faster than downloading as mp3;
     # then resample and convert to mp3
-    command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
-    click.echo(f"Downloading {youtube_id}")
+    command = f'yt-dlp -q -o "{output_dir}/{id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={id}'
+    click.echo(f"Downloading {id}")
     os.system(command)
 
     # resample and delete the original
-    audio_path1 = os.path.join(output_dir, f"{youtube_id}.NA.wav")
+    audio_path1 = os.path.join(output_dir, f"{id}.NA.wav")
     if os.path.exists(audio_path1):
-        audio_path2 = os.path.join(output_dir, f"{youtube_id}.mp3")
+        audio_path2 = os.path.join(output_dir, f"{id}.mp3")
         audio, sr = librosa.load(audio_path1, sr=sampling_rate)
         assert isinstance(sr, int)
         assert isinstance(audio, np.ndarray)
