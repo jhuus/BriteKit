@@ -2,6 +2,7 @@
 import json
 import os
 import requests
+from typing import Optional
 
 import click
 
@@ -53,7 +54,7 @@ def process_response(
 
 
 def xeno(
-    key: str=None,
+    key: Optional[str]=None,
     name: str="",
     output_dir: str="",
     max_downloads: int=500,

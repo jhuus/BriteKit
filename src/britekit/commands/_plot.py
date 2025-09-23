@@ -58,15 +58,15 @@ def _plot_recording(
 
 
 def plot_db(
-    cfg_path: str,
-    class_name: str,
-    db_path: Optional[str],
-    ndims: bool,
-    max_count: Optional[float],
-    output_path: str,
-    prefix: Optional[str],
-    power: Optional[float],
-    spec_group: Optional[str],
+    cfg_path: Optional[str]=None,
+    class_name: str="",
+    db_path: Optional[str]=None,
+    ndims: bool=False,
+    max_count: Optional[float]=None,
+    output_path: str="",
+    prefix: Optional[str]=None,
+    power: Optional[float]=1.0,
+    spec_group: Optional[str]=None,
 ):
     """
     Plot spectrograms from a training database for a specific class.
@@ -218,13 +218,13 @@ def _plot_db_cmd(
 
 
 def plot_dir(
-    cfg_path: str,
-    ndims: bool,
-    input_path: str,
-    output_path: str,
-    all: bool,
-    overlap: float,
-    power: float = 1.0,
+    cfg_path: Optional[str]=None,
+    ndims: bool=False,
+    input_path: str="",
+    output_path: str="",
+    all: bool=False,
+    overlap: float=0.0,
+    power: float=1.0,
 ):
     """
     Plot spectrograms for all audio recordings in a directory.
@@ -332,13 +332,13 @@ def _plot_dir_cmd(
 
 
 def plot_rec(
-    cfg_path: str,
-    ndims: bool,
-    input_path: str,
-    output_path: str,
-    all: bool,
-    overlap: float,
-    power: float = 1.0,
+    cfg_path: Optional[str]=None,
+    ndims: bool=False,
+    input_path: str="",
+    output_path: str="",
+    all: bool=False,
+    overlap: float=0.0,
+    power: float=1.0,
 ):
     """
     Plot spectrograms for a specific audio recording.

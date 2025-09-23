@@ -1,6 +1,7 @@
 # File name starts with _ to keep it out of typeahead for API users
 import os
 from pathlib import Path
+from typing import Optional
 
 import click
 import numpy as np
@@ -173,8 +174,8 @@ def _download_curated(
 
 
 def audioset(
-    class_name: str=None,
-    curated_csv_path: str=None,
+    class_name: Optional[str]=None,
+    curated_csv_path: Optional[str]=None,
     output_dir: str="",
     max_downloads: int=500,
     sampling_rate: int=32000,
@@ -225,6 +226,7 @@ def audioset(
             root_dir,
         )
     else:
+        assert curated_csv_path is not None
         _download_curated(
             curated_csv_path,
             output_dir,
