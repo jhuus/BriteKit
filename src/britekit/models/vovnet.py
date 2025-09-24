@@ -67,18 +67,6 @@ class VovNetModel(BaseModel):
 # Model size is most affected by number of classes for smaller models
 MODEL_REGISTRY = {
     "vovnet.1":
-    # ~180K parameters with 50 classes
-    dict(
-        stem_chs=[32, 32, 32],
-        stage_conv_chs=[32, 64, 64, 96],
-        stage_out_chs=[32, 64, 64, 96],
-        layer_per_block=1,
-        block_per_stage=[1, 1, 1, 1],
-        residual=True,
-        depthwise=False,
-        attn="eca",
-    ),
-    "vovnet.2":
     # ~400K parameters with 50 classes
     dict(
         stem_chs=[32, 32, 32],
@@ -90,7 +78,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.3":
+    "vovnet.2":
     # ~650K parameters with 50 classes
     dict(
         stem_chs=[32, 32, 32],
@@ -102,7 +90,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.4":
+    "vovnet.3":
     # ~1.1M parameters with 50 classes
     dict(
         stem_chs=[32, 32, 32],
@@ -114,7 +102,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.5":
+    "vovnet.4":
     # ~2.1M parameters
     dict(
         stem_chs=[32, 32, 64],
@@ -126,7 +114,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.6":
+    "vovnet.5":
     # ~3.0M parameters
     dict(
         stem_chs=[32, 32, 32],
@@ -138,7 +126,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.7":
+    "vovnet.6":
     # ~3.7M parameters
     dict(
         stem_chs=[64, 64, 128],
@@ -150,7 +138,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.8":
+    "vovnet.7":
     # ~4.4M parameters
     dict(
         stem_chs=[64, 64, 128],
@@ -162,7 +150,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.9":
+    "vovnet.8":
     # ~5.5M parameters
     dict(
         stem_chs=[32, 32, 64],
@@ -174,7 +162,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.10":
+    "vovnet.9":
     # ~6.2M parameters
     dict(
         stem_chs=[32, 32, 64],
@@ -186,7 +174,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.11":
+    "vovnet.10":
     # ~7.6M parameters (they get much slower with layers_per_block=3 though)
     dict(
         stem_chs=[64, 64, 128],
@@ -198,7 +186,7 @@ MODEL_REGISTRY = {
         depthwise=False,
         attn="eca",
     ),
-    "vovnet.12":
+    "vovnet.11":
     # ~9.3M parameters
     dict(
         stem_chs=[64, 64, 128],

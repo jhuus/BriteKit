@@ -76,39 +76,36 @@ class EffNetModel(BaseModel):
 # (channel_multiplier, depth_multiplier) per model type
 MODEL_REGISTRY = {
     "effnet.1":
-    # ~180K parameters with 50 classes
-    (0.2, 0.2),
-    "effnet.2":
     # ~400K parameters with 50 classes
     (0.25, 0.26),
-    "effnet.3":
+    "effnet.2":
     # ~690K parameters with 50 classes
     (0.3, 0.3),
-    "effnet.4":
+    "effnet.3":
     # ~1.4M parameters with 50 classes
     (0.4, 0.4),
-    "effnet.5":
+    "effnet.4":
     # ~2M parameters with 50 classes
     (0.42, 0.51),
-    "effnet.6":
+    "effnet.5":
     # ~2.9M parameters with 50 classes
     (0.48, 0.58),
-    "effnet.7":
+    "effnet.6":
     # ~3.7M parameters with 50 classes
     (0.54, 0.6),
-    "effnet.8":
+    "effnet.7":
     # ~4.6M parameters with 50 classes
     (0.6, 0.6),
-    "effnet.9":
+    "effnet.8":
     # ~5.4M parameters with 50 classes
     (0.65, 0.6),
-    "effnet.10":
+    "effnet.9":
     # ~6.1M parameters with 50 classes
     (0.64, 0.7),
-    "effnet.11":
+    "effnet.10":
     # ~7.3M parameters with 50 classes
     (0.7, 0.7),
-    "effnet.12":
+    "effnet.11":
     # ~8.1M parameters with 50 classes
     (0.7, 0.8),
 }

@@ -64,17 +64,6 @@ class HGNetModel(BaseModel):
 # Setting non_sed_head_type = "basic" generates a much smaller head.
 MODEL_REGISTRY = {
     "hgnet.1":
-    # ~195K parameters with 50 classes
-    {
-        "stem_type": "v2",
-        "stem_chs": [16, 16],
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [16, 16, 16, 1, False, False, 3, 1],
-        "stage2": [16, 16, 16, 1, True, False, 3, 1],
-        "stage3": [16, 16, 32, 1, True, False, 3, 1],
-        "stage4": [32, 32, 32, 1, True, True, 5, 1],
-    },
-    "hgnet.2":
     # ~360K parameters with 50 classes
     {
         "stem_type": "v2",
@@ -85,7 +74,7 @@ MODEL_REGISTRY = {
         "stage3": [64, 64, 64, 2, True, False, 3, 1],
         "stage4": [64, 64, 64, 1, True, True, 5, 1],
     },
-    "hgnet.3":
+    "hgnet.2":
     # ~580K parameters with 50 classes
     {
         "stem_type": "v2",
@@ -96,7 +85,7 @@ MODEL_REGISTRY = {
         "stage3": [64, 64, 128, 2, True, False, 3, 1],
         "stage4": [128, 64, 128, 1, True, True, 5, 1],
     },
-    "hgnet.4":
+    "hgnet.3":
     # ~1.0M parameters with 50 classes
     {
         "stem_type": "v2",
@@ -107,7 +96,7 @@ MODEL_REGISTRY = {
         "stage3": [64, 128, 128, 2, True, False, 3, 1],
         "stage4": [128, 64, 256, 1, True, True, 5, 1],
     },
-    "hgnet.5":
+    "hgnet.4":
     # ~1.6M parameters
     {
         "stem_type": "v2",
@@ -118,7 +107,7 @@ MODEL_REGISTRY = {
         "stage3": [128, 64, 256, 2, True, True, 5, 1],
         "stage4": [256, 64, 512, 1, True, True, 5, 1],
     },
-    "hgnet.6":
+    "hgnet.5":
     # ~2.8M parameters
     {
         "stem_type": "v2",
@@ -129,7 +118,7 @@ MODEL_REGISTRY = {
         "stage3": [128, 64, 384, 2, True, True, 5, 3],
         "stage4": [384, 96, 768, 1, True, True, 5, 3],
     },
-    "hgnet.7":
+    "hgnet.6":
     # ~3.1M parameters
     {
         "stem_type": "v2",
@@ -140,7 +129,7 @@ MODEL_REGISTRY = {
         "stage3": [256, 64, 512, 2, True, True, 5, 3],
         "stage4": [512, 96, 768, 1, True, True, 5, 3],
     },
-    "hgnet.8":
+    "hgnet.7":
     # this is hgnetv2_b0, with ~4.0M parameters
     {
         "stem_type": "v2",
@@ -151,7 +140,7 @@ MODEL_REGISTRY = {
         "stage3": [256, 64, 512, 2, True, True, 5, 3],
         "stage4": [512, 128, 1024, 1, True, True, 5, 3],
     },
-    "hgnet.9":
+    "hgnet.8":
     # this is hgnetv2_b1, with ~4.3M parameters
     {
         "stem_type": "v2",
@@ -162,7 +151,7 @@ MODEL_REGISTRY = {
         "stage3": [256, 96, 512, 2, True, True, 5, 3],
         "stage4": [512, 192, 1024, 1, True, True, 5, 3],
     },
-    "hgnet.10":
+    "hgnet.9":
     # ~4.6M parameters
     {
         "stem_type": "v2",
@@ -173,7 +162,7 @@ MODEL_REGISTRY = {
         "stage3": [256, 96, 512, 2, True, True, 5, 4],
         "stage4": [512, 192, 1024, 1, True, True, 5, 4],
     },
-    "hgnet.11":
+    "hgnet.10":
     # ~5.7M parameters
     {
         "stem_type": "v2",
@@ -184,7 +173,7 @@ MODEL_REGISTRY = {
         "stage3": [256, 96, 512, 3, True, True, 5, 4],
         "stage4": [512, 192, 1024, 1, True, True, 5, 4],
     },
-    "hgnet.12":
+    "hgnet.11":
     # ~6.1M parameters
     {
         "stem_type": "v2",
@@ -195,7 +184,7 @@ MODEL_REGISTRY = {
         "stage3": [384, 128, 512, 3, True, True, 5, 4],
         "stage4": [512, 192, 1024, 1, True, True, 5, 4],
     },
-    "hgnet.13":
+    "hgnet.12":
     # ~6.7M parameters
     {
         "stem_type": "v2",

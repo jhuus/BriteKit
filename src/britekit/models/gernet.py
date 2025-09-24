@@ -66,18 +66,6 @@ class GerNetModel(BaseModel):
 # Model size is most affected by number of classes for smaller models
 MODEL_REGISTRY = {
     "gernet.1":
-    # ~195K parameters with 50 classes
-    byobnet.ByoModelCfg(
-        blocks=(
-            byobnet.ByoBlockCfg(type="basic", d=1, c=16, s=2, gs=0, br=1.0),
-            byobnet.ByoBlockCfg(type="basic", d=3, c=16, s=2, gs=0, br=1.0),
-            byobnet.ByoBlockCfg(type="bottle", d=1, c=32, s=1, gs=1, br=3.0),
-        ),
-        stem_chs=13,
-        stem_pool=None,
-        num_features=1920,
-    ),
-    "gernet.2":
     # ~430K parameters with 50 classes
     byobnet.ByoModelCfg(
         blocks=(
@@ -90,7 +78,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.3":
+    "gernet.2":
     # ~640K parameters with 50 classes
     byobnet.ByoModelCfg(
         blocks=(
@@ -104,7 +92,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.4":
+    "gernet.3":
     # ~892K parameters with 50 classes
     byobnet.ByoModelCfg(
         blocks=(
@@ -118,7 +106,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.5":
+    "gernet.4":
     # ~1.5M parameters
     byobnet.ByoModelCfg(
         blocks=(
@@ -132,7 +120,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.6":
+    "gernet.5":
     # ~2.5M parameters
     byobnet.ByoModelCfg(
         blocks=(
@@ -146,7 +134,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.7":
+    "gernet.6":
     # ~3.3M parameters
     byobnet.ByoModelCfg(
         blocks=(
@@ -160,7 +148,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.8":
+    "gernet.7":
     # ~4.5M parameters
     byobnet.ByoModelCfg(
         blocks=(
@@ -174,7 +162,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.9":
+    "gernet.8":
     # ~5.5M parameters
     byobnet.ByoModelCfg(
         blocks=(
@@ -188,7 +176,7 @@ MODEL_REGISTRY = {
         stem_pool=None,
         num_features=1920,
     ),
-    "gernet.10":
+    "gernet.9":
     # ~6.4M parameters
     byobnet.ByoModelCfg(
         blocks=(

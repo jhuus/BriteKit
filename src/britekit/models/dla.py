@@ -74,41 +74,34 @@ class DlaModel(BaseModel):
 # Model size is most affected by number of classes for smaller models
 MODEL_REGISTRY = {
     "dla.1":
-    # ~170K parameters with 50 classes
-    dict(
-        levels=[1, 1, 1, 1, 1, 1],
-        channels=[16, 32, 32, 32, 32, 32],
-        block=dla.DlaBasic,
-    ),
-    "dla.2":
     # ~390K parameters with 50 classes
     dict(
         levels=[1, 1, 1, 1, 1, 1],
         channels=[16, 32, 32, 32, 64, 64],
         block=dla.DlaBasic,
     ),
-    "dla.3":
+    "dla.2":
     # ~630K parameters with 50 classes
     dict(
         levels=[1, 1, 1, 1, 1, 1],
         channels=[16, 32, 64, 64, 64, 64],
         block=dla.DlaBasic,
     ),
-    "dla.4":
+    "dla.3":
     # ~1.0M parameters with 50 classes
     dict(
         levels=[1, 1, 1, 1, 1, 1],
         channels=[16, 32, 64, 64, 64, 128],
         block=dla.DlaBasic,
     ),
-    "dla.5":
+    "dla.4":
     # ~1.5M parameters with 50 classes
     dict(
         levels=[1, 1, 1, 1, 1, 1],
         channels=[16, 32, 64, 64, 128, 128],
         block=dla.DlaBasic,
     ),
-    "dla.6":
+    "dla.5":
     # ~2.1M parameters
     dict(
         levels=[1, 1, 1, 1, 1, 1],
