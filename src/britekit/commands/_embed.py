@@ -57,6 +57,7 @@ def embed(
         db_path = cfg.train.train_db
 
     BATCH_SIZE = 512  # process this many spectrograms at a time
+    assert cfg.misc.search_ckpt_path is not None
     model = load_from_checkpoint(cfg.misc.search_ckpt_path)
     device = get_device()
     model.eval()  # set inference mode

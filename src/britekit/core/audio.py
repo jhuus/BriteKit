@@ -209,7 +209,13 @@ class Audio:
             end_sample = int((offset + spec_duration) * sr)
 
             if start_sample <= len(self.signal) - min_samples:
-                spec = self._get_raw_spectrogram(self.signal[start_sample:end_sample])
+                spec = self._get_raw_spectrogram(
+                    self.signal[start_sample:end_sample],
+                    freq_scale=freq_scale,
+                    decibels=decibels,
+                    top_db=top_db,
+                    db_power=db_power,
+                )
                 if spec_duration == self.cfg.audio.spec_duration:
                     spec = spec[
                         : self.cfg.audio.spec_height, : self.cfg.audio.spec_width

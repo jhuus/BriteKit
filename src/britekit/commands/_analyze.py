@@ -13,10 +13,10 @@ from britekit.core.util import cli_help_from_doc
 
 
 def analyze(
-    cfg_path: str,
-    input_path: str,
-    output_path: str,
-    rtype: str,
+    cfg_path: Optional[str] = None,
+    input_path: str = "",
+    output_path: str = "",
+    rtype: str = "both",
     min_score: Optional[float] = None,
     num_threads: Optional[int] = None,
     overlap: Optional[float] = None,

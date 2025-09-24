@@ -96,9 +96,12 @@ class Predictor:
             raise InferenceError(f"Invalid audio duration: {audio_duration} seconds")
 
         increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
-        start_times = np.arange(0, audio_duration - (increment / 2), increment).tolist()
-
+        end_offset = max(increment, audio_duration - increment)
+        start_times = util.get_range(0, end_offset, increment)
         specs, _ = self.audio.get_spectrograms(start_times)
+        if specs is None or len(specs) == 0:
+            return None, None, []
+
         specs = specs**self.cfg.infer.audio_power
         specs = specs.unsqueeze(1)  # (N,H,W) -> (N,1,H,W)
         frame_maps = []
@@ -149,14 +152,13 @@ class Predictor:
 
         assert self.class_names is not None
 
+        labels: dict[str, list] = {}  # name -> [(score, start_time, end_time)]
+        if scores is None or len(scores) == 0:
+            return labels
+
         # Validate input dimensions
         if len(scores.shape) != 2:
             raise InferenceError(f"Scores must be 2D array, got shape {scores.shape}")
-
-        if len(start_times) != scores.shape[0]:
-            raise InferenceError(
-                f"Number of start_times ({len(start_times)}) must match number of spectrograms ({scores.shape[0]})"
-            )
 
         if scores.shape[1] != len(self.class_names):
             raise InferenceError(
@@ -167,7 +169,6 @@ class Predictor:
 
         # ensure labels are sorted by name/code before start_time,
         # which is useful when inspecting label files during testing
-        labels: dict[str, list] = {}  # name -> [(score, start_time, end_time)]
         num_specs, num_classes = scores.shape
         for i in range(num_specs):
             for j in range(num_classes):
@@ -545,15 +546,18 @@ class Predictor:
 
         names = self.class_names
         if self.cfg.infer.label_field == "codes":
-            names = self.class_codes
+            if None not in self.class_codes:
+                names = self.class_codes
         elif self.cfg.infer.label_field == "alt_names":
             if self.class_alt_names is None:
                 raise InferenceError("Alt names not available")
-            names = self.class_alt_names
+            if None not in self.class_alt_names:
+                names = self.class_alt_names
         elif self.cfg.infer.label_field == "alt_codes":
             if self.class_alt_codes is None:
                 raise InferenceError("Alt codes not available")
-            names = self.class_alt_codes
+            if None not in self.class_alt_codes:
+                names = self.class_alt_codes
         elif self.cfg.infer.label_field != "names":
             util.echo(
                 f'Invalid label_field option ("{self.cfg.infer.label_field}"). Defaulting to class names.'

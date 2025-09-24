@@ -3,6 +3,7 @@ import click
 import numpy as np
 import os
 import scipy
+from typing import Optional
 import zlib
 
 from britekit.core.audio import Audio
@@ -14,18 +15,18 @@ from britekit.training_db.training_db import TrainingDatabase
 
 
 def search(
-    cfg_path: str,
-    db_path: str,
-    class_name: str,
-    max_dist: float,
-    exp: float,
-    num_to_plot: int,
-    output_path: str,
-    input_path: str,
-    offset: float,
-    exclude_db: str,
-    class_name2: str,
-    spec_group: str,
+    cfg_path: Optional[str]=None,
+    db_path: Optional[str]=None,
+    class_name: str="",
+    max_dist: float=0.5,
+    exp: float=0.5,
+    num_to_plot: int=200,
+    output_path: str="",
+    input_path: str="",
+    offset: float=0.0,
+    exclude_db: Optional[str]=None,
+    class_name2: Optional[str]=None,
+    spec_group: str="default",
 ):
     """
     Search a database for spectrograms similar to a specified one.
@@ -116,6 +117,14 @@ def search(
             check_spec_names[spec_name] = 1
 
     # load the saved model, i.e. the search checkpoint
+    if cfg.misc.search_ckpt_path is None:
+        click.echo("cfg.misc.search_ckpt_path is not specified")
+        return
+
+    if not os.path.exists(cfg.misc.search_ckpt_path):
+        click.echo("Invalid value for cfg.misc.search_ckpt_path")
+        return
+
     click.echo("Loading saved model")
     device = get_device()
     model = load_from_checkpoint(cfg.misc.search_ckpt_path)
