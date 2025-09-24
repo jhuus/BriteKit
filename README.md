@@ -75,10 +75,8 @@ train:
 This overrides the default values for model_type, learning_rate, drop_rate and num_epochs. When using the API, you can update configuration parameters like this:
 ```
 import britekit as bk
-cfg = bk.BaseConfig()
-bk.config_loader.set_base_config(cfg)
-cfg.audio.spec_duration = 3.0
-bk.commands.extract_all(class_name="cow", dir_path="recordings/cow")
+cfg, _ = bk.get_config()
+cfg.train.model_type = "effnet.4"
 ```
 ## Downloading Recordings
 The `inat`, `xeno` and `youtube` commands make it easy to download recordings from Xeno_Canto, iNaturalist and Youtube. For iNaturalist it is important to provide the scientific name. For example, to download recordings of the American Green Frog (lithobates clamitans), type:
