@@ -11,10 +11,10 @@ from britekit.training_db.training_db import TrainingDatabase
 
 
 def embed(
-    cfg_path: Optional[str],
-    db_path: Optional[str],
-    class_name: Optional[str],
-    spec_group: str,
+    cfg_path: Optional[str]=None,
+    db_path: Optional[str]=None,
+    class_name: Optional[str]=None,
+    spec_group: str="default",
 ) -> None:
     """
     Generate embeddings for spectrograms and insert them into the database.

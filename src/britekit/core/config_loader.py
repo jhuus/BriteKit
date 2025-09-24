@@ -3,7 +3,7 @@ from omegaconf import OmegaConf, DictConfig
 from britekit.core.base_config import BaseConfig, FunctionConfig
 
 _base_config: Optional[BaseConfig] = None
-_func_config: Optional[FunctionConfig] = FunctionConfig()
+_func_config: Optional[FunctionConfig] = None
 
 
 def get_config(cfg_path: Optional[str] = None) -> tuple[BaseConfig, FunctionConfig]:
