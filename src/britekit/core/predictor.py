@@ -66,7 +66,7 @@ class Predictor:
 
     def get_raw_scores(
         self, recording_path: str
-    ) -> tuple[np.ndarray, Optional[np.ndarray], list[float]]:
+    ) -> tuple[Optional[np.ndarray], Optional[np.ndarray], list[float]]:
         """
         Get scores in array format from the loaded models for the given recording.
 

@@ -14,18 +14,18 @@ from britekit.core.tuner import Tuner
 
 
 def tune(
-    cfg_path: str,
-    param_path: Optional[str],
-    output_path: str,
-    annotations_path: str,
-    metric: str,
-    recordings_path: str,
-    train_log_path: str,
-    num_trials: int,
-    num_runs: int,
-    extract: bool,
-    skip_training: bool,
-    classes_path: Optional[str],
+    cfg_path: Optional[str] = None,
+    param_path: Optional[str] = None,
+    output_path: str = "",
+    annotations_path: str = "",
+    metric: str = "macro_roc",
+    recordings_path: str = "",
+    train_log_path: str = "",
+    num_trials: int = 0,
+    num_runs: int = 1,
+    extract: bool = False,
+    skip_training: bool = False,
+    classes_path: Optional[str] = None,
 ):
     """
     Find and print the best hyperparameter settings based on exhaustive or random search.

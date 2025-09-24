@@ -12,12 +12,12 @@ from britekit.testing.per_segment_tester import PerSegmentTester
 
 
 def calibrate(
-    cfg_path: str,
-    annotations_path: str,
-    label_dir: str,
-    output_path: str,
-    recordings_path: Optional[str],
-    cutoff: float,
+    cfg_path: Optional[str] = None,
+    annotations_path: str = "",
+    label_dir: str = "",
+    output_path: str = "",
+    recordings_path: Optional[str] = None,
+    cutoff: float = 0.4,
     coef: Optional[float] = None,
     inter: Optional[float] = None,
 ):
