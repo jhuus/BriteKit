@@ -141,7 +141,7 @@ The model_type parameter can be "timm.x" for any model x supported by [timm](htt
 | hgnet |  HgNetV2| Fast, useful for all but the smallest models. | not published |
 | vovnet | VovNet  | Medium-fast, useful for all sizes. | [here](https://arxiv.org/abs/1904.09730) |
 
-For very small models, say with less than 10 classes and just a few thousand training spectrograms, DLA and VovNet are good candidates. As model size increases, DLA becomes slower and less accurate.
+For very small models, say with less than 10 classes and just a few thousand training spectrograms, DLA and VovNet are good candidates. As model size increases, DLA becomes slower and less appropriate.
 
 If `head_type` is not specified, BriteKit uses the default classifier head defined by the model. However, you can also specify any of the following head types:
 | Head Type | Description |

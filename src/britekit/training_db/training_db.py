@@ -737,9 +737,9 @@ class TrainingDatabase:
         self,
         category_id: int,
         name: str,
-        alt_name: str = "",
-        code: str = "",
-        alt_code: str = "",
+        alt_name: Optional[str] = None,
+        code: Optional[str] = None,
+        alt_code: Optional[str] = None,
     ):
         """
         Insert a Class record.

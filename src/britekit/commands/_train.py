@@ -1,6 +1,7 @@
 # File name starts with _ to keep it out of typeahead for API users
 import click
 import time
+from typing import Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import TrainingError
@@ -9,7 +10,7 @@ from britekit.core.trainer import Trainer
 
 
 def train(
-    cfg_path: str,
+    cfg_path: Optional[str]=None,
 ):
     """
     Train a bioacoustic recognition model using the specified configuration.

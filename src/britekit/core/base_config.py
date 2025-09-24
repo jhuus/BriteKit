@@ -48,7 +48,7 @@ class Training:
     num_folds: int = 1  # For k-fold cross-validation
     val_portion: float = 0  # Used only if num_folds = 1
     train_db: str = "data/training.db"  # Path to training database
-    train_pickle: Optional[str] = None  # Path to training pickle file
+    train_pickle: str = "data/training.pkl"  # Path to training pickle file
     test_pickle: Optional[str] = None  # Path to test pickle file
     num_workers: int = 3  # Number of trainer worker threads
     compile: bool = False  # Compile the model?
