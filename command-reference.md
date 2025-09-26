@@ -204,7 +204,7 @@ Usage: britekit ckpt-avg [OPTIONS]
 Options:
   -i, --input DIRECTORY  Directory containing checkpoints to average  [required]
   -o, --output FILE      Optional path to output checkpoint. Default is
-                         weights.ckpt in the input directory
+                         average.ckpt in the input directory
   --help                 Show this message and exit.
 ```
 ### britekit ckpt-freeze
@@ -395,7 +395,7 @@ Options:
                    Defaults to 'default'.
   --code TEXT      Class code for when new class is added.
   --name TEXT      Class name.  [required]
-  --dir DIRECTORY  Path to directory containing recordings..  [required]
+  --dir DIRECTORY  Path to directory containing recordings.  [required]
   --overlap FLOAT  Spectrogram overlap in seconds. Defaults to value in the
                    config file.
   --src TEXT       Source name for inserted recordings. Defaults to 'default'.
@@ -494,11 +494,11 @@ Usage: britekit inat [OPTIONS]
   optionally add filename prefixes.
 
 Options:
+  --name TEXT         Species name.  [required]
   --output DIRECTORY  Output directory.  [required]
   --max INTEGER       Maximum number of recordings to download. Default = 500.
   --noprefix          By default, filenames use an 'N' prefix and recording
                       number. Specify this flag to skip the prefix.
-  --name TEXT         Species name.  [required]
   --help              Show this message and exit.
 ```
 ### britekit init
@@ -875,9 +875,9 @@ Usage: britekit xeno [OPTIONS]
 
 Options:
   --key TEXT          Xeno-Canto API key.
+  --name TEXT         Species name.  [required]
   --output DIRECTORY  Output directory.  [required]
   --max INTEGER       Maximum number of recordings to download. Default = 500.
-  --name TEXT         Species name.  [required]
   --nolic             Specify this flag to ignore the licence. By default,
                       exclude if licence is BY-NC-ND.
   --sci               Specify this flag when using a scientific name rather than

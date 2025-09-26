@@ -892,7 +892,7 @@ Returns:
 
 **get_raw_scores**  
 ```python
-Predictor.get_raw_scores(self, recording_path: str) -> tuple[numpy.ndarray, typing.Optional[numpy.ndarray], list[float]]
+Predictor.get_raw_scores(self, recording_path: str) -> tuple[typing.Optional[numpy.ndarray], typing.Optional[numpy.ndarray], list[float]]
 ```
 Get scores in array format from the loaded models for the given recording.
 
@@ -1629,7 +1629,7 @@ Returns:
 
 **insert_class**  
 ```python
-TrainingDatabase.insert_class(self, category_id: int, name: str, alt_name: str = '', code: str = '', alt_code: str = '')
+TrainingDatabase.insert_class(self, category_id: int, name: str, alt_name: Optional[str] = None, code: Optional[str] = None, alt_code: Optional[str] = None)
 ```
 Insert a Class record.
 
@@ -1854,3 +1854,9 @@ Otherwise, returns the result of object.__str__() (if defined)
 or repr(object).
 encoding defaults to sys.getdefaultencoding().
 errors defaults to 'strict'.
+
+### get_config
+**Function**  
+```python
+get_config(cfg_path: Optional[str] = None) -> tuple[britekit.core.base_config.BaseConfig, britekit.core.base_config.FunctionConfig]
+```

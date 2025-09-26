@@ -46,7 +46,7 @@
 | `num_folds` | `int` | 1 | For k-fold cross-validation |
 | `val_portion` | `float` | 0 | Used only if num_folds = 1 |
 | `train_db` | `str` | 'data/training.db' | Path to training database |
-| `train_pickle` | `Union[str, NoneType]` | None | Path to training pickle file |
+| `train_pickle` | `str` | 'data/training.pkl' | Path to training pickle file |
 | `test_pickle` | `Union[str, NoneType]` | None | Path to test pickle file |
 | `num_workers` | `int` | 3 | Number of trainer worker threads |
 | `compile` | `bool` | False | Compile the model? |
@@ -95,7 +95,7 @@
 | --- | --- | --- | --- |
 | `force_cpu` | `bool` | False | If true, use CPU (for performance comparisons) |
 | `ckpt_folder` | `str` | 'data/ckpt' | Use an ensemble of all checkpoints in this folder for inference |
-| `search_ckpt_path` | `str` | 'data/ckpt-search' | Checkpoint used in searching and clustering |
+| `search_ckpt_path` | `Union[str, NoneType]` | None | Checkpoint used in searching and clustering |
 | `classes_file` | `str` | 'data/classes.txt' | List of classes used to generate pickle files |
 | `ignore_file` | `str` | 'data/ignore.txt' | Classes listed in this file are ignored in analysis |
 | `source_regexes` | `Union[list, NoneType]` | <factory <lambda>> | Sample regexes to map recording names to source names |
