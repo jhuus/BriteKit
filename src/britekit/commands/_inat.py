@@ -1,12 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
-import pyinaturalist
 import requests
-
-import click
 from typing import Any, Dict, Optional
 
-from britekit.core.util import cli_help_from_doc
+import click
+import pyinaturalist
+
+from britekit.core import util
 
 
 def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[str]:
@@ -28,7 +29,7 @@ def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[
         mp3_path = f"{output_dir}/N{base}.mp3"
 
     if not os.path.exists(output_path) and not os.path.exists(mp3_path):
-        click.echo(f"Downloading {output_path}")
+        logging.info(f"Downloading {output_path}")
         r = requests.get(url, allow_redirects=True)
         open(output_path, "wb").write(r.content)
 
@@ -65,7 +66,7 @@ def inat(
     )
 
     id_map: Dict[str, int] = {}  # map media IDs to observation IDs
-    click.echo(f"Response contains {len(response['results'])} results")
+    logging.info(f"Response contains {len(response['results'])} results")
     num_downloads = 0
     for result in response["results"]:
         if num_downloads >= max_downloads:
@@ -95,7 +96,7 @@ def inat(
 @click.command(
     name="inat",
     short_help="Download recordings from iNaturalist.",
-    help=cli_help_from_doc(inat.__doc__),
+    help=util.cli_help_from_doc(inat.__doc__),
 )
 @click.option("--name", required=True, type=str, help="Species name.")
 @click.option(
@@ -124,4 +125,5 @@ def _inat_cmd(
     max_downloads: int,
     no_prefix: bool,
 ) -> None:
+    util.set_logging()
     inat(name, output_dir, max_downloads, no_prefix)

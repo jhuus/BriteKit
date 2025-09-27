@@ -1,9 +1,10 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 
 import click
 
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 
 
 def wav2mp3(
@@ -43,7 +44,7 @@ def wav2mp3(
             if ext and (ext.lower() in CONVERT_TYPES):
                 target = os.path.join(dir, base)
                 cmd = f'ffmpeg -i "{filepath}" -y -vn -ar {sampling_rate} -b:a 192k "{target}.mp3"'
-                click.echo(cmd)
+                logging.info(cmd)
                 os.system(cmd)
                 os.remove(filepath)
 
@@ -51,7 +52,7 @@ def wav2mp3(
 @click.command(
     name="wav2mp3",
     short_help="Convert uncompressed audio or flac to mp3.",
-    help=cli_help_from_doc(wav2mp3.__doc__),
+    help=util.cli_help_from_doc(wav2mp3.__doc__),
 )
 @click.option(
     "--dir",
@@ -70,4 +71,5 @@ def _wav2mp3_cmd(
     dir: str,
     sampling_rate: int,
 ):
+    util.set_logging()
     wav2mp3(dir, sampling_rate)

@@ -1,4 +1,5 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -9,7 +10,6 @@ from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core.audio import Audio
 from britekit.core.plot import plot_spec
 from britekit.core import util
-from britekit.core.util import cli_help_from_doc
 from britekit.training_db.training_db import TrainingDatabase
 
 
@@ -22,10 +22,10 @@ def _plot_recording(
     overlap: float,
     ndims: bool,
 ):
-    click.echo(f'Processing "{input_path}"')
+    logging.info(f'Processing "{input_path}"')
     signal, rate = audio.load(input_path)
     if signal is None:
-        click.echo(f"Failed to read {input_path}")
+        logging.error(f"Failed to read {input_path}")
         quit()
 
     recording_seconds = len(signal) / rate
@@ -34,7 +34,7 @@ def _plot_recording(
         specs, _ = audio.get_spectrograms([0], spec_duration=recording_seconds)
         specs = specs.cpu().numpy()
         if specs[0] is None:
-            click.echo(f'Error: failed to extract spectrogram from "{input_path}".')
+            logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
             quit()
 
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
@@ -86,8 +86,7 @@ def plot_db(
         power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
         spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
 
@@ -120,7 +119,7 @@ def plot_db(
             )
             if not os.path.exists(spec_path):
                 if r.filename != prev_filename:
-                    click.echo(f"Processing {r.filename}")
+                    logging.info(f"Processing {r.filename}")
                     prev_filename = r.filename
 
                 spec = util.expand_spectrogram(r.value)
@@ -130,13 +129,13 @@ def plot_db(
             if max_count is not None and num_plotted >= max_count:
                 break
 
-        click.echo(f"Plotted {num_plotted} spectrograms")
+        logging.info(f"Plotted {num_plotted} spectrograms")
 
 
 @click.command(
     name="plot-db",
     short_help="Plot spectrograms from a database.",
-    help=cli_help_from_doc(plot_db.__doc__),
+    help=util.cli_help_from_doc(plot_db.__doc__),
 )
 @click.option(
     "-c",
@@ -204,6 +203,7 @@ def _plot_db_cmd(
     power: Optional[float],
     spec_group: Optional[str],
 ):
+    util.set_logging()
     plot_db(
         cfg_path,
         class_name,
@@ -242,8 +242,7 @@ def plot_dir(
         overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
         power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
 
@@ -255,7 +254,7 @@ def plot_dir(
 
     audio_paths = util.get_audio_files(input_path)
     if len(audio_paths) == 0:
-        click.echo(f'Error: no recordings found in "{input_path}".')
+        logging.error(f'Error: no recordings found in "{input_path}".')
         quit()
 
     audio = Audio(cfg=cfg)
@@ -266,7 +265,7 @@ def plot_dir(
 @click.command(
     name="plot-dir",
     short_help="Plot spectrograms from a directory of recordings.",
-    help=cli_help_from_doc(plot_dir.__doc__),
+    help=util.cli_help_from_doc(plot_dir.__doc__),
 )
 @click.option(
     "-c",
@@ -328,6 +327,7 @@ def _plot_dir_cmd(
     overlap: float,
     power: float = 1.0,
 ):
+    util.set_logging()
     plot_dir(cfg_path, ndims, input_path, output_path, all, overlap, power)
 
 
@@ -356,8 +356,7 @@ def plot_rec(
         overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
         power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
 
@@ -374,7 +373,7 @@ def plot_rec(
 @click.command(
     name="plot-rec",
     short_help="Plot spectrograms from a specific recording.",
-    help=cli_help_from_doc(plot_rec.__doc__),
+    help=util.cli_help_from_doc(plot_rec.__doc__),
 )
 @click.option(
     "-c",
@@ -436,4 +435,5 @@ def _plot_rec_cmd(
     overlap: float,
     power: float = 1.0,
 ):
+    util.set_logging()
     plot_rec(cfg_path, ndims, input_path, output_path, all, overlap, power)

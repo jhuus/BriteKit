@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 import threading
@@ -68,7 +69,7 @@ class Analyzer:
         """
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
-            util.echo(f"[Thread {thread_num}] Processing {recording_path}")
+            logging.info(f"[Thread {thread_num}] Processing {recording_path}")
             scores, frame_map, offsets = predictor.get_raw_scores(recording_path)
             recording_name = Path(recording_path).stem
             if rtype in {"audacity", "both"}:

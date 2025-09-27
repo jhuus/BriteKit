@@ -1,4 +1,5 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 
 import click
@@ -6,7 +7,7 @@ import numpy as np
 import librosa
 import soundfile as sf
 
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 
 
 def youtube(
@@ -29,7 +30,7 @@ def youtube(
     # download it as wav, which is faster than downloading as mp3;
     # then resample and convert to mp3
     command = f'yt-dlp -q -o "{output_dir}/{id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={id}'
-    click.echo(f"Downloading {id}")
+    logging.info(f"Downloading {id}")
     os.system(command)
 
     # resample and delete the original
@@ -42,13 +43,13 @@ def youtube(
         sf.write(audio_path2, audio, sr, format="mp3")
         os.remove(audio_path1)
     else:
-        click.echo("Download failed")
+        logging.info("Download failed")
 
 
 @click.command(
     name="youtube",
     short_help="Download a recording from Youtube.",
-    help=cli_help_from_doc(youtube.__doc__),
+    help=util.cli_help_from_doc(youtube.__doc__),
 )
 @click.option(
     "--id",
@@ -76,6 +77,7 @@ def _youtube_cmd(
     output_dir: str,
     sampling_rate: int,
 ) -> None:
+    util.set_logging()
     youtube(
         youtube_id,
         output_dir,

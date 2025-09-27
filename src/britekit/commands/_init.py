@@ -1,10 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 from pathlib import Path
-import click
 from importlib.resources import files as pkg_files
 from importlib.abc import Traversable
 from typing import Iterator, Tuple, List, cast
-from britekit.core.util import cli_help_from_doc
+
+import click
+
+from britekit.core import util
 
 INSTALL_PKG = "britekit.install"
 
@@ -62,15 +65,15 @@ def init(dest: Path) -> None:
         # Write bytes from the packaged resource
         out_path.write_bytes(trav_file.read_bytes())
         copied += 1
-        click.echo(f"copied: {out_path}")
+        logging.info(f"copied: {out_path}")
 
-    click.echo(f"\nDone. Copied: {copied}, Skipped: {skipped}, Dest: {dest}")
+    logging.info(f"\nDone. Copied: {copied}, Skipped: {skipped}, Dest: {dest}")
 
 
 @click.command(
     name="init",
     short_help="Create default directory structure including sample files.",
-    help=cli_help_from_doc(init.__doc__),
+    help=util.cli_help_from_doc(init.__doc__),
 )
 @click.option(
     "--dest",
@@ -79,4 +82,5 @@ def init(dest: Path) -> None:
     help="Root directory to copy under (default is working directory).",
 )
 def _init_cmd(dest: Path) -> None:
+    util.set_logging()
     init(dest)

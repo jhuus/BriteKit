@@ -1,11 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
-import numpy as np
+import logging
 import zlib
 from typing import List, Optional
 
+import click
+import numpy as np
+
 from britekit.core.config_loader import get_config, BaseConfig
-from britekit.core.util import expand_spectrogram, get_device, cli_help_from_doc
+from britekit.core import util
 from britekit.models.model_loader import load_from_checkpoint, BaseModel
 from britekit.training_db.training_db import TrainingDatabase
 
@@ -44,7 +46,7 @@ def embed(
         value_ids: List[int] = []
         for i, spec in enumerate(specs):
             value_ids.append(spec.specvalue_id)
-            spec = expand_spectrogram(spec.value)
+            spec = util.expand_spectrogram(spec.value)
             spec = spec.reshape((1, cfg.audio.spec_height, cfg.audio.spec_width))
             spec_array[i] = spec
 
@@ -59,7 +61,7 @@ def embed(
     BATCH_SIZE = 512  # process this many spectrograms at a time
     assert cfg.misc.search_ckpt_path is not None
     model = load_from_checkpoint(cfg.misc.search_ckpt_path)
-    device = get_device()
+    device = util.get_device()
     model.eval()  # set inference mode
     model.to(device)
 
@@ -67,23 +69,23 @@ def embed(
         if not class_name:
             results = db.get_class()
             if len(results) == 0:
-                click.echo(f"No classes found in database {db_path}.")
+                logging.error(f"No classes found in database {db_path}.")
                 quit()
         else:
             results = db.get_class({"Name": class_name})
             if len(results) == 0:
-                click.echo(f"Class {class_name} not found in database {db_path}.")
+                logging.error(f"Class {class_name} not found in database {db_path}.")
                 quit()
 
         for result in results:
-            click.echo(f"Processing {result.name}")
+            logging.info(f"Processing {result.name}")
             specs = db.get_spectrogram_by_class(result.name, spec_group=spec_group)
-            click.echo(f"Fetched {len(specs)} spectrograms for {result.name}")
+            logging.info(f"Fetched {len(specs)} spectrograms for {result.name}")
             start_idx = 0
 
             while start_idx < len(specs):
                 end_idx = min(start_idx + BATCH_SIZE, len(specs))
-                click.echo(f"Processing spectrograms {start_idx} to {end_idx - 1}")
+                logging.info(f"Processing spectrograms {start_idx} to {end_idx - 1}")
                 embed_block(specs[start_idx:end_idx], cfg, model, db, device)
                 start_idx += BATCH_SIZE
 
@@ -91,7 +93,7 @@ def embed(
 @click.command(
     name="embed",
     short_help="Insert spectrogram embeddings into database.",
-    help=cli_help_from_doc(embed.__doc__),
+    help=util.cli_help_from_doc(embed.__doc__),
 )
 @click.option(
     "-c",
@@ -116,4 +118,5 @@ def _embed_cmd(
     class_name: Optional[str],
     spec_group: str,
 ) -> None:
+    util.set_logging()
     embed(cfg_path, db_path, class_name, spec_group)

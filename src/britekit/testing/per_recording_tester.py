@@ -1,10 +1,10 @@
+import logging
 import os
 
 import numpy as np
 import pandas as pd
 
 from britekit.core.config_loader import get_config
-from britekit.core import util
 from britekit.testing.base_tester import BaseTester
 
 
@@ -87,21 +87,21 @@ class PerRecordingTester(BaseTester):
         self._initialize()
 
         # calculate stats
-        util.echo("Calculating PR-AUC stats")
+        logging.info("Calculating PR-AUC stats")
         self.map_dict = self.get_pr_auc_stats()
 
-        util.echo("Calculating ROC-AUC stats")
+        logging.info("Calculating ROC-AUC stats")
         self.roc_dict = self.get_roc_auc_stats()
 
-        util.echo("Calculating PR stats")
+        logging.info("Calculating PR stats")
         self.details_dict = self.get_precision_recall(
             threshold=self.threshold, details=True
         )
 
-        util.echo("Calculating PR table")
+        logging.info("Calculating PR table")
         self.pr_table_dict = self.get_pr_table()
 
-        util.echo(f"Creating reports in {self.output_dir}")
+        logging.info(f"Creating reports in {self.output_dir}")
         self.produce_reports()
 
     # ============================================================================
@@ -153,7 +153,7 @@ class PerRecordingTester(BaseTester):
                     elif len(class_code) > 0:
                         # the unknown_classes set is just so we only report each unknown class once
                         if class_code not in unknown_classes:
-                            util.echo(f"Unknown class {class_code} will be ignored")
+                            logging.error(f"Unknown class {class_code} will be ignored")
                             unknown_classes.add(class_code)
 
                         continue  # exclude from saved annotations
@@ -329,7 +329,7 @@ class PerRecordingTester(BaseTester):
         print()
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
             for rpt_line in rpt:
-                print(rpt_line[:-1])  # echo to console
+                print(rpt_line[:-1])
                 summary.write(rpt_line)
 
         # write recording details (row per segment)
@@ -440,7 +440,7 @@ class PerRecordingTester(BaseTester):
             os.makedirs(self.output_dir)
 
         # initialize y_true and y_pred and save them as CSV files
-        util.echo("Initializing")
+        logging.info("Initializing")
         self.get_labels(self.label_dir)
         self.get_annotations()
         self._init_y_true()

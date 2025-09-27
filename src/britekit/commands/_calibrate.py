@@ -1,4 +1,5 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -7,7 +8,7 @@ import click
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 from britekit.testing.per_segment_tester import PerSegmentTester
 
 
@@ -42,11 +43,8 @@ def calibrate(
         coef (float, optional): Use this coefficient for the calibration plot.
         inter (float, optional): Use this intercept for the calibration plot.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
-
     if (coef is None and inter is not None) or (coef is not None and inter is None):
-        click.echo("If --coef or --inter is specified, both must be specified.")
+        logging.error("If --coef or --inter is specified, both must be specified.")
         quit()
 
     try:
@@ -59,7 +57,7 @@ def calibrate(
                 # not just name of subdirectory of recordings
                 labels_path = label_dir
             else:
-                click.echo(f"Label directory {label_dir} not found.")
+                logging.error(f"Label directory {label_dir} not found.")
                 quit()
 
         PerSegmentTester(
@@ -75,13 +73,13 @@ def calibrate(
         ).run()
 
     except InputError as e:
-        click.echo(e)
+        logging.error(e)
 
 
 @click.command(
     name="calibrate",
     short_help="Calibrate an ensemble based on per-segment test results.",
-    help=cli_help_from_doc(calibrate.__doc__),
+    help=util.cli_help_from_doc(calibrate.__doc__),
 )
 @click.option(
     "-c",
@@ -152,6 +150,7 @@ def _calibrate_cmd(
     coef: Optional[float] = None,
     inter: Optional[float] = None,
 ):
+    util.set_logging()
     calibrate(
         cfg_path,
         annotations_path,

@@ -1,9 +1,11 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
+import logging
 from typing import Optional
 
+import click
+
 from britekit.core.config_loader import get_config
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 from britekit.training_db.extractor import Extractor
 from britekit.training_db.training_db import TrainingDatabase
 
@@ -38,8 +40,7 @@ def extract_all(
         src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
         spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
 
@@ -48,13 +49,13 @@ def extract_all(
             db, class_name, class_code, cat_name, src_name, overlap, spec_group
         )
         count = extractor.extract_all(dir_path)
-        click.echo(f"Inserted {count} spectrograms")
+        logging.info(f"Inserted {count} spectrograms")
 
 
 @click.command(
     name="extract-all",
     short_help="Insert all spectrograms from recordings into database.",
-    help=cli_help_from_doc(extract_all.__doc__),
+    help=util.cli_help_from_doc(extract_all.__doc__),
 )
 @click.option(
     "-c",
@@ -117,6 +118,7 @@ def _extract_all_cmd(
     src_name: Optional[str],
     spec_group: Optional[str],
 ) -> None:
+    util.set_logging()
     extract_all(
         cfg_path,
         db_path,
@@ -165,8 +167,7 @@ def extract_by_image(
         src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
         spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
 
@@ -174,14 +175,14 @@ def extract_by_image(
         extractor = Extractor(
             db, class_name, class_code, cat_name, src_name, spec_group=spec_group
         )
-        count = extractor.extract_by_image(rec_dir, spec_dir, click.echo, dest_dir)
-        click.echo(f"Inserted {count} spectrograms")
+        count = extractor.extract_by_image(rec_dir, spec_dir, dest_dir)
+        logging.info(f"Inserted {count} spectrograms")
 
 
 @click.command(
     name="extract-by-image",
     short_help="Insert spectrograms that correspond to images.",
-    help=cli_help_from_doc(extract_by_image.__doc__),
+    help=util.cli_help_from_doc(extract_by_image.__doc__),
 )
 @click.option(
     "-c",
@@ -252,6 +253,7 @@ def _extract_by_image_cmd(
     src_name: Optional[str],
     spec_group: Optional[str],
 ) -> None:
+    util.set_logging()
     extract_by_image(
         cfg_path,
         db_path,

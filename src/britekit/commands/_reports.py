@@ -1,7 +1,6 @@
 # File name starts with _ to keep it out of typeahead for API users
 import glob
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -9,12 +8,14 @@ import tempfile
 from typing import Optional
 
 import click
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import pandas as pd
 
 from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
-from britekit.core.util import inference_output_to_dataframe, cli_help_from_doc
+from britekit.core import util
 from britekit.testing.per_minute_tester import PerMinuteTester
 from britekit.testing.per_recording_tester import PerRecordingTester
 from britekit.testing.per_segment_tester import PerSegmentTester
@@ -97,13 +98,13 @@ def rpt_ann(
     details_path = os.path.join(output_path, "test_details.csv")
     output_df.to_csv(details_path, index=False, float_format="%.1f")
 
-    click.echo(f"See summary and details reports in {output_path}")
+    logging.info(f"See summary and details reports in {output_path}")
 
 
 @click.command(
     name="rpt-ann",
     short_help="Summarize annotations in a per-segment test.",
-    help=cli_help_from_doc(rpt_ann.__doc__),
+    help=util.cli_help_from_doc(rpt_ann.__doc__),
 )
 @click.option(
     "-a",
@@ -125,6 +126,7 @@ def _rpt_ann_cmd(
     annotations_path: str,
     output_path: str,
 ):
+    util.set_logging()
     rpt_ann(annotations_path, output_path)
 
 
@@ -144,15 +146,14 @@ def rpt_db(cfg_path: Optional[str] = None,
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         output_path (str): Directory where database reports will be saved.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    click.echo(f"Generating report for database {cfg.train.train_db}")
+    logging.info(f"Generating report for database {cfg.train.train_db}")
     with TrainingDatabase(cfg.train.train_db) as db:
         provider = TrainingDataProvider(db)
         summary_df, details_df = provider.class_info()
@@ -166,7 +167,7 @@ def rpt_db(cfg_path: Optional[str] = None,
 @click.command(
     name="rpt-db",
     short_help="Generate a database summary report.",
-    help=cli_help_from_doc(rpt_db.__doc__),
+    help=util.cli_help_from_doc(rpt_db.__doc__),
 )
 @click.option(
     "-c",
@@ -188,6 +189,7 @@ def rpt_db(cfg_path: Optional[str] = None,
     help="Path to output directory.",
 )
 def _rpt_db_cmd(cfg_path, db_path, output_path):
+    util.set_logging()
     rpt_db(cfg_path, db_path, output_path)
 
 
@@ -208,12 +210,10 @@ def rpt_epochs(
         annotations_path (str): Path to CSV file containing ground truth annotations.
         output_path (str): Directory where the graph image will be saved.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
-
+    cfg, _ = get_config(cfg_path)
     ckpt_paths = glob.glob(str(Path(input_path) / "*.ckpt"))
     if len(ckpt_paths) == 0:
-        click.echo(f"No checkpoint files found in {input_path}")
+        logging.error(f"No checkpoint files found in {input_path}")
         quit()
 
     if not os.path.exists(output_path):
@@ -224,7 +224,7 @@ def rpt_epochs(
         stem = Path(ckpt_path).stem
         index = stem.rfind("-e")
         if index == -1:
-            click.echo(f"Invalid checkpoint name: {Path(ckpt_path).name}")
+            logging.error(f"Invalid checkpoint name: {Path(ckpt_path).name}")
             quit()
 
         ckpt_num = int(stem[index + 2 :])
@@ -240,12 +240,12 @@ def rpt_epochs(
     max_roc_score, max_roc_epoch = 0, 0
     pr_scores = []
     roc_scores = []
-    fn_cfg.echo = None  # suppress output from Analyzer and PerSegmentTester
+    util.set_logging(level=logging.ERROR) # suppress output from Analyzer and PerSegmentTester
     with tempfile.TemporaryDirectory() as temp_dir:
         cfg.misc.ckpt_folder = temp_dir
 
         for epoch_num in epoch_nums:
-            click.echo(f"Processing epoch {epoch_num}")
+            logging.info(f"Processing epoch {epoch_num}")
 
             # copy checkpoint to temp dir
             from_path = epoch_to_ckpt[epoch_num]
@@ -284,6 +284,8 @@ def rpt_epochs(
 
             os.remove(to_path)
 
+    util.set_logging() # restore console output
+
     # Save CSV
     df = pd.DataFrame()
     df["epoch"] = epoch_nums
@@ -316,15 +318,15 @@ def rpt_epochs(
     plot_path = str(Path(output_path) / "training_scores.jpeg")
     plt.savefig(plot_path, dpi=300, bbox_inches="tight")
 
-    click.echo(f"Maximum PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}")
-    click.echo(f"Maximum ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
-    click.echo(f"See plot at {plot_path}")
+    logging.info(f"Maximum PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}")
+    logging.info(f"Maximum ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
+    logging.info(f"See plot at {plot_path}")
 
 
 @click.command(
     name="rpt-epochs",
     short_help="Plot the test score for every training epoch.",
-    help=cli_help_from_doc(rpt_epochs.__doc__),
+    help=util.cli_help_from_doc(rpt_epochs.__doc__),
 )
 @click.option(
     "-c",
@@ -364,6 +366,7 @@ def _rpt_epochs_cmd(
     annotations_path: str,
     output_path: str,
 ):
+    util.set_logging()
     rpt_epochs(
         cfg_path,
         input_path,
@@ -401,12 +404,12 @@ def rpt_labels(
         os.makedirs(output_path)
 
     # get labels in a dataframe, sort it, then filter on threshold
-    df = inference_output_to_dataframe(label_dir)
+    df = util.inference_output_to_dataframe(label_dir)
     df = df.sort_values(by=["recording", "name", "start_time"])
     df = df[df["score"] >= min_score]
 
     if df.empty:
-        click.echo(f"No labels found with scores >= {min_score}")
+        logging.error(f"No labels found with scores >= {min_score}")
         quit()
 
     # remove any overlap between adjacent labels
@@ -469,13 +472,13 @@ def rpt_labels(
 
     df = pd.DataFrame(rows, columns=["recording"] + class_names)
     df.to_csv(os.path.join(output_path, "details.csv"), index=False)
-    click.echo(f"See output reports in {output_path}.")
+    logging.info(f"See output reports in {output_path}.")
 
 
 @click.command(
     name="rpt-labels",
     short_help="Summarize the output of an inference run.",
-    help=cli_help_from_doc(rpt_labels.__doc__),
+    help=util.cli_help_from_doc(rpt_labels.__doc__),
 )
 @click.option(
     "-l",
@@ -506,6 +509,7 @@ def _rpt_labels_cmd(
     output_path: str,
     min_score: Optional[float],
 ):
+    util.set_logging()
     rpt_labels(label_dir, output_path, min_score)
 
 
@@ -541,9 +545,7 @@ def rpt_test(
         min_score (float, optional): Provide detailed reports for this confidence threshold.
         precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
-
+    cfg, _ = get_config()
     try:
         if not recordings_path:
             recordings_path = str(Path(annotations_path).parent)
@@ -554,7 +556,7 @@ def rpt_test(
                 # not just name of subdirectory of recordings
                 labels_path = label_dir
             else:
-                click.echo(f"Label directory {label_dir} not found.")
+                logging.error(f"Label directory {label_dir} not found.")
                 quit()
 
         if min_score is None:
@@ -586,18 +588,18 @@ def rpt_test(
                 min_score,
             ).run()
         else:
-            click.echo(
+            logging.error(
                 'Invalid granularity (expected "recording", "minute" or "segment").'
             )
 
     except InputError as e:
-        click.echo(e)
+        logging.error(e)
 
 
 @click.command(
     name="rpt-test",
     short_help="Generate metrics and reports from test results.",
-    help=cli_help_from_doc(rpt_test.__doc__),
+    help=util.cli_help_from_doc(rpt_test.__doc__),
 )
 @click.option(
     "-c",
@@ -672,6 +674,7 @@ def _rpt_test_cmd(
     min_score: Optional[float],
     precision: float,
 ):
+    util.set_logging()
     rpt_test(
         cfg_path,
         granularity,

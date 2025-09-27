@@ -13,7 +13,6 @@ import torch
 
 from britekit.core.util import (
     get_device,
-    echo,
     format_elapsed_time,
     get_range,
     cfg_to_pure,
@@ -181,40 +180,6 @@ class TestGetDevice:
 
         result = get_device()
         assert result == "cpu"
-
-
-class TestEcho:
-    """Test echo function."""
-
-    @patch("britekit.core.util.get_config")
-    def test_echo_enabled(self, mock_get_config):
-        """Test echo when enabled."""
-        mock_fn_cfg = MagicMock()
-        mock_fn_cfg.echo = MagicMock()  # Make echo a callable mock
-        mock_get_config.return_value = (None, mock_fn_cfg)
-
-        echo("test message")
-        mock_fn_cfg.echo.assert_called_once_with("test message")
-
-    @patch("britekit.core.util.get_config")
-    def test_echo_disabled(self, mock_get_config):
-        """Test echo when disabled."""
-        mock_fn_cfg = MagicMock()
-        mock_fn_cfg.echo = None  # No echo function when disabled
-        mock_get_config.return_value = (None, mock_fn_cfg)
-
-        echo("test message")
-        # Should not call echo when it's None
-
-    @patch("britekit.core.util.get_config")
-    def test_echo_empty_message(self, mock_get_config):
-        """Test echo with empty message."""
-        mock_fn_cfg = MagicMock()
-        mock_fn_cfg.echo = MagicMock()  # Make echo a callable mock
-        mock_get_config.return_value = (None, mock_fn_cfg)
-
-        echo()
-        mock_fn_cfg.echo.assert_called_once_with("")
 
 
 class TestFormatElapsedTime:
@@ -602,8 +567,7 @@ class TestGetSourceName:
         assert result == "default"
 
     @patch("britekit.core.util.get_config")
-    @patch("britekit.core.util.echo")
-    def test_get_source_name_invalid_regex(self, mock_echo, mock_get_config):
+    def test_get_source_name_invalid_regex(self, mock_get_config):
         """Test with invalid regex pattern."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = [("[invalid", "test_source")]
@@ -611,8 +575,6 @@ class TestGetSourceName:
 
         result = get_source_name("test_file.mp3")
         assert result == "default"
-        # Verify that echo was called with the error message
-        mock_echo.assert_called_once()
 
     @patch("britekit.core.util.get_config")
     def test_get_source_name_with_extension(self, mock_get_config):

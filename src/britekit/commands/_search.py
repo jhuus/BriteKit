@@ -1,15 +1,17 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
-import numpy as np
+import logging
 import os
-import scipy
 from typing import Optional
 import zlib
+
+import click
+import numpy as np
+import scipy
 
 from britekit.core.audio import Audio
 from britekit.core.config_loader import get_config
 from britekit.core.plot import plot_spec
-from britekit.core.util import expand_spectrogram, get_device, cli_help_from_doc
+from britekit.core import util
 from britekit.models.model_loader import load_from_checkpoint
 from britekit.training_db.training_db import TrainingDatabase
 
@@ -67,7 +69,7 @@ def search(
     audio.load(input_path)
     specs, _ = audio.get_spectrograms([offset])
     if specs is None or len(specs) == 0:
-        click.echo(
+        logging.error(
             f"Failed to retrieve search spectrogram from offset {offset} in {input_path}"
         )
         quit()
@@ -84,7 +86,7 @@ def search(
         db_path = cfg.train.train_db
 
     # get recordings and create dict from ID to filename
-    click.echo(f"Opening database to search at {db_path}")
+    logging.info(f"Opening database to search at {db_path}")
     db = TrainingDatabase(db_path)
     recording_dict = {}
     results = db.get_recording_by_class(class_name)
@@ -96,12 +98,12 @@ def search(
     results = db.get_spectrogram_by_class(
         class_name, include_value=False, include_embedding=True, spec_group=spec_group
     )
-    click.echo(f"Retrieved {len(results)} spectrograms to search")
+    logging.info(f"Retrieved {len(results)} spectrograms to search")
 
     spec_infos = []
     for i, r in enumerate(results):
         if r.embedding is None:
-            click.echo("Error: not all spectrograms have embeddings")
+            logging.error("Error: not all spectrograms have embeddings")
             quit()
         else:
             embedding = np.frombuffer(zlib.decompress(r.embedding), dtype=np.float32)
@@ -118,15 +120,15 @@ def search(
 
     # load the saved model, i.e. the search checkpoint
     if cfg.misc.search_ckpt_path is None:
-        click.echo("cfg.misc.search_ckpt_path is not specified")
+        logging.error("cfg.misc.search_ckpt_path is not specified")
         return
 
     if not os.path.exists(cfg.misc.search_ckpt_path):
-        click.echo("Invalid value for cfg.misc.search_ckpt_path")
+        logging.error("Invalid value for cfg.misc.search_ckpt_path")
         return
 
-    click.echo("Loading saved model")
-    device = get_device()
+    logging.info("Loading saved model")
+    device = util.get_device()
     model = load_from_checkpoint(cfg.misc.search_ckpt_path)
     model.eval()  # set inference mode
     model.to(device)
@@ -138,17 +140,17 @@ def search(
     target_embedding = embeddings[0]
 
     # compare embeddings and save the distances
-    click.echo("Comparing embeddings")
+    logging.info("Comparing embeddings")
     for i in range(len(spec_infos)):
         spec_infos[i].distance = scipy.spatial.distance.cosine(
             target_embedding, spec_infos[i].embedding
         )
 
     # sort by distance and plot the results
-    click.echo("Sorting results")
+    logging.info("Sorting results")
     spec_infos = sorted(spec_infos, key=lambda value: value.distance)
 
-    click.echo("Plotting results")
+    logging.info("Plotting results")
     num_plotted = 0
     spec_num = 0
     for spec_info in spec_infos:
@@ -157,18 +159,18 @@ def search(
 
         segment_results = db.get_segment({"ID": spec_info.segment_id})
         if len(segment_results) != 1:
-            click.echo(f"Error: unable to retrieve segment {spec_info.segment_id}")
+            logging.error(f"Error: unable to retrieve segment {spec_info.segment_id}")
 
         value_results = db.get_specvalue({"ID": spec_info.specvalue_id})
         if len(value_results) != 1:
-            click.echo(
+            logging.error(
                 f"Error: unable to retrieve spectrogram value {spec_info.specvalue_id}"
             )
 
         filename = recording_dict[segment_results[0].recording_id]
         offset = segment_results[0].offset
         distance = spec_info.distance
-        spec = expand_spectrogram(value_results[0].value)
+        spec = util.expand_spectrogram(value_results[0].value)
         spec = spec.reshape((1, cfg.audio.spec_height, cfg.audio.spec_width))
 
         spec_name = f"{filename}-{int(round(offset))}"
@@ -190,7 +192,7 @@ def search(
 @click.command(
     name="search",
     short_help="Search a database for spectrograms similar to one given.",
-    help=cli_help_from_doc(search.__doc__),
+    help=util.cli_help_from_doc(search.__doc__),
 )
 @click.option(
     "-c",
@@ -284,6 +286,7 @@ def _search_cmd(
     class_name2: str,
     spec_group: str,
 ):
+    util.set_logging()
     search(
         cfg_path,
         db_path,

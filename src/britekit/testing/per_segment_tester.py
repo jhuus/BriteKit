@@ -1,15 +1,17 @@
-import librosa
+import logging
 import math
-import matplotlib.pyplot as plt
 import os
 from pathlib import Path
+from typing import Optional
+
+import librosa
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.special import expit, logit
 from sklearn import metrics
 from sklearn.calibration import calibration_curve
 from sklearn.linear_model import LogisticRegression
-from typing import Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
@@ -212,7 +214,7 @@ class PerSegmentTester(BaseTester):
 
             if class_code not in self.trained_class_set:
                 if class_code not in unknown_classes:
-                    util.echo(f"Unknown class {class_code} will be ignored")
+                    logging.error(f"Unknown class {class_code} will be ignored")
                     unknown_classes.add(class_code)  # so we don't report it again
 
                 continue  # exclude from saved annotations
@@ -235,7 +237,9 @@ class PerSegmentTester(BaseTester):
         segment_dict = {}
         for recording in self.annotations:
             if recording not in self.recording_duration:
-                util.echo(f"Ignoring recording {recording} (annotated but not found).")
+                logging.error(
+                    f"Ignoring recording {recording} (annotated but not found)."
+                )
                 continue
 
             # calculate num_segments exactly as it's done in analyze.py so they match
@@ -534,10 +538,10 @@ class PerSegmentTester(BaseTester):
             f"Average of macro-ROC-annotated and micro-ROC-trained = {self.roc_auc_dict['combined_roc_auc_trained']:.4f}\n"
         )
 
-        util.echo()
+        logging.info()
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
             for rpt_line in rpt:
-                util.echo(rpt_line[:-1])  # echo to console
+                logging.info(rpt_line[:-1])
                 summary.write(rpt_line)
 
         # write recording details (row per segment)
@@ -704,7 +708,7 @@ class PerSegmentTester(BaseTester):
             for comprehensive coverage.
         """
 
-        util.echo("Calculating PR table")
+        logging.info("Calculating PR table")
         pr_table_dict = {}
         precision, recall, thresholds = metrics.precision_recall_curve(
             self.y_true_annotated.ravel(), self.y_pred_annotated.ravel()
@@ -730,7 +734,7 @@ class PerSegmentTester(BaseTester):
         if self.output_dir and not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
-        util.echo("Initializing")
+        logging.info("Initializing")
         self.get_labels(self.label_dir)
         self._get_recording_info()
         self.get_annotations()
@@ -811,7 +815,7 @@ class PerSegmentTester(BaseTester):
         plt.savefig(output_path, dpi=150)
         plt.close()
 
-        util.echo(f"Saved calibration plot to {output_path}")
+        logging.info(f"Saved calibration plot to {output_path}")
 
     def do_calibration(self):
         """
@@ -861,8 +865,8 @@ class PerSegmentTester(BaseTester):
         self.plot_calibration_curve(y_true, y_pred, coefficient, intercept)
 
         # print the coefficient and intercept
-        util.echo(f"Coefficient = {coefficient:.2f}")
-        util.echo(f"Intercept   = {intercept:.2f}")
+        logging.info(f"Coefficient = {coefficient:.2f}")
+        logging.info(f"Intercept   = {intercept:.2f}")
 
     def run(self):
         """
@@ -893,17 +897,17 @@ class PerSegmentTester(BaseTester):
             return
 
         # calculate stats
-        util.echo("Calculating PR-AUC stats")
+        logging.info("Calculating PR-AUC stats")
         self.pr_auc_dict = self.get_pr_auc_stats()
 
-        util.echo("Calculating ROC stats")
+        logging.info("Calculating ROC stats")
         self.roc_auc_dict = self.get_roc_auc_stats()
 
-        util.echo("Calculating PR stats")
+        logging.info("Calculating PR stats")
         self.details_dict = self.get_precision_recall(
             threshold=self.threshold, details=True
         )
         self.pr_table_dict = self.get_pr_table()
 
-        util.echo(f"Creating reports in {self.output_dir}")
+        logging.info(f"Creating reports in {self.output_dir}")
         self._produce_reports()

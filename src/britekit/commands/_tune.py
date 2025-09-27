@@ -1,4 +1,5 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -8,8 +9,7 @@ import yaml
 
 import click
 
-from britekit.core.config_loader import get_config
-from britekit.core.util import format_elapsed_time, cli_help_from_doc
+from britekit.core import util
 from britekit.core.tuner import Tuner
 
 
@@ -55,12 +55,9 @@ def tune(
         classes_path (str, optional): Path to CSV containing class names for extract option. Default is all classes.
     """
 
-    _, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
-
     try:
         if extract and skip_training:
-            click.echo(
+            logging.error(
                 "Performing spectrogram extract is incompatible with skipping training."
             )
             return
@@ -96,25 +93,25 @@ def tune(
         )
         best_score, best_params = tuner.run()
         if best_params:
-            click.echo(f"\nBest score = {best_score:.4f}")
-            click.echo(f"Best params = {best_params}")
-            click.echo(f"See reports in {output_path}")
+            logging.info(f"\nBest score = {best_score:.4f}")
+            logging.info(f"Best params = {best_params}")
+            logging.info(f"See reports in {output_path}")
 
         if cfg_path:
             to_path = os.path.join(output_path, Path(cfg_path).name)
             shutil.copy(cfg_path, to_path)
 
-        elapsed_time = format_elapsed_time(start_time, time.time())
-        click.echo(f"Elapsed time = {elapsed_time}")
+        elapsed_time = util.format_elapsed_time(start_time, time.time())
+        logging.info(f"Elapsed time = {elapsed_time}")
 
     except Exception as e:
-        click.echo(e)
+        logging.error(e)
 
 
 @click.command(
     name="tune",
     short_help="Tune hyperparameters using exhaustive or random search.",
-    help=cli_help_from_doc(tune.__doc__),
+    help=util.cli_help_from_doc(tune.__doc__),
 )
 @click.option(
     "-c",
@@ -221,6 +218,7 @@ def _tune_cmd(
     skip_training: bool,
     classes_path: Optional[str],
 ):
+    util.set_logging()
     tune(
         cfg_path,
         param_path,

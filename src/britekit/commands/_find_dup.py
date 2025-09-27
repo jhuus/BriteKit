@@ -1,12 +1,14 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
+from typing import List, Optional
+import zlib
+
 import click
 import numpy as np
 import scipy
-import zlib
-from typing import List, Optional
 
 from britekit.core.config_loader import get_config
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
 
@@ -51,13 +53,13 @@ def find_dup(
             {"RecordingID": recording.id, "SpecGroupID": specgroup_id}
         )
         if len(results) == 0:
-            click.echo(f"Error: no matching spectrograms for {recording.filename}.")
+            logging.error(f"Error: no matching spectrograms for {recording.filename}.")
             quit()
 
         for i in range(min(3, len(results))):  # just need the first few for comparison
             r = results[i]
             if r.embedding is None:
-                click.echo(f"Error: embeddings missing for {recording.filename}.")
+                logging.error(f"Error: embeddings missing for {recording.filename}.")
                 quit()
 
             recording.embeddings.append(
@@ -105,24 +107,24 @@ def find_dup(
         db_path = cfg.train.train_db
 
     # get recordings from the database
-    click.echo("Opening database")
+    logging.info("Opening database")
     db = TrainingDatabase(db_path)
     provider = TrainingDataProvider(db)
     specgroup_id = provider.specgroup_id(spec_group)
 
     recordings = get_recordings(db, class_name, specgroup_id)
-    click.echo(f"Fetched {len(recordings)} recordings")
+    logging.info(f"Fetched {len(recordings)} recordings")
 
     # sort recordings by length, then process in a loop
     recordings = sorted(recordings, key=lambda recording: recording.seconds)
     i = 0
     while i < len(recordings) - 1:
         if match_recordings(recordings[i], recordings[i + 1]):
-            click.echo(
+            logging.info(
                 f"{recordings[i].filename} and {recordings[i + 1].filename} are possible duplicates"
             )
             if delete:
-                click.echo(f"Removing {recordings[i].filename} from database")
+                logging.info(f"Removing {recordings[i].filename} from database")
                 db.delete_recording({"ID": recordings[i].id})
 
             i += 2
@@ -133,7 +135,7 @@ def find_dup(
 @click.command(
     name="find-dup",
     short_help="Find and optionally delete duplicate recordings in a database.",
-    help=cli_help_from_doc(find_dup.__doc__),
+    help=util.cli_help_from_doc(find_dup.__doc__),
 )
 @click.option(
     "-c",
@@ -171,4 +173,5 @@ def _find_dup_cmd(
     delete: bool,
     spec_group: str,
 ) -> None:
+    util.set_logging()
     find_dup(cfg_path, db_path, class_name, delete, spec_group)

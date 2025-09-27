@@ -1,4 +1,5 @@
 from functools import cmp_to_key
+import logging
 import math
 
 import numpy as np
@@ -113,8 +114,7 @@ class BaseTester:
                 if self.segment_len is None:
                     self.segment_len = row.end_time - row.start_time
                 elif not math.isclose(row.end_time - row.start_time, self.segment_len):
-                    # use print instead of util.echo so it isn't suppressed
-                    print(
+                    logging.error(
                         f"Error: detected different label durations ({self.segment_len} and {row.end_time - row.start_time})"
                     )
                     quit()
@@ -138,14 +138,13 @@ class BaseTester:
                 max_labels = len(self.labels_per_recording[recording])
 
         if longest_recording is None:
-            # use print instead of util.echo so it isn't suppressed
-            print("Error: no labels found")
+            logging.error("Error: no labels found")
             quit()
 
         self.overlap = self._calculate_overlap(
             self.labels_per_recording[longest_recording]
         )
-        util.echo(
+        logging.info(
             f"Detected segment length={self.segment_len:.2f} and label overlap={self.overlap:.2f}"
         )
 
@@ -306,16 +305,15 @@ class BaseTester:
         """
 
         if self.y_true_annotated_df is None or self.y_pred_annotated_df is None:
-            # use print instead of util.echo so it isn't suppressed
-            print("y_true_annotated_df and y_pred_df are not both defined")
+            logging.error("y_true_annotated_df and y_pred_df are not both defined")
             quit()
 
         if self.y_true_annotated_df.shape[0] != self.y_pred_annotated_df.shape[0]:
-            util.echo("Row count mismatch")
-            util.echo(
+            logging.info("Row count mismatch")
+            logging.info(
                 f"y_true_annotated_df row count = {self.y_true_annotated_df.shape[0]}"
             )
-            util.echo(f"y_pred_df row count = {self.y_pred_annotated_df.shape[0]}")
+            logging.info(f"y_pred_df row count = {self.y_pred_annotated_df.shape[0]}")
 
             y_true_annotated_file_list = self.y_true_annotated_df[""].tolist()
             y_pred_file_list = self.y_pred_annotated_df[""].tolist()
@@ -332,7 +330,7 @@ class BaseTester:
 
             for i in range(len(shorter_list)):
                 if shorter_list[i] != longer_list[i]:
-                    util.echo(
+                    logging.info(
                         f"{longer_list[i]} is row {i} for {longer_name} but not {shorter_name}, which has {shorter_list[i]}"
                     )
                     break
@@ -340,11 +338,11 @@ class BaseTester:
             quit()
 
         if self.y_true_annotated_df.shape[1] != self.y_pred_annotated_df.shape[1]:
-            util.echo("Column count mismatch")
-            util.echo(
+            logging.info("Column count mismatch")
+            logging.info(
                 f"y_true_annotated_df column count = {self.y_true_annotated_df.shape[1]}"
             )
-            util.echo(
+            logging.info(
                 f"y_pred_annotated_df column count = {self.y_pred_annotated_df.shape[1]}"
             )
             quit()
@@ -354,11 +352,11 @@ class BaseTester:
                 self.y_true_annotated_df.iloc[i].iloc[0]
                 != self.y_pred_annotated_df.iloc[i].iloc[0]
             ):
-                util.echo(f"First column mismatch at row index {i}")
-                util.echo(
+                logging.info(f"First column mismatch at row index {i}")
+                logging.info(
                     f"y_true_annotated_df value = {self.y_true_annotated_df.iloc[i].iloc[0]}"
                 )
-                util.echo(
+                logging.info(
                     f"y_pred_annotated_df value = {self.y_pred_annotated_df.iloc[i].iloc[0]}"
                 )
                 quit()
@@ -927,8 +925,7 @@ class BaseTester:
         """
 
         if self.recordings is None:
-            # use print instead of util.echo so it isn't suppressed
-            print("Error: subclass failed to initialize self.recordings")
+            logging.error("Error: subclass failed to initialize self.recordings")
             quit()
 
         tp_seconds = 0  # total TP seconds

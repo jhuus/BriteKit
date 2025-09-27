@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import random
@@ -7,7 +8,6 @@ import pandas as pd
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
-from britekit.core.util import echo
 from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
 
@@ -113,7 +113,7 @@ class Pickler:
                 specs = specs[: self.max_per_class]
 
             if not quiet:
-                echo(f'Fetched {len(specs)} spectrograms for "{name}"')
+                logging.info(f'Fetched {len(specs)} spectrograms for "{name}"')
 
             total_count += len(specs)
             if len(specs) == 0:
@@ -123,14 +123,14 @@ class Pickler:
 
         # stop if there are classes with no spectrograms
         if len(empty_classes) > 0:
-            echo("Error: there are no spectrograms for")
+            logging.error("Error: there are no spectrograms for")
             for name in empty_classes:
-                echo(name)
+                logging.info(name)
 
             raise InputError("Not all specified classes have spectrograms")
 
         if not quiet:
-            echo(f"Total # spectrograms = {total_count}")
+            logging.info(f"Total # spectrograms = {total_count}")
 
         # create a dict from class name to index
         class_name_dict = {}
@@ -158,4 +158,4 @@ class Pickler:
         pickle.dump(pickle_dict, pickle_file)
 
         if not quiet:
-            echo(f'Saved data in "{self.output_path}"')
+            logging.info(f'Saved data in "{self.output_path}"')

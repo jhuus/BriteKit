@@ -1,16 +1,16 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Tuple, Set
 
 import click
 import numpy as np
 import librosa
 import pandas as pd
 import soundfile as sf
-from typing import Dict, List, Tuple, Set
 
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 
 
 def _download_recording(
@@ -22,13 +22,13 @@ def _download_recording(
     # download it as wav, which is faster than downloading as mp3;
     # then convert to mp3 when the 10-second clip is extracted
     command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
-    click.echo(f"Downloading {youtube_id}")
+    logging.info(f"Downloading {youtube_id}")
     os.system(command)
 
     # extract the 10-second clip and delete the original
     audio_path1 = os.path.join(output_dir, f"{youtube_id}.NA.wav")
     if os.path.exists(audio_path1):
-        click.echo("Extracting 10-second clip")
+        logging.info("Extracting 10-second clip")
         audio_path2 = os.path.join(output_dir, f"{youtube_id}-{int(start_seconds)}.mp3")
         audio, sr = librosa.load(audio_path1, sr=sampling_rate)
         assert isinstance(sr, int)
@@ -65,7 +65,7 @@ def _download_class(
 
     use_name = class_name.lower()
     if use_name not in name_to_index:
-        click.echo(
+        logging.error(
             f'Class "{class_name}" not found. See names in "{class_label_path}".'
         )
         quit()
@@ -74,7 +74,7 @@ def _download_class(
     class_label = index_to_label[class_index]
 
     # read info for all clips that match the specified class
-    click.echo("Scanning unbalanced_train_segments.csv...")
+    logging.info("Scanning unbalanced_train_segments.csv...")
     details_path = str(
         Path(root_dir) / "data" / "audioset" / "unbalanced_train_segments.csv"
     )
@@ -101,10 +101,9 @@ def _download_class(
                 label_counts[label] += 1
 
     if do_report:
-        click.echo(f"# segments with no secondary labels = {num_unique}")
-        click.echo()
+        logging.info(f"# segments with no secondary labels = {num_unique}\n")
         for label in label_counts:
-            click.echo(
+            logging.info(
                 f"# segments also labelled {label_to_name[label]} = {label_counts[label]}"
             )
 
@@ -123,7 +122,7 @@ def _download_class(
                 if not pd.isna(label):
                     label = label.lower()
                     if label not in name_to_index:
-                        click.echo(
+                        logging.error(
                             f'Error: value "{label}" in class_inclusion.csv is not a known class name.'
                         )
                         quit()
@@ -145,7 +144,7 @@ def _download_class(
                 if count >= max_downloads + num_to_skip:
                     break
 
-    click.echo(f"# downloaded = {count - num_to_skip}")
+    logging.info(f"# downloaded = {count - num_to_skip}")
 
 
 def _download_curated(
@@ -170,7 +169,7 @@ def _download_curated(
             if count >= max_downloads + num_to_skip:
                 break
 
-    click.echo(f"# downloaded = {count - num_to_skip}")
+    logging.info(f"# downloaded = {count - num_to_skip}")
 
 
 def audioset(
@@ -206,10 +205,10 @@ def audioset(
     """
 
     if class_name is None and curated_csv_path is None:
-        click.echo("Error. You must specify either --name or --curated.")
+        logging.error("Error. You must specify either --name or --curated.")
         quit()
     elif class_name is not None and curated_csv_path is not None:
-        click.echo("Error. You may specify only one of --name or --curated.")
+        logging.error("Error. You may specify only one of --name or --curated.")
         quit()
 
     if not do_report and not os.path.exists(output_dir):
@@ -239,7 +238,7 @@ def audioset(
 @click.command(
     name="audioset",
     short_help="Download recordings from Google Audioset.",
-    help=cli_help_from_doc(audioset.__doc__),
+    help=util.cli_help_from_doc(audioset.__doc__),
 )
 @click.option("--name", "class_name", type=str, help="Class name.")
 @click.option(
@@ -299,6 +298,7 @@ def _audioset_cmd(
     do_report: bool,
     root_dir: str,
 ) -> None:
+    util.set_logging()
     audioset(
         class_name,
         curated_csv_path,

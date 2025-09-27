@@ -1,13 +1,14 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
+import logging
 from pathlib import Path
 import time
 from typing import Optional
 
+import click
+
 from britekit.core.config_loader import get_config
 from britekit.core import util
 from britekit.core.reextractor import Reextractor
-from britekit.core.util import cli_help_from_doc
 
 
 def reextract(
@@ -37,11 +38,10 @@ def reextract(
         spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
     """
 
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
 
     if class_name and classes_path:
-        click.echo("Only one of --name and --classes may be specified.")
+        logging.error("Only one of --name and --classes may be specified.")
         return
 
     if db_path is None:
@@ -50,13 +50,13 @@ def reextract(
     start_time = time.time()
     Reextractor(db_path, class_name, classes_path, check, spec_group).run()
     elapsed_time = util.format_elapsed_time(start_time, time.time())
-    click.echo(f"Elapsed time = {elapsed_time}")
+    logging.info(f"Elapsed time = {elapsed_time}")
 
 
 @click.command(
     name="reextract",
     short_help="Re-generate the spectrograms in a database, and add them to the database.",
-    help=cli_help_from_doc(reextract.__doc__),
+    help=util.cli_help_from_doc(reextract.__doc__),
 )
 @click.option(
     "-c",
@@ -105,4 +105,5 @@ def _reextract_cmd(
     check: bool = False,
     spec_group: str = "default",
 ):
+    util.set_logging()
     reextract(cfg_path, db_path, class_name, classes_path, check, spec_group)

@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import shutil
@@ -75,7 +76,7 @@ class Extractor:
 
             self.segments[r.recording_id].add(round(r.offset, 0))
 
-    def _process_image_dir(self, spec_dir, echo):
+    def _process_image_dir(self, spec_dir):
         """
         Get list of specs from directory of images.
 
@@ -95,7 +96,7 @@ class Extractor:
                     result = re.split("(\\S+)_(\\S+)", name)
 
             if len(result) != 4:
-                echo(f"Error: unknown file name format: {image_path}")
+                logging.error(f"Error: unknown file name format: {image_path}")
                 continue
             else:
                 file_name = result[1]
@@ -165,21 +166,21 @@ class Extractor:
         for recording_path in recording_paths:
             filename = Path(recording_path).stem
             if filename in self.filenames:
-                util.echo(f"Skipping {filename} (already in database)")
+                logging.info(f"Skipping {filename} (already in database)")
                 continue
 
-            util.echo(f"Processing {recording_path}")
+            logging.info(f"Processing {recording_path}")
             try:
                 self.audio.load(recording_path)
                 seconds = self.audio.seconds()
             except Exception as e:
-                util.echo(f"Caught exception: {e}")
+                logging.error(f"Caught exception: {e}")
                 continue
 
             end_offset = max(self.increment, seconds - self.increment)
             offsets = util.get_range(0, end_offset, self.increment)
             if len(offsets) == 0:
-                util.echo(f"Skipping {filename} (too short)")
+                logging.info(f"Skipping {filename} (too short)")
                 continue
 
             num_inserted += self.insert_spectrograms(recording_path, offsets)
@@ -187,7 +188,7 @@ class Extractor:
         return num_inserted
 
     def extract_by_image(
-        self, rec_dir: str, spec_dir: str, echo, dest_dir: Optional[str] = None
+        self, rec_dir: str, spec_dir: str, dest_dir: Optional[str] = None
     ):
         """
         Extract spectrograms that match names of spectrogram images in a given directory.
@@ -197,12 +198,11 @@ class Extractor:
             rec_dir (str): Directory containing recordings.
             spec_dir (str): Directory containing spectrogram images.
             dest_dir (str, optional): Optionally copy used recordings to this directory.
-            echo: Function that prints a message to the console
 
         Returns:
             Number of spectrograms inserted.
         """
-        offsets_per_file = self._process_image_dir(spec_dir, echo)
+        offsets_per_file = self._process_image_dir(spec_dir)
         num_inserted = 0
         recording_paths = util.get_audio_files(rec_dir)
         for recording_path in recording_paths:
@@ -217,11 +217,11 @@ class Extractor:
 
                 recording_path = dest_path
 
-            echo(f"Processing {recording_path}")
+            logging.info(f"Processing {recording_path}")
             try:
                 self.audio.load(recording_path)
             except Exception as e:
-                echo(f"Caught exception: {e}")
+                logging.error(f"Caught exception: {e}")
                 continue
 
             num_inserted += self.insert_spectrograms(

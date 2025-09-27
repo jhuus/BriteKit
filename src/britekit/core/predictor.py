@@ -1,4 +1,5 @@
 import importlib.util
+import logging
 import math
 import os
 from typing import Sequence, Optional, List
@@ -559,7 +560,7 @@ class Predictor:
             if None not in self.class_alt_codes:
                 names = self.class_alt_codes
         elif self.cfg.infer.label_field != "names":
-            util.echo(
+            logging.error(
                 f'Invalid label_field option ("{self.cfg.infer.label_field}"). Defaulting to class names.'
             )
 

@@ -1,12 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
 import json
+import logging
 import os
 import requests
 from typing import Optional
 
 import click
 
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 
 
 def sort_key(recording):
@@ -37,7 +38,7 @@ def process_response(
     num_pages = j["numPages"]
     curr_recordings = j["recordings"]
 
-    click.echo(f"Response contains {len(curr_recordings)} recordings.")
+    logging.info(f"Response contains {len(curr_recordings)} recordings.")
     for recording in curr_recordings:
         if not ignore_licence and "by-nc-nd" in recording["lic"]:
             continue
@@ -85,7 +86,7 @@ def xeno(
         if "XCKEY" in os.environ:
             key = os.environ["XCKEY"]
         else:
-            click.echo(
+            logging.error(
                 "Xeno-Canto API key must be specified in --key argument or in XCKEY environment variable."
             )
             quit()
@@ -106,7 +107,7 @@ def xeno(
         page += 1
 
         url = f"https://www.xeno-canto.org/api/3/recordings?query={name}&page={page}&key={key}"
-        click.echo(f"Requesting data from {url}")
+        logging.info(f"Requesting data from {url}")
         response = requests.get(url)
 
         # try up to 3 times if status=503 (server temporarily unavailable)
@@ -117,11 +118,11 @@ def xeno(
                 )
                 break
             elif response.status_code == 503 and i < 2:
-                click.echo(
+                logging.error(
                     f"HTTP GET returned status={response.status_code}. Retrying."
                 )
             else:
-                click.echo(f"HTTP GET failed with status={response.status_code}")
+                logging.error(f"HTTP GET failed with status={response.status_code}")
                 done = True
 
     # sort recordings by quality
@@ -132,7 +133,7 @@ def xeno(
     for recording in recordings:
         outfile = os.path.join(output_dir, f"XC{recording['id']}.mp3")
         if not os.path.exists(outfile):
-            click.echo(f"Downloading {outfile}")
+            logging.info(f"Downloading {outfile}")
             url = recording["file"]
             response = requests.get(url)
             with open(outfile, "wb") as mp3:
@@ -146,7 +147,7 @@ def xeno(
 @click.command(
     name="xeno",
     short_help="Download recordings from Xeno-Canto.",
-    help=cli_help_from_doc(xeno.__doc__),
+    help=util.cli_help_from_doc(xeno.__doc__),
 )
 @click.option("--key", type=str, help="Xeno-Canto API key.")
 @click.option("--name", required=True, type=str, help="Species name.")
@@ -191,6 +192,7 @@ def _xeno_cmd(
     scientific_name: bool,
     seen_only: bool,
 ):
+    util.set_logging()
     xeno(
         key, name, output_dir, max_downloads, ignore_licence, scientific_name, seen_only
     )

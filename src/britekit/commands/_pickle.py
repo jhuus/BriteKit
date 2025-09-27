@@ -1,12 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 from pathlib import Path
+from typing import Optional
 
 import click
-from typing import Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.pickler import Pickler
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 
 
 def pickle(
@@ -34,8 +35,7 @@ def pickle(
         max_per_class (int, optional): Maximum number of spectrograms to include per class.
         spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -49,7 +49,7 @@ def pickle(
 @click.command(
     name="pickle",
     short_help="Convert database records to a pickle file for use in training.",
-    help=cli_help_from_doc(pickle.__doc__),
+    help=util.cli_help_from_doc(pickle.__doc__),
 )
 @click.option(
     "-c",
@@ -106,6 +106,7 @@ def _pickle_cmd(
     max_per_class: Optional[int],
     spec_group: Optional[str],
 ) -> None:
+    util.set_logging()
     pickle(
         cfg_path,
         classes_path,

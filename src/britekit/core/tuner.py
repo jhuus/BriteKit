@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 from pathlib import Path
 import random
@@ -92,7 +93,7 @@ class Tuner:
             raise InputError(f"Invalid metric: {metric}")
 
         self.metric = metric_dict[metric]
-        util.echo(f"Using metric {metric}")
+        logging.info(f"Using metric {metric}")
 
     def _get_values(self, param_def):
         """
@@ -126,7 +127,7 @@ class Tuner:
         """
         name = param_def["name"]
 
-        util.echo(f"*** Set {name}={value}")
+        logging.info(f"*** Set {name}={value}")
         if hasattr(self.cfg.train, name):
             setattr(self.cfg.train, name, value)
         elif hasattr(self.cfg.audio, name):
@@ -157,9 +158,9 @@ class Tuner:
     def _get_scores(self):
         if self.extract:
             # extract a new set of spectrograms to tune spectrogram parameters
-            util.echo("Extracting spectrograms")
+            logging.info("Extracting spectrograms")
             self.reextractor.run(quiet=True)
-            util.echo("Saving pickle file")
+            logging.info("Saving pickle file")
             self.pickler.pickle(quiet=True)
 
         scores = np.zeros(self.num_runs)
@@ -175,7 +176,7 @@ class Tuner:
             scores[i] = self._run_test()
 
             if self.num_runs > 1:
-                util.echo(
+                logging.info(
                     f"*** Current score={scores[i]:.4f} (trial {self.trial_num + 1}, run {i + 1} of {self.num_runs})"
                 )
 
@@ -203,10 +204,10 @@ class Tuner:
                     self.best_scores = scores
                     self.best_params = params.copy()
 
-                util.echo(
+                logging.info(
                     f"*** Trial score={score:.4f}, params={params}, runs={scores}"
                 )
-                util.echo(
+                logging.info(
                     f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
                 )
 
@@ -257,8 +258,8 @@ class Tuner:
                 self.best_score = score
                 self.best_params = params.copy()
 
-            util.echo(f"*** Score={score:.4f}, params={params}, runs={scores}")
-            util.echo(
+            logging.info(f"*** Score={score:.4f}, params={params}, runs={scores}")
+            logging.info(
                 f"*** Best score={self.best_score:.4f}, best params={self.best_params}"
             )
             self.trial_num += 1
@@ -276,8 +277,7 @@ class Tuner:
         self.cfg.infer.min_score = 0
 
         # suppress console output during inference and test analysis
-        echo = self.fn_cfg.echo
-        self.fn_cfg.echo = None
+        util.set_logging(level=logging.ERROR)
 
         label_dir = "tuning_labels"
         inference_output_dir = str(Path(self.recording_dir) / label_dir)
@@ -320,7 +320,7 @@ class Tuner:
             else:
                 score = roc_stats[self.metric]
 
-        self.fn_cfg.echo = echo  # restore console output
+        util.set_logging()  # restore console output
         return score
 
     def _write_reports(self):
@@ -410,8 +410,10 @@ class Tuner:
             # just loop with the base config
             self.trial_metrics[0]["params"] = ""
             scores = self._get_scores()
-            util.echo(f"*** Scores = {scores}")
-            util.echo(f"*** Mean = {scores.mean():.4f}, Std Dev = {scores.std():.4f} ")
+            logging.info(f"*** Scores = {scores}")
+            logging.info(
+                f"*** Mean = {scores.mean():.4f}, Std Dev = {scores.std():.4f} "
+            )
             self.trial_num = 1  # so write_reports doesn't skip trial 0
         elif self.num_trials == 0:
             # num_trials = 0 means do exhaustive search

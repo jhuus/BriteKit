@@ -1,13 +1,15 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
 import glob
+import logging
 import os
-import pytorch_lightning as pl
-import torch
 from typing import Optional
 
+import click
+import pytorch_lightning as pl
+import torch
+
 from britekit.core.config_loader import get_config
-from britekit.core.util import cli_help_from_doc, echo
+from britekit.core import util
 from britekit.models.model_loader import load_from_checkpoint
 
 
@@ -44,13 +46,13 @@ def ckpt_avg(input_path: str="", output_path: Optional[str]=None):
 
     averaged_ckpt["state_dict"] = avg_state_dict
     torch.save(averaged_ckpt, str(output_path))
-    echo(f"Saved checkpoint with average weights in {output_path}")
+    logging.info(f"Saved checkpoint with average weights in {output_path}")
 
 
 @click.command(
     name="ckpt-avg",
     short_help="Average the weights of several checkpoints.",
-    help=cli_help_from_doc(ckpt_avg.__doc__),
+    help=util.cli_help_from_doc(ckpt_avg.__doc__),
 )
 @click.option(
     "-i",
@@ -69,6 +71,7 @@ def ckpt_avg(input_path: str="", output_path: Optional[str]=None):
     help="Optional path to output checkpoint. Default is average.ckpt in the input directory",
 )
 def _ckpt_avg_cmd(input_path: str, output_path: str):
+    util.set_logging()
     ckpt_avg(input_path, output_path)
 
 
@@ -100,7 +103,7 @@ def ckpt_freeze(input_path: str=""):
 @click.command(
     name="ckpt-freeze",
     short_help="Freeze the backbone weights of a checkpoint.",
-    help=cli_help_from_doc(ckpt_freeze.__doc__),
+    help=util.cli_help_from_doc(ckpt_freeze.__doc__),
 )
 @click.option(
     "-i",
@@ -111,6 +114,7 @@ def ckpt_freeze(input_path: str=""):
     help="Path to checkpoint to freeze",
 )
 def _ckpt_freeze_cmd(input_path: str):
+    util.set_logging()
     ckpt_freeze(input_path)
 
 
@@ -145,7 +149,7 @@ def ckpt_onnx(
 @click.command(
     name="ckpt-onnx",
     short_help="Convert a checkpoint to onnx format for use with openvino.",
-    help=cli_help_from_doc(ckpt_onnx.__doc__),
+    help=util.cli_help_from_doc(ckpt_onnx.__doc__),
 )
 @click.option(
     "-c",
@@ -167,4 +171,5 @@ def _ckpt_onnx_cmd(
     cfg_path: str,
     input_path: str,
 ):
+    util.set_logging()
     ckpt_onnx(cfg_path, input_path)

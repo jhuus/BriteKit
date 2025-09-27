@@ -1,9 +1,11 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
+import logging
 import os
 from pathlib import Path
 import time
 from typing import Optional
+
+import click
 
 from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
@@ -40,11 +42,11 @@ def analyze(
         segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
                                      fixed-length; otherwise they are variable-length.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    util.set_logging()
+    cfg, _ = get_config(cfg_path)
     try:
         if rtype not in {"audacity", "csv", "both"}:
-            click.echo(f"Error. invalid rtype value: {rtype}")
+            logging.error(f"Error. invalid rtype value: {rtype}")
             quit()
 
         if output_path:
@@ -69,15 +71,15 @@ def analyze(
             cfg.infer.segment_len = segment_len
 
         device = util.get_device()
-        util.echo(f"Using {device.upper()} for inference")
+        logging.info(f"Using {device.upper()} for inference")
 
         start_time = time.time()
         analyzer = Analyzer()
         analyzer.run(input_path, output_path, rtype)
         elapsed_time = util.format_elapsed_time(start_time, time.time())
-        click.echo(f"Elapsed time = {elapsed_time}")
+        logging.info(f"Elapsed time = {elapsed_time}")
     except InferenceError as e:
-        click.echo(e)
+        logging.error(e)
 
 
 @click.command(

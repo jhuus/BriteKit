@@ -1,12 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
+import logging
 import os
 import re
-
-import click
 from typing import Optional, Dict, List
 
+import click
+
 from britekit.core.config_loader import get_config
-from britekit.core.util import cli_help_from_doc
+from britekit.core import util
 from britekit.training_db.training_db import TrainingDatabase
 
 
@@ -22,42 +23,42 @@ def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the category to delete (e.g., "Birds", "Mammals").
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if name is None:
-        click.echo(f"Error: category name is missing but required.")
+        logging.error(f"Error: category name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_category({"Name": name})
         if not results:
-            click.echo(f"No category found with name {name}")
+            logging.error(f"No category found with name {name}")
         else:
             cat_id = results[0].id
             class_results = db.get_class({"CategoryID": cat_id})
             for c in class_results:
-                click.echo(f'Deleting class "{c.name}"')
+                logging.info(f'Deleting class "{c.name}"')
                 rec_results = db.get_recording_by_class(c.name)
                 for r in rec_results:
                     db.delete_recording({"ID": r.id})
 
             db.delete_category({"Name": name})
-            click.echo(f'Successfully deleted category "{name}"')
+            logging.info(f'Successfully deleted category "{name}"')
 
 
 @click.command(
     name="del-cat",
     short_help="Delete a category (class group) and its classes from a database.",
-    help=cli_help_from_doc(del_cat.__doc__),
+    help=util.cli_help_from_doc(del_cat.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Category name.")
 def _del_cat_cmd(db_path: Optional[str], name: str) -> None:
+    util.set_logging()
     del_cat(db_path, name)
 
 
@@ -73,19 +74,18 @@ def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the class to delete (e.g., "Common Yellowthroat").
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if name is None:
-        click.echo(f"Error: class name is missing but required.")
+        logging.error(f"Error: class name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_class({"Name": name})
         if not results:
-            click.echo(f"No class found with name {name}")
+            logging.error(f"No class found with name {name}")
         else:
             # cascading deletes don't fully handle this case,
             # so have to delete recordings first
@@ -94,19 +94,20 @@ def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
                 db.delete_recording({"ID": r.id})
 
             db.delete_class({"Name": name})
-            click.echo(f'Successfully deleted class "{name}"')
+            logging.info(f'Successfully deleted class "{name}"')
 
 
 @click.command(
     name="del-class",
     short_help="Delete a class and associated records from a database.",
-    help=cli_help_from_doc(del_class.__doc__),
+    help=util.cli_help_from_doc(del_class.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "class_name", required=True, help="Class name.")
 def _del_class_cmd(db_path: Optional[str], class_name: str) -> None:
+    util.set_logging()
     del_class(db_path, class_name)
 
 
@@ -121,34 +122,34 @@ def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if file_name is None:
-        click.echo(f"Error: file name is missing but required.")
+        logging.error(f"Error: file name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_recording({"FileName": file_name})
         if not results:
-            click.echo(f"No recording found with file name {file_name}")
+            logging.error(f"No recording found with file name {file_name}")
         else:
             db.delete_recording({"FileName": file_name})
-            click.echo(f'Successfully deleted recording "{file_name}"')
+            logging.info(f'Successfully deleted recording "{file_name}"')
 
 
 @click.command(
     name="del-rec",
     short_help="Delete a recording and associated records from a database.",
-    help=cli_help_from_doc(del_rec.__doc__),
+    help=util.cli_help_from_doc(del_rec.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "file_name", required=True, help="Recording file name.")
 def _del_rec_cmd(db_path: Optional[str], file_name: str) -> None:
+    util.set_logging()
     del_rec(db_path, file_name)
 
 
@@ -163,34 +164,34 @@ def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if name is None:
-        click.echo(f"Error: name is missing but required.")
+        logging.error(f"Error: name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_specgroup({"Name": name})
         if not results:
-            click.echo(f"No spectrogram group found with name {name}")
+            logging.error(f"No spectrogram group found with name {name}")
         else:
             db.delete_specgroup({"ID": results[0].id})
-            click.echo(f'Successfully deleted spectrogram group "{name}"')
+            logging.info(f'Successfully deleted spectrogram group "{name}"')
 
 
 @click.command(
     name="del-sgroup",
     short_help="Delete a spectrogram group from the database.",
-    help=cli_help_from_doc(del_sgroup.__doc__),
+    help=util.cli_help_from_doc(del_sgroup.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Spec group name.")
 def _del_sgroup_cmd(db_path: Optional[str], name: str) -> None:
+    util.set_logging()
     del_sgroup(db_path, name)
 
 
@@ -206,34 +207,34 @@ def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if name is None:
-        click.echo(f"Error: name is missing but required.")
+        logging.error(f"Error: name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_soundtype({"Name": name})
         if not results:
-            click.echo(f"No sound type found with name {name}")
+            logging.error(f"No sound type found with name {name}")
         else:
             db.delete_soundtype({"Name": name})
-            click.echo(f'Successfully deleted sound type "{name}"')
+            logging.info(f'Successfully deleted sound type "{name}"')
 
 
 @click.command(
     name="del-stype",
     short_help="Delete a sound type from a database.",
-    help=cli_help_from_doc(del_stype.__doc__),
+    help=util.cli_help_from_doc(del_stype.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Sound type name.")
 def _del_stype_cmd(db_path: Optional[str], name: str) -> None:
+    util.set_logging()
     del_stype(db_path, name)
 
 
@@ -249,34 +250,34 @@ def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if name is None:
-        click.echo(f"Error: name is missing but required.")
+        logging.error(f"Error: name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         results = db.get_source({"Name": name})
         if not results:
-            click.echo(f"No source found with name {name}")
+            logging.error(f"No source found with name {name}")
         else:
             db.delete_source({"Name": name})
-            click.echo(f'Successfully deleted source "{name}"')
+            logging.info(f'Successfully deleted source "{name}"')
 
 
 @click.command(
     name="del-src",
     short_help="Delete a recording source and associated records from a database.",
-    help=cli_help_from_doc(del_src.__doc__),
+    help=util.cli_help_from_doc(del_src.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
 @click.option("--name", "name", required=True, help="Source name.")
 def _del_src_cmd(db_path: Optional[str], name: str) -> None:
+    util.set_logging()
     del_src(db_path, name)
 
 
@@ -296,31 +297,30 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
         class_name (str): Name of the class whose segments should be considered for deletion.
         dir_path (str): Path to directory containing spectrogram image files.
     """
-    cfg, fn_cfg = get_config()
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
     if class_name is None:
-        click.echo(f"Error: class name is missing but required.")
+        logging.error(f"Error: class name is missing but required.")
         quit()
 
     if dir_path is None:
-        click.echo(f"Error: directory path is missing but required.")
+        logging.error(f"Error: directory path is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
         count = db.get_class_count({"Name": class_name})
         if count == 0:
-            click.echo(f"Error: class {class_name} not found")
+            logging.error(f"Error: class {class_name} not found")
             return
         elif count > 1:
-            click.echo(f"Error: found multiple classes called {class_name}")
+            logging.error(f"Error: found multiple classes called {class_name}")
             return
 
         recording_dict: Dict[str, int] = {}
         results = db.get_recording_by_class(class_name)
-        click.echo(f"Found {len(results)} recordings")
+        logging.info(f"Found {len(results)} recordings")
         for r in results:
             tokens = r.filename.split(".")
             recording_dict[tokens[0]] = r.id
@@ -341,7 +341,7 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
                 result = re.split("(.+)-(.+)", spec_name)
 
             if len(result) != 4:
-                click.echo(f"Error: unknown file name format: {spec_name}")
+                logging.error(f"Error: unknown file name format: {spec_name}")
                 continue
             else:
                 recording_name = result[1]
@@ -350,26 +350,26 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
             if recording_name in recording_dict.keys():
                 recording_id = recording_dict[recording_name]
             else:
-                click.echo(f"recording not found: {recording_name}")
+                logging.error(f"recording not found: {recording_name}")
                 return
 
             result = db.get_segment({"RecordingID": recording_id, "Offset": offset})
             if result is None:
-                click.echo(f"segment not found: {recording_name}-{offset}")
+                logging.error(f"segment not found: {recording_name}-{offset}")
             else:
                 # should only be one, but conceivably more
                 for r in result:
-                    click.echo(f"Deleting segment ID {r.id}")
+                    logging.info(f"Deleting segment ID {r.id}")
                     db.delete_segment({"ID": r.id})
                     deleted += 1
 
-        click.echo(f"Deleted {deleted} segments")
+        logging.info(f"Deleted {deleted} segments")
 
 
 @click.command(
     name="del-seg",
     short_help="Delete segments that match given images.",
-    help=cli_help_from_doc(del_seg.__doc__),
+    help=util.cli_help_from_doc(del_seg.__doc__),
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
@@ -379,4 +379,5 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
     "--dir", "dir_path", required=True, help="Path to directory containing images."
 )
 def _del_seg_cmd(db_path: Optional[str], class_name: str, dir_path: str) -> None:
+    util.set_logging()
     del_seg(db_path, class_name, dir_path)

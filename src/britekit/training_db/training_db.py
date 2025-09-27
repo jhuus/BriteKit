@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import os
 import sqlite3
 from types import SimpleNamespace
@@ -6,7 +7,6 @@ from typing import Optional
 
 from britekit.core.exceptions import DatabaseError
 from britekit.core.config_loader import get_config
-from britekit.core.util import echo
 
 
 class TrainingDatabase:
@@ -232,8 +232,8 @@ class TrainingDatabase:
                 )
                 if self.cursor.fetchone():
                     # Convert database from HawkEars 1.x to schema version 1 of BriteKit
-                    echo("")
-                    echo("Upgrading training database schema from HawkEars 1.0")
+                    logging.info("")
+                    logging.info("Upgrading training database schema from HawkEars 1.0")
 
                     # settings to improve migration performance
                     self.conn.commit()
@@ -245,7 +245,7 @@ class TrainingDatabase:
 
                     # copy Subcategory to new Class table so foreign keys are defined with cascading delete etc,
                     # but retain ID so ClassID in Recording table is still valid
-                    echo("Migrate Class table")
+                    logging.info("Migrate Class table")
                     self._create_class_table()
                     sql = """
                         INSERT INTO Class (ID, CategoryID, Name, Code, AltName)
@@ -257,7 +257,7 @@ class TrainingDatabase:
                     self.cursor.execute("DROP INDEX IF EXISTS idx_subcategory")
 
                     # rename SoundType table, copy to new one, then drop the old one
-                    echo("Migrate SoundType table")
+                    logging.info("Migrate SoundType table")
                     self.cursor.execute("ALTER TABLE SoundType RENAME TO SoundType_old")
                     self._create_soundtype_table()
                     sql = """
@@ -270,7 +270,7 @@ class TrainingDatabase:
 
                     # rename Recording table, copy to new one, then drop the old one
                     # (create a temporary ClassID column, which we drop below)
-                    echo("Migrate Recording table")
+                    logging.info("Migrate Recording table")
                     self.cursor.execute("ALTER TABLE Recording RENAME TO Recording_old")
                     self._create_recording_table()
                     self.cursor.execute(
@@ -295,7 +295,7 @@ class TrainingDatabase:
                     self._create_spec_value_table()
                     self.conn.commit()  # do commits to free up disk space
 
-                    echo("Migrate Segment table")
+                    logging.info("Migrate Segment table")
                     sql = """
                         INSERT INTO Segment (ID, RecordingID, Offset, Audio, SamplingRate, InsertedDate)
                         SELECT s.ID, s.RecordingID, s.Offset, s.Audio, s.SamplingRate, s.Inserted
@@ -304,7 +304,7 @@ class TrainingDatabase:
                     self.cursor.execute(sql)
                     self.conn.commit()  # do commits to free up disk space
 
-                    echo("Migrate SpecValue table")
+                    logging.info("Migrate SpecValue table")
                     sql = """
                         INSERT INTO SpecValue (SegmentID, Value, Embedding, SpecGroupID)
                         SELECT s.ID, s.Value, s.Embedding, 1
@@ -314,7 +314,7 @@ class TrainingDatabase:
                     self.conn.commit()  # do commits to free up disk space
 
                     # create and populate SegmentClass table
-                    echo("Migrate SegmentClass table")
+                    logging.info("Migrate SegmentClass table")
                     self._create_segment_class_table()
                     sql = """
                         INSERT INTO SegmentClass (SegmentID, ClassID, SoundTypeID)
@@ -326,7 +326,7 @@ class TrainingDatabase:
                     self.cursor.execute(sql)
                     self.conn.commit()  # do commits to free up disk space
 
-                    echo("Finalize migration")
+                    logging.info("Finalize migration")
 
                     self.cursor.execute("DROP TABLE Spectrogram_old")
                     self.cursor.execute("DROP INDEX IF EXISTS idx_spectrogram")

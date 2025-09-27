@@ -204,7 +204,7 @@ class BaseConfig:
 
 
 @dataclass
+# TODO: allow API users to replace some functions with their own here.
 # Callables cannot be included in BaseConfig, since they are not serializable
 class FunctionConfig:
-    # print, log, echo, ...
-    echo: Optional[Callable] = None
+    not_defined_yet: Optional[Callable] = None

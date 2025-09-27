@@ -1,11 +1,13 @@
 from __future__ import annotations
-import inspect
 from dataclasses import is_dataclass, asdict
 from enum import Enum
 import glob
+import inspect
+import logging
 import os
 from pathlib import Path
 import re
+import sys
 from types import SimpleNamespace
 from typing import Any, cast, Dict, List, Union, Mapping, TypeAlias, Optional, Tuple
 from posixpath import splitext
@@ -83,26 +85,6 @@ _ARG_HEADINGS = ("Args", "Arguments", "Parameters")
 # =============================================================================
 
 
-def get_device() -> str:
-    """Return the device for pytorch to use."""
-    cfg, _ = get_config()
-    if cfg.misc.force_cpu:
-        return "cpu"  # for performance comparisons
-    elif torch.cuda.is_available():
-        return "cuda"
-    elif torch.backends.mps.is_available():
-        return "mps"
-    else:
-        return "cpu"
-
-
-def echo(msg: str = "") -> None:
-    """Echo a message if echo is enabled in config."""
-    _, fn_cfg = get_config()
-    if fn_cfg.echo:
-        fn_cfg.echo(msg)
-
-
 def format_elapsed_time(start_time: float, end_time: float) -> str:
     """Format elapsed time as HH:MM:SS or MM:SS."""
     if end_time < start_time:
@@ -117,6 +99,19 @@ def format_elapsed_time(start_time: float, end_time: float) -> str:
         return f"{minutes:02}:{seconds:02}"
     else:
         return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+
+def get_device() -> str:
+    """Return the device for pytorch to use."""
+    cfg, _ = get_config()
+    if cfg.misc.force_cpu:
+        return "cpu"  # for performance comparisons
+    elif torch.cuda.is_available():
+        return "cuda"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
 
 
 def get_range(min_val: float, max_val: float, incr: float) -> List[float]:
@@ -138,6 +133,22 @@ def get_range(min_val: float, max_val: float, incr: float) -> List[float]:
     n_steps = int(np.round((max_val - min_val) / incr))
     values = np.round(np.linspace(min_val, min_val + n_steps * incr, n_steps + 1), 10)
     return [float(v) for v in values]
+
+
+def set_logging(level=logging.INFO, timestamp=False):
+    """ Initialize logging. """
+    if timestamp:
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=level,
+            format="%(asctime)s.%(msecs)03d %(message)s",
+            datefmt="%H:%M:%S",
+            force=True,
+        )
+    else:
+        logging.basicConfig(
+            stream=sys.stderr, level=level, format="%(message)s", force=True
+        )
 
 
 # =============================================================================
@@ -301,7 +312,7 @@ def get_audio_files(path: str, short_names: bool = False) -> List[str]:
                                 # Fallback to original path if resolve fails
                                 files.append(file_path)
     except (OSError, PermissionError) as e:
-        echo(f"Error accessing directory {path}: {e}")
+        logging.error(f"Error accessing directory {path}: {e}")
         return []
 
     return sorted(files)
@@ -334,7 +345,7 @@ def get_file_lines(path: str, encoding: str = "utf-8") -> List[str]:
 
             return lines
     except (IOError, UnicodeDecodeError) as e:
-        echo(f"Unable to open input file {path}: {e}")
+        logging.error(f"Unable to open input file {path}: {e}")
         return []
 
 
@@ -363,7 +374,7 @@ def get_source_name(filename: str) -> str:
             if re.match(pattern, filename):
                 return source
         except re.error as e:
-            echo(f"Invalid regex pattern '{pattern}': {e}")
+            logging.error(f"Invalid regex pattern '{pattern}': {e}")
             continue
 
     return "default"
@@ -463,7 +474,7 @@ def select_label_regex(line: str) -> Tuple[Optional[re.Pattern], bool]:
                 label_regex = pattern
                 is_birdnet = True
     except re.error as e:
-        echo(f"Invalid regex pattern: {e}")
+        logging.error(f"Invalid regex pattern: {e}")
         return None, False
 
     return label_regex, is_birdnet
@@ -498,7 +509,7 @@ def labels_to_list(input_path: str) -> List[SimpleNamespace]:
                 if label_regex is None:
                     label_regex, is_birdnet = select_label_regex(line)
                     if label_regex is None:
-                        echo(f"Unknown label format in {label_path}: {line}")
+                        logging.error(f"Unknown label format in {label_path}: {line}")
                         continue
 
                 try:
@@ -535,10 +546,10 @@ def labels_to_list(input_path: str) -> List[SimpleNamespace]:
                         )
                     )
                 except (ValueError, IndexError) as e:
-                    echo(f"Error parsing line '{line}' in {label_path}: {e}")
+                    logging.error(f"Error parsing line '{line}' in {label_path}: {e}")
                     continue
     except Exception as e:
-        echo(f"Error processing labels in {input_path}: {e}")
+        logging.error(f"Error processing labels in {input_path}: {e}")
         return []
 
     return label_list

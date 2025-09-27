@@ -1,3 +1,4 @@
+import logging
 import pickle
 from typing import Any, List, Tuple
 
@@ -7,7 +8,6 @@ from sklearn.model_selection import StratifiedKFold
 
 from britekit.core.config_loader import get_config
 from britekit.core.dataset import SpectrogramDataset
-from britekit.core.util import echo
 
 
 class DataModule(LightningDataModule):
@@ -47,11 +47,11 @@ class DataModule(LightningDataModule):
             ]
 
             self.num_train_specs = len(self.specs)
-            echo(
+            logging.info(
                 f"Fetched {self.num_train_specs} spectrograms for {len(self.train_class_names)} classes"
             )
         except Exception as e:
-            echo(f"Failed to load training data: {e}")
+            logging.error(f"Failed to load training data: {e}")
 
         if (
             self.cfg.train.noise_class_name
@@ -80,10 +80,12 @@ class DataModule(LightningDataModule):
 
                 # Validate test data
                 if not class_names or not specs or not labels:
-                    echo("Test data is empty or invalid, setting test_data to None")
+                    logging.error(
+                        "Test data is empty or invalid, setting test_data to None"
+                    )
                     self.test_data = None
                 elif len(specs) != len(labels):
-                    echo(
+                    logging.error(
                         f"Mismatch between test specs ({len(specs)}) and labels ({len(labels)}) lengths, setting test_data to None"
                     )
                     self.test_data = None
@@ -98,7 +100,9 @@ class DataModule(LightningDataModule):
                         is_training=False,
                     )
             except Exception as e:
-                echo(f"Failed to load test data: {e}, setting test_data to None")
+                logging.error(
+                    f"Failed to load test data: {e}, setting test_data to None"
+                )
                 self.test_data = None
         else:
             self.test_data = None
@@ -233,7 +237,7 @@ class DataModule(LightningDataModule):
 
     def test_dataloader(self):
         if self.test_data is None:
-            echo("Test data not available, returning None")
+            logging.error("Test data not available, returning None")
             return None
         return DataLoader(
             self.test_data,

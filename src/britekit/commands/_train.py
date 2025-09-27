@@ -1,11 +1,13 @@
 # File name starts with _ to keep it out of typeahead for API users
-import click
+import logging
 import time
 from typing import Optional
 
+import click
+
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import TrainingError
-from britekit.core.util import format_elapsed_time, cli_help_from_doc
+from britekit.core import util
 from britekit.core.trainer import Trainer
 
 
@@ -27,19 +29,18 @@ def train(
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
                                  If not specified, uses default configuration.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     try:
         start_time = time.time()
         Trainer().run()
-        elapsed_time = format_elapsed_time(start_time, time.time())
-        click.echo(f"Elapsed time = {elapsed_time}")
+        elapsed_time = util.format_elapsed_time(start_time, time.time())
+        logging.info(f"Elapsed time = {elapsed_time}")
     except TrainingError as e:
-        click.echo(e)
+        logging.error(e)
 
 
 @click.command(
-    name="train", short_help="Run training.", help=cli_help_from_doc(train.__doc__)
+    name="train", short_help="Run training.", help=util.cli_help_from_doc(train.__doc__)
 )
 @click.option(
     "-c",
@@ -52,6 +53,7 @@ def train(
 def _train_cmd(
     cfg_path: str,
 ):
+    util.set_logging()
     train(cfg_path)
 
 
@@ -73,21 +75,20 @@ def find_lr(cfg_path: str, num_batches: int):
         num_batches (int): Number of training batches to analyze for learning rate finding.
                           Default is 100. Higher values provide more accurate results but take longer.
     """
-    cfg, fn_cfg = get_config(cfg_path)
-    fn_cfg.echo = click.echo
+    cfg, _ = get_config(cfg_path)
     try:
         suggested_lr, fig = Trainer().find_lr(num_batches)
         fig.savefig("learning_rates.jpeg")
-        click.echo(f"Suggested learning rate = {suggested_lr:.6f}")
-        click.echo("See plot in learning_rates.jpeg")
+        logging.info(f"Suggested learning rate = {suggested_lr:.6f}")
+        logging.info("See plot in learning_rates.jpeg")
     except TrainingError as e:
-        click.echo(e)
+        logging.error(e)
 
 
 @click.command(
     name="find-lr",
     short_help="Suggest a learning rate.",
-    help=cli_help_from_doc(find_lr.__doc__),
+    help=util.cli_help_from_doc(find_lr.__doc__),
 )
 @click.option(
     "-c",
@@ -101,4 +102,5 @@ def find_lr(cfg_path: str, num_batches: int):
     "-n", "--num-batches", type=int, default=100, help="Number of batches to analyze"
 )
 def _find_lr_cmd(cfg_path: str, num_batches: int):
+    util.set_logging()
     find_lr(cfg_path, num_batches)
