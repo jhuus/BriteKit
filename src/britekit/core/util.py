@@ -136,7 +136,7 @@ def get_range(min_val: float, max_val: float, incr: float) -> List[float]:
 
 
 def set_logging(level=logging.INFO, timestamp=False):
-    """ Initialize logging. """
+    """Initialize logging."""
     if timestamp:
         logging.basicConfig(
             stream=sys.stderr,
