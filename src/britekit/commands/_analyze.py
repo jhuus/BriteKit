@@ -1,5 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
-import logging
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import os
 from pathlib import Path
 import time
@@ -7,10 +7,8 @@ from typing import Optional
 
 import click
 
-from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
-from britekit.core import util
 from britekit.core.util import cli_help_from_doc
 
 
@@ -42,6 +40,12 @@ def analyze(
         segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
                                      fixed-length; otherwise they are variable-length.
     """
+
+    # defer slow imports to improve --help performance
+    import logging
+    from britekit.core import util
+    from britekit.core.analyzer import Analyzer
+
     util.set_logging()
     cfg, _ = get_config(cfg_path)
     try:

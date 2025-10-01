@@ -1,17 +1,9 @@
+# Defer some imports to improve initialization performance.
 import logging
 import math
 import os
 from pathlib import Path
 from typing import Optional
-
-import librosa
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from scipy.special import expit, logit
-from sklearn import metrics
-from sklearn.calibration import calibration_curve
-from sklearn.linear_model import LogisticRegression
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
@@ -82,6 +74,7 @@ class PerSegmentTester(BaseTester):
         """
         Create a dict with the duration in seconds of every recording
         """
+        import librosa
 
         self.recording_duration = {}
         self.recordings = []
@@ -186,6 +179,7 @@ class PerSegmentTester(BaseTester):
             Sets self.annotations, self.annotated_class_set, and self.annotated_classes.
             Calls self.set_class_indexes() to update class indexing.
         """
+        import pandas as pd
 
         # read the annotations
         unknown_classes = set()  # so we only report each unknown class once
@@ -230,6 +224,8 @@ class PerSegmentTester(BaseTester):
         """
         Create a dataframe representing the ground truth data, with recordings segmented into 3-second segments
         """
+        import numpy as np
+        import pandas as pd
 
         # set segment_dict[recording][segment] = {classes in that segment},
         # where each segment is 3 seconds (self.segment_len) long
@@ -292,6 +288,8 @@ class PerSegmentTester(BaseTester):
         """
         Output precision/recall per threshold
         """
+        import matplotlib.pyplot as plt
+        import pandas as pd
 
         df = pd.DataFrame()
         df["threshold"] = pd.Series(threshold)
@@ -321,6 +319,8 @@ class PerSegmentTester(BaseTester):
         """
         Output recall per precision
         """
+        import matplotlib.pyplot as plt
+        import pandas as pd
 
         df = pd.DataFrame()
         df["precision"] = pd.Series(precision)
@@ -343,6 +343,9 @@ class PerSegmentTester(BaseTester):
         """
         Output various ROC curves
         """
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import pandas as pd
 
         df = pd.DataFrame()
         df["threshold"] = pd.Series(
@@ -418,6 +421,8 @@ class PerSegmentTester(BaseTester):
         """
         Produce reports
         """
+        import numpy as np
+        import pandas as pd
 
         # calculate and output precision/recall per threshold
         threshold_annotated = self.pr_table_dict["annotated_thresholds"]
@@ -707,6 +712,7 @@ class PerSegmentTester(BaseTester):
             Uses both manual threshold evaluation and scikit-learn's precision_recall_curve
             for comprehensive coverage.
         """
+        from sklearn import metrics
 
         logging.info("Calculating PR table")
         pr_table_dict = {}
@@ -779,6 +785,11 @@ class PerSegmentTester(BaseTester):
             Saves the calibration plot to the output directory with filename format:
             calibration-{a:.2f}-{b:.2f}.png
         """
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from scipy.special import expit, logit
+        from sklearn.calibration import calibration_curve
+
         if self.coefficient is not None:
             # plot with the values specified in the constructor
             a = self.coefficient
@@ -837,6 +848,9 @@ class PerSegmentTester(BaseTester):
         Raises:
             ValueError: If too few samples are above the calibration cutoff threshold.
         """
+        import numpy as np
+        from sklearn.linear_model import LogisticRegression
+        from scipy.special import logit
 
         y_pred = self.y_pred_trained.ravel()
         y_true = self.y_true_trained.ravel()

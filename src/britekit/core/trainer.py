@@ -1,14 +1,7 @@
+# Defer some imports to improve initialization performance.
 from pathlib import Path
 
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
-from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.tuner import Tuner
-import torch
-
-from britekit.core.data_module import DataModule
 from britekit.core.config_loader import get_config
-from britekit.models import model_loader
 
 
 class Trainer:
@@ -17,6 +10,9 @@ class Trainer:
     """
 
     def __init__(self):
+        import pytorch_lightning as pl
+        import torch
+
         self.cfg, _ = get_config()
         torch.set_float32_matmul_precision("medium")
         if self.cfg.train.seed is not None:
@@ -36,6 +32,13 @@ class Trainer:
         """
         Run training as specified in configuration.
         """
+        import pytorch_lightning as pl
+        from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
+        from pytorch_lightning.loggers import TensorBoardLogger
+        import torch
+
+        from britekit.core.data_module import DataModule
+        from britekit.models import model_loader
 
         # load all the data once for performance, then split as needed in each fold
         dm = DataModule()
@@ -117,6 +120,13 @@ class Trainer:
         """
         Suggest a learning rate and produce a plot.
         """
+        import pytorch_lightning as pl
+        from pytorch_lightning.callbacks import TQDMProgressBar
+        from pytorch_lightning.tuner import Tuner
+
+        from britekit.core.data_module import DataModule
+        from britekit.models import model_loader
+
         dm = DataModule()
         dm.prepare_fold(0)
 

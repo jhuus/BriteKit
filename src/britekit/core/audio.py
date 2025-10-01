@@ -1,12 +1,7 @@
+# Defer some imports to improve initialization performance.
 import logging
 from typing import Any, Optional
 import warnings
-
-import librosa
-import numpy as np
-import torch
-import torch.nn.functional as F
-import torchaudio as ta
 
 from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config
@@ -53,6 +48,8 @@ class Audio:
         Args:
             cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
         """
+        import torchaudio as ta
+
         if cfg is None:
             self.cfg, _ = get_config()
         else:
@@ -126,6 +123,8 @@ class Audio:
         Note:
             If loading fails, signal will be None and an error will be logged.
         """
+        import librosa
+
         if not path or not isinstance(path, str):
             logging.error(f"Invalid path provided: {path}")
             return None, self.cfg.audio.sampling_rate
@@ -190,6 +189,9 @@ class Audio:
         Note:
             Returns (None, None) if no audio signal is loaded.
         """
+        import torch
+        import torch.nn.functional as F
+
         if self.signal is None or start_times is None:
             return None, None
 
@@ -259,6 +261,9 @@ class Audio:
     # =============================================================================
 
     def _make_log2_filterbank(self, bins_per_octave=12):
+        import numpy as np
+        import torch
+
         """Create a filterbank for log spectrograms."""
         f_min = self.cfg.audio.min_freq
         f_max = self.cfg.audio.max_freq
@@ -296,6 +301,10 @@ class Audio:
         top_db: Optional[float] = None,
         db_power: Optional[float] = None,
     ):
+        import torch
+        import torch.nn.functional as F
+        import torchaudio as ta
+
         if freq_scale is None:
             freq_scale = self.cfg.audio.freq_scale
 
@@ -361,6 +370,8 @@ class Audio:
         Stereo recordings sometimes have one clean channel and one noisy one;
         so rather than just merge them, use heuristics to pick the cleaner one.
         """
+        import numpy as np
+
         recording_seconds = int(len(left_signal) / self.cfg.audio.sampling_rate)
         check_seconds = min(recording_seconds, self.cfg.audio.check_seconds)
         if check_seconds == 0:

@@ -1,9 +1,8 @@
+# Defer some imports to improve initialization performance.
 import os
 import sqlite3
 from types import SimpleNamespace
 import zlib
-
-import numpy as np
 
 from britekit.core.exceptions import DatabaseError
 
@@ -217,6 +216,8 @@ class OccurrenceDatabase:
         """
         Return the occurrence values for a given county ID and class name.
         """
+        import numpy as np
+
         try:
             query = """
                 SELECT o.ClassID, o.Value FROM Occurrence o JOIN Class s on o.ClassID = s.ID WHERE CountyID = ? AND s.Name = ?
@@ -249,6 +250,8 @@ class OccurrenceDatabase:
 
     def insert_occurrences(self, county_id, class_id, value):
         """Insert an occurrence record for a given county and class."""
+        import numpy as np
+
         try:
             # value is a numpy array of 48 floats (occurrence per week, four weeks/month);
             # convert it to a float16 array and zip that to keep the database small

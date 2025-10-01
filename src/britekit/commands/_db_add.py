@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 from typing import Optional
 
@@ -6,7 +7,6 @@ import click
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
-from britekit.training_db.training_db import TrainingDatabase
 
 
 def add_cat(db_path: Optional[str]=None, name: str="") -> None:
@@ -21,6 +21,8 @@ def add_cat(db_path: Optional[str]=None, name: str="") -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the category to add (e.g., "Birds", "Mammals").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -59,6 +61,8 @@ def add_stype(db_path: Optional[str]=None, name: str="") -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the sound type to add (e.g., "Song", "Call", "Alarm").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -97,6 +101,8 @@ def add_src(db_path: Optional[str]=None, name: str="") -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the source to add (e.g., "Xeno-Canto", "Macaulay Library").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -146,6 +152,8 @@ def add_class(
         alt_name (str, optional): Alternate name for the class (e.g., scientific name).
         alt_code (str, optional): Alternate code for the class (e.g., scientific code).
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db

@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 from pathlib import Path
 from typing import Optional
@@ -6,7 +7,6 @@ from typing import Optional
 import click
 
 from britekit.core.config_loader import get_config
-from britekit.core.pickler import Pickler
 from britekit.core import util
 
 
@@ -35,6 +35,8 @@ def pickle(
         max_per_class (int, optional): Maximum number of spectrograms to include per class.
         spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
     """
+    from britekit.core.pickler import Pickler
+
     cfg, _ = get_config(cfg_path)
     if db_path is None:
         db_path = cfg.train.train_db

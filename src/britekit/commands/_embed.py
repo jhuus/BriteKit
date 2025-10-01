@@ -1,16 +1,13 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import zlib
 from typing import List, Optional
 
 import click
-import numpy as np
 
 from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core import util
-from britekit.models.model_loader import load_from_checkpoint, BaseModel
-from britekit.training_db.training_db import TrainingDatabase
-
 
 def embed(
     cfg_path: Optional[str]=None,
@@ -35,11 +32,14 @@ def embed(
     def embed_block(
         specs: List,
         cfg: BaseConfig,
-        model: BaseModel,
-        db: TrainingDatabase,
+        model,
+        db,
         device: str,
     ) -> None:
         """Process embeddings for a block of spectrograms."""
+        import numpy as np
+
+
         spec_array = np.zeros(
             (len(specs), 1, cfg.audio.spec_height, cfg.audio.spec_width)
         )
@@ -53,6 +53,9 @@ def embed(
         embeddings = model.get_embeddings(spec_array, device)
         for i in range(len(embeddings)):
             db.update_specvalue(value_ids[i], "Embedding", zlib.compress(embeddings[i]))
+
+    from britekit.models.model_loader import load_from_checkpoint
+    from britekit.training_db.training_db import TrainingDatabase
 
     cfg, _ = get_config(cfg_path)
     if db_path is None:

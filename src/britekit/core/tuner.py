@@ -1,3 +1,4 @@
+# Defer some imports to improve initialization performance.
 import copy
 import logging
 import os
@@ -7,18 +8,9 @@ import re
 import tempfile
 from typing import Any, Optional
 
-import numpy as np
-import pandas as pd
-
-from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
-from britekit.core.pickler import Pickler
-from britekit.core.reextractor import Reextractor
-from britekit.core.trainer import Trainer
 from britekit.core import util
-from britekit.testing.per_segment_tester import PerSegmentTester
-from britekit.training_db.training_db import TrainingDatabase
 
 
 def natural_key(s):
@@ -48,6 +40,9 @@ class Tuner:
         skip_training: bool = False,
         classes_path: Optional[str] = None,
     ):
+        from britekit.core.pickler import Pickler
+        from britekit.core.reextractor import Reextractor
+
         self.cfg, self.fn_cfg = get_config()
         self.original_seed = self.cfg.train.seed
         self.recording_dir = recording_dir
@@ -156,6 +151,9 @@ class Tuner:
                 raise InputError(f"Augmentation {param_def} not found")
 
     def _get_scores(self):
+        import numpy as np
+        from britekit.core.trainer import Trainer
+
         if self.extract:
             # extract a new set of spectrograms to tune spectrogram parameters
             logging.info("Extracting spectrograms")
@@ -269,6 +267,8 @@ class Tuner:
         """
         Run inference with the generated checkpoints and return the selected metric.
         """
+        from britekit.core.analyzer import Analyzer
+        from britekit.testing.per_segment_tester import PerSegmentTester
 
         train_dir = sorted(os.listdir(self.train_log_dir), key=natural_key)[-1]
         self.cfg.misc.ckpt_folder = str(
@@ -325,6 +325,9 @@ class Tuner:
 
     def _write_reports(self):
         # create and write metrics-summary.csv
+        import numpy as np
+        import pandas as pd
+
         trials = []
         params = []
         macro_pr_mean = []
@@ -399,6 +402,9 @@ class Tuner:
         A "trial" is a set of parameter values and a "run" is a training/inference run.
         There may be multiple runs per trial, since results per run are non-deterministic.
         """
+        import numpy as np
+        from britekit.training_db.training_db import TrainingDatabase
+
         self.best_score = float("-inf")
         self.best_params = None
         self.trial_num = 0

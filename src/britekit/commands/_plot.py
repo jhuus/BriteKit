@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 from pathlib import Path
@@ -7,21 +8,20 @@ from typing import Optional
 import click
 
 from britekit.core.config_loader import get_config, BaseConfig
-from britekit.core.audio import Audio
-from britekit.core.plot import plot_spec
 from britekit.core import util
-from britekit.training_db.training_db import TrainingDatabase
 
 
 def _plot_recording(
     cfg: BaseConfig,
-    audio: Audio,
+    audio,
     input_path: str,
     output_path: str,
     all: bool,
     overlap: float,
     ndims: bool,
 ):
+    from britekit.core.plot import plot_spec
+
     logging.info(f'Processing "{input_path}"')
     signal, rate = audio.load(input_path)
     if signal is None:
@@ -86,6 +86,9 @@ def plot_db(
         power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
         spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
     """
+    from britekit.core.plot import plot_spec
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
@@ -242,6 +245,8 @@ def plot_dir(
         overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
         power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
     """
+    from britekit.core.audio import Audio
+
     cfg, _ = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
@@ -356,6 +361,8 @@ def plot_rec(
         overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
         power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
     """
+    from britekit.core.audio import Audio
+
     cfg, _ = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power

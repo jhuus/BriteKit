@@ -1,10 +1,6 @@
+# Defer some imports to improve initialization performance.
 import logging
 import os
-
-from matplotlib import pyplot as plt
-import numpy as np
-import pandas as pd
-from sklearn import metrics
 
 
 from britekit.core.config_loader import get_config
@@ -134,6 +130,7 @@ class PerMinuteTester(BaseTester):
             Sets self.annotations, self.annotated_class_set, self.annotated_classes,
             and self.segments_per_recording. Calls self.set_class_indexes() to update class indexing.
         """
+        import pandas as pd
 
         # read the annotations
         unknown_classes = set()
@@ -217,6 +214,8 @@ class PerMinuteTester(BaseTester):
             Uses both manual threshold evaluation and scikit-learn's precision_recall_curve
             for comprehensive coverage.
         """
+        import numpy as np
+        from sklearn import metrics
 
         # use the looping method so we get per_second precision
         thresholds = []
@@ -298,6 +297,8 @@ class PerMinuteTester(BaseTester):
             self.pr_table_dict (if gen_pr_table=True) have been calculated by calling
             the corresponding methods.
         """
+        import numpy as np
+        import pandas as pd
 
         if self.gen_pr_table:
             # calculate and output precision/recall per threshold
@@ -574,6 +575,7 @@ class PerMinuteTester(BaseTester):
         """
         Create a dataframe representing the ground truth data, with recordings segmented into 1-minute segments
         """
+        import pandas as pd
 
         # convert self.annotations to 2D array with a row per segment and a column per class;
         # set cells to 1 if class is present and 0 if not present
@@ -611,6 +613,8 @@ class PerMinuteTester(BaseTester):
         """
         Output precision/recall per threshold
         """
+        from matplotlib import pyplot as plt
+        import pandas as pd
 
         df = pd.DataFrame()
         df["threshold"] = pd.Series(threshold)
@@ -646,6 +650,8 @@ class PerMinuteTester(BaseTester):
         """
         Output recall per precision
         """
+        from matplotlib import pyplot as plt
+        import pandas as pd
 
         df = pd.DataFrame()
         df["precision"] = pd.Series(precision)
@@ -668,6 +674,9 @@ class PerMinuteTester(BaseTester):
         """
         Output various ROC curves
         """
+        from matplotlib import pyplot as plt
+        import numpy as np
+        import pandas as pd
 
         df = pd.DataFrame()
         df["threshold"] = pd.Series(

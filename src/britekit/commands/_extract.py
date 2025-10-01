@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 from typing import Optional
 
@@ -6,8 +7,6 @@ import click
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
-from britekit.training_db.extractor import Extractor
-from britekit.training_db.training_db import TrainingDatabase
 
 
 def extract_all(
@@ -40,6 +39,9 @@ def extract_all(
         src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
         spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
     """
+    from britekit.training_db.extractor import Extractor
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
@@ -167,6 +169,9 @@ def extract_by_image(
         src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
         spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
     """
+    from britekit.training_db.extractor import Extractor
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path

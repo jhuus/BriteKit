@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 from pathlib import Path
 import time
@@ -8,7 +9,6 @@ import click
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
-from britekit.core.reextractor import Reextractor
 
 
 def reextract(
@@ -37,7 +37,7 @@ def reextract(
         check (bool): If True, only check that all recording paths are accessible without updating database.
         spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
     """
-
+    from britekit.core.reextractor import Reextractor
     cfg, _ = get_config(cfg_path)
 
     if class_name and classes_path:

@@ -1,17 +1,12 @@
+# Defer some imports to improve initialization performance.
 import importlib.util
 import logging
 import math
 import os
 from typing import Sequence, Optional, List
 
-import numpy as np
-import pandas as pd
-import torch
-
-from britekit.core.audio import Audio
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
-from britekit.models import model_loader
 from britekit.core import util
 
 
@@ -40,6 +35,8 @@ class Predictor:
             device (str, optional): Device to use for inference ('cuda', 'cpu', or 'mps').
                 If None, automatically selects the best available device.
         """
+        from britekit.core.audio import Audio
+
         self.cfg, _ = get_config()
         self.audio = Audio()
         self.class_names: Optional[List[str]] = None
@@ -65,9 +62,7 @@ class Predictor:
 
         self._load_models(model_path)
 
-    def get_raw_scores(
-        self, recording_path: str
-    ) -> tuple[Optional[np.ndarray], Optional[np.ndarray], list[float]]:
+    def get_raw_scores(self, recording_path: str):
         """
         Get scores in array format from the loaded models for the given recording.
 
@@ -82,6 +77,7 @@ class Predictor:
                   Shape is (num_frames, num_classes). None if not using SED models.
                 - start_times (list[float]): Start time in seconds for each spectrogram.
         """
+        import numpy as np
 
         if not os.path.exists(recording_path):
             raise InferenceError(f'Recording "{recording_path}" not found')
@@ -137,7 +133,7 @@ class Predictor:
         return avg_score, avg_frame_map, start_times
 
     def get_segment_labels(
-        self, scores: np.ndarray, start_times: list[float]
+        self, scores, start_times: list[float]
     ) -> dict[str, list[Label]]:
         """
         Given an array of raw segment-level scores, return dict of labels.
@@ -150,7 +146,6 @@ class Predictor:
             dict[str, list]: Dictionary mapping species names to lists of Label objects.
                 Each Label contains (score, start_time, end_time) for detected segments.
         """
-
         assert self.class_names is not None
 
         labels: dict[str, list] = {}  # name -> [(score, start_time, end_time)]
@@ -187,7 +182,7 @@ class Predictor:
 
         return labels
 
-    def get_frame_labels(self, frame_map: np.ndarray) -> dict[str, list[Label]]:
+    def get_frame_labels(self, frame_map) -> dict[str, list[Label]]:
         """
         Given a frame map, return dict of labels.
 
@@ -200,6 +195,7 @@ class Predictor:
                 Labels are either variable-duration (if segment_len is None) or
                 fixed-duration based on cfg.infer.segment_len.
         """
+        import numpy as np
 
         assert self.class_names is not None
 
@@ -278,11 +274,11 @@ class Predictor:
 
     def get_dataframe(
         self,
-        score_array: np.ndarray,
-        frame_map: Optional[np.ndarray],
+        score_array,
+        frame_map,
         start_times: list[float],
         recording_name: str,
-    ) -> pd.DataFrame:
+    ):
         """
         Given an array of raw scores, return as a pandas dataframe.
 
@@ -297,6 +293,7 @@ class Predictor:
             pd.DataFrame: DataFrame with columns ['recording', 'name', 'start_time', 'end_time', 'score']
                 containing all detected species segments.
         """
+        import pandas as pd
 
         if frame_map is None:
             labels = self.get_segment_labels(score_array, start_times)
@@ -326,8 +323,8 @@ class Predictor:
 
     def save_audacity_labels(
         self,
-        scores: np.ndarray,
-        frame_map: Optional[np.ndarray],
+        scores,
+        frame_map,
         start_times: list[float],
         file_path: str,
     ) -> None:
@@ -361,13 +358,12 @@ class Predictor:
                 f"Failed to write Audacity labels to {file_path}: {str(e)}"
             )
 
-    @torch.no_grad()
     def to_global_frames(
         self,
-        frame_scores: torch.Tensor,
+        frame_scores,
         offsets_sec: Sequence[float],
         recording_duration_sec: float,
-    ) -> torch.Tensor:
+    ):
         """
         Map overlapping per-spectrogram frame scores onto a global frame grid.
         Use mean rather than max or weighted values.
@@ -380,53 +376,56 @@ class Predictor:
         Returns:
             global_frames: (num_classes, T_global) tensor of scores in [0, 1].
         """
-        assert (
-            frame_scores.dim() == 3
-        ), "frame_scores must be (num_specs, num_classes, T_spec)"
-        num_specs, num_classes, T_spec = frame_scores.shape
-        device = frame_scores.device
-        fps = self.cfg.train.sed_fps
+        import torch
 
-        # Validate fps
-        if fps <= 0:
-            raise InferenceError(f"Invalid fps value: {fps}")
+        with torch.no_grad():
+            assert (
+                frame_scores.dim() == 3
+            ), "frame_scores must be (num_specs, num_classes, T_spec)"
+            num_specs, num_classes, T_spec = frame_scores.shape
+            device = frame_scores.device
+            fps = self.cfg.train.sed_fps
 
-        # Global grid length (frames)
-        T_global: int = int(round(fps * recording_duration_sec))
+            # Validate fps
+            if fps <= 0:
+                raise InferenceError(f"Invalid fps value: {fps}")
 
-        # Map spectrogram offsets (seconds) to global frame indices
-        starts = torch.tensor(
-            [int(round(o * fps)) for o in offsets_sec],
-            device=device,
-            dtype=torch.int64,
-        )
+            # Global grid length (frames)
+            T_global: int = int(round(fps * recording_duration_sec))
 
-        # Prepare accumulation buffers
-        global_scores = torch.zeros((T_global, num_classes), device=device)
-        weights = torch.zeros((T_global,), device=device)
+            # Map spectrogram offsets (seconds) to global frame indices
+            starts = torch.tensor(
+                [int(round(o * fps)) for o in offsets_sec],
+                device=device,
+                dtype=torch.int64,
+            )
 
-        # Accumulate
-        assert global_scores is not None
-        for k in range(num_specs):
-            start: int = int(starts[k].item())
-            # Skip chunks entirely outside the global range
-            if start >= T_global or start + T_spec <= 0:
-                continue
+            # Prepare accumulation buffers
+            global_scores = torch.zeros((T_global, num_classes), device=device)
+            weights = torch.zeros((T_global,), device=device)
 
-            g0: int = int(max(0, start))
-            g1: int = int(min(T_global, start + T_spec))
-            t0: int = int(g0 - start)
-            t1: int = int(t0 + (g1 - g0))
+            # Accumulate
+            assert global_scores is not None
+            for k in range(num_specs):
+                start: int = int(starts[k].item())
+                # Skip chunks entirely outside the global range
+                if start >= T_global or start + T_spec <= 0:
+                    continue
 
-            chunk = frame_scores[k, :, t0:t1].T  # shape (local_T, num_classes)
+                g0: int = int(max(0, start))
+                g1: int = int(min(T_global, start + T_spec))
+                t0: int = int(g0 - start)
+                t1: int = int(t0 + (g1 - g0))
+
+                chunk = frame_scores[k, :, t0:t1].T  # shape (local_T, num_classes)
+                assert weights is not None
+                global_scores[g0:g1, :] += chunk
+                weights[g0:g1] += 1.0
+
+            # Finalize
             assert weights is not None
-            global_scores[g0:g1, :] += chunk
-            weights[g0:g1] += 1.0
-
-        # Finalize
-        assert weights is not None
-        denom = torch.clamp(weights, min=1e-12).unsqueeze(1)  # (T_global, 1)
-        return global_scores / denom
+            denom = torch.clamp(weights, min=1e-12).unsqueeze(1)  # (T_global, 1)
+            return global_scores / denom
 
     # =============================================================================
     # Private Helper Methods
@@ -468,6 +467,8 @@ class Predictor:
 
     def _load_model(self, model_path: str):
         """Given a checkpoint path, load and return a single model"""
+        from britekit.models import model_loader
+
         if model_path.endswith(".ckpt"):
             try:
                 model = model_loader.load_from_checkpoint(model_path).eval()
@@ -504,7 +505,10 @@ class Predictor:
 
         return model
 
-    def _get_openvino_scores(self, specs: np.ndarray) -> list[np.ndarray]:
+    def _get_openvino_scores(self, specs):
+        import numpy as np
+        import torch
+
         scores = []
         block_size = self.cfg.infer.openvino_block_size
         num_blocks = (specs.shape[0] + block_size - 1) // block_size

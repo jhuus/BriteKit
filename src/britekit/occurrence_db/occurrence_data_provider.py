@@ -1,5 +1,4 @@
-import numpy as np
-
+# Defer some imports to improve initialization performance.
 from britekit.core.exceptions import InputError
 from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
 
@@ -105,6 +104,8 @@ class OccurrenceDataProvider:
         Returns:
             Numpy array of 48 average occurrence values (one per week, using 4-week months).
         """
+        import numpy as np
+
         total_values = np.zeros(48)
         zeros = np.zeros(48)
         total_weight = 0
@@ -145,6 +146,8 @@ class OccurrenceDataProvider:
         Returns:
             Numpy average maximum occurrence value.
         """
+        import numpy as np
+
         max_value = 0
         total_weight = 0
         weight = 1

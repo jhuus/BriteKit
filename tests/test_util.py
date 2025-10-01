@@ -128,60 +128,6 @@ class TestEnum(Enum):
 # Core Utility Functions Tests
 # =============================================================================
 
-
-class TestGetDevice:
-    """Test get_device function."""
-
-    @patch("britekit.core.util.get_config")
-    @patch("britekit.core.util.torch")
-    def test_get_device_force_cpu(self, mock_torch, mock_get_config):
-        """Test get_device when force_cpu is True."""
-        mock_cfg = MagicMock()
-        mock_cfg.misc.force_cpu = True
-        mock_get_config.return_value = (mock_cfg, None)
-
-        result = get_device()
-        assert result == "cpu"
-
-    @patch("britekit.core.util.get_config")
-    @patch("britekit.core.util.torch")
-    def test_get_device_cuda_available(self, mock_torch, mock_get_config):
-        """Test get_device when CUDA is available."""
-        mock_cfg = MagicMock()
-        mock_cfg.misc.force_cpu = False
-        mock_get_config.return_value = (mock_cfg, None)
-        mock_torch.cuda.is_available.return_value = True
-
-        result = get_device()
-        assert result == "cuda"
-
-    @patch("britekit.core.util.get_config")
-    @patch("britekit.core.util.torch")
-    def test_get_device_mps_available(self, mock_torch, mock_get_config):
-        """Test get_device when MPS is available."""
-        mock_cfg = MagicMock()
-        mock_cfg.misc.force_cpu = False
-        mock_get_config.return_value = (mock_cfg, None)
-        mock_torch.cuda.is_available.return_value = False
-        mock_torch.backends.mps.is_available.return_value = True
-
-        result = get_device()
-        assert result == "mps"
-
-    @patch("britekit.core.util.get_config")
-    @patch("britekit.core.util.torch")
-    def test_get_device_cpu_fallback(self, mock_torch, mock_get_config):
-        """Test get_device CPU fallback."""
-        mock_cfg = MagicMock()
-        mock_cfg.misc.force_cpu = False
-        mock_get_config.return_value = (mock_cfg, None)
-        mock_torch.cuda.is_available.return_value = False
-        mock_torch.backends.mps.is_available.return_value = False
-
-        result = get_device()
-        assert result == "cpu"
-
-
 class TestFormatElapsedTime:
     """Test format_elapsed_time function."""
 

@@ -1,10 +1,7 @@
+# Defer some imports to improve initialization performance.
 from functools import cmp_to_key
 import logging
 import math
-
-import numpy as np
-import pandas as pd
-from sklearn import metrics
 
 from britekit.core import util
 
@@ -178,6 +175,8 @@ class BaseTester:
             This method sets self.y_pred_trained_df and self.y_pred_annotated_df
         """
 
+        import pandas as pd
+
         self.segments_per_recording = segments_per_recording
 
         # set segment_dict[recording][segment][class_codes] = score (if there is a matching label)
@@ -263,6 +262,7 @@ class BaseTester:
             Sets self.y_true_annotated, self.y_pred_annotated, self.y_true_trained,
             and self.y_pred_trained as numpy arrays
         """
+        import numpy as np
 
         if self.y_true_annotated is not None and self.y_pred_annotated is not None:
             return  # done already
@@ -387,6 +387,7 @@ class BaseTester:
             Macro and none averaging are only defined for classes with annotations,
             but micro averaging is defined for all trained classes
         """
+        from sklearn import metrics
 
         macro_pr_auc = metrics.average_precision_score(
             self.y_true_annotated, self.y_pred_annotated, average="macro"
@@ -453,6 +454,8 @@ class BaseTester:
             Macro and none averaging are only defined for classes with annotations,
             but micro averaging is defined for all trained classes
         """
+        import numpy as np
+        from sklearn import metrics
 
         # ROC-AUC is not defined if y_true has a column with all ones
         y_true_has_column_with_all_ones = False
@@ -564,6 +567,7 @@ class BaseTester:
         Note:
             Returns all zeros if no predictions meet the threshold
         """
+        from sklearn import metrics
 
         # copy y_pred, set values < threshold to 0 and values >= threshold to 1
         y_pred_trained = self.y_pred_trained.copy()
@@ -712,6 +716,7 @@ class BaseTester:
             Assumes input values are in range [0, 1]. Output y values are clipped to [0, 1].
             Uses linear interpolation for smooth results.
         """
+        import numpy as np
 
         # x input to CubicSpline has to be monotonically increasing,
         # but we have to deal with case where it's really decreasing
@@ -859,6 +864,7 @@ class BaseTester:
         """
         Calculate precision in seconds for the given threshold
         """
+        import numpy as np
 
         # create y_secs array containing seconds predicted >= threshold per class/file-id
         y_secs = np.zeros(

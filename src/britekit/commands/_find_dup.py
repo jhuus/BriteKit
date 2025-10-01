@@ -1,11 +1,10 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 from typing import List, Optional
 import zlib
 
 import click
-import numpy as np
-import scipy
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
@@ -44,11 +43,13 @@ def find_dup(
             self.id: int = id
             self.filename: str = filename
             self.seconds: float = seconds
-            self.embeddings: List[np.ndarray] = []
+            self.embeddings: List = []
 
     def get_spectrogram_embeddings(
         db: TrainingDatabase, recording: Recording, specgroup_id: int
     ) -> None:
+        import numpy as np
+
         results = db.get_specvalue(
             {"RecordingID": recording.id, "SpecGroupID": specgroup_id}
         )
@@ -80,6 +81,8 @@ def find_dup(
 
     # return true iff the two recordings appear to be duplicates
     def match_recordings(recording1: Recording, recording2: Recording) -> bool:
+        import scipy
+
         SECONDS_FUDGE = 0.1  # treat durations as equal if within this many seconds
         DISTANCE_FUDGE = 0.02  # treat spectrograms as equal if within this distance
 

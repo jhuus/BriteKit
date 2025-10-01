@@ -1,5 +1,4 @@
-import pandas as pd
-
+# Defer some imports to improve initialization performance.
 from britekit.core import util
 from britekit.training_db.training_db import TrainingDatabase
 
@@ -82,6 +81,7 @@ class TrainingDataProvider:
             summary_df: A pandas dataframe with recording and segment counts per class
             details_df: A pandas dataframe with segment counts per recording per class
         """
+        import pandas as pd
 
         classes = self.db.get_class()
         recordings_per_class = {}
@@ -127,6 +127,8 @@ class TrainingDataProvider:
         Returns:
             A pandas dataframe with number of spectrograms per spec group.
         """
+        import pandas as pd
+
         names = []
         counts = []
         spec_groups = self.db.get_specgroup()

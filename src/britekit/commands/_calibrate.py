@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 from pathlib import Path
@@ -9,7 +10,6 @@ import click
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
 from britekit.core import util
-from britekit.testing.per_segment_tester import PerSegmentTester
 
 
 def calibrate(
@@ -43,6 +43,8 @@ def calibrate(
         coef (float, optional): Use this coefficient for the calibration plot.
         inter (float, optional): Use this intercept for the calibration plot.
     """
+    from britekit.testing.per_segment_tester import PerSegmentTester
+
     if (coef is None and inter is not None) or (coef is not None and inter is None):
         logging.error("If --coef or --inter is specified, both must be specified.")
         quit()

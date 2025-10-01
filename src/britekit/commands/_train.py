@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import time
 from typing import Optional
@@ -8,7 +9,6 @@ import click
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import TrainingError
 from britekit.core import util
-from britekit.core.trainer import Trainer
 
 
 def train(
@@ -29,6 +29,8 @@ def train(
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
                                  If not specified, uses default configuration.
     """
+    from britekit.core.trainer import Trainer
+
     cfg, _ = get_config(cfg_path)
     try:
         start_time = time.time()
@@ -75,6 +77,8 @@ def find_lr(cfg_path: str, num_batches: int):
         num_batches (int): Number of training batches to analyze for learning rate finding.
                           Default is 100. Higher values provide more accurate results but take longer.
     """
+    from britekit.core.trainer import Trainer
+
     cfg, _ = get_config(cfg_path)
     try:
         suggested_lr, fig = Trainer().find_lr(num_batches)

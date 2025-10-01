@@ -1,15 +1,12 @@
+# Defer some imports to improve initialization performance.
 import logging
 import os
 import pickle
 import random
 from typing import Optional
 
-import pandas as pd
-
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
-from britekit.training_db.training_db import TrainingDatabase
-from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
 class Pickler:
@@ -31,6 +28,8 @@ class Pickler:
         max_per_class: Optional[int] = None,
         spec_group: Optional[str] = None,
     ):
+        from britekit.training_db.training_db import TrainingDatabase
+
         self.cfg, self.fn_cfg = get_config()
         self.classes_path = classes_path
         self.output_path = output_path
@@ -50,6 +49,8 @@ class Pickler:
 
     def pickle(self, quiet=False):
         """Create the pickle file as specified."""
+        import pandas as pd
+        from britekit.training_db.training_data_provider import TrainingDataProvider
 
         # read DB and map class name to DB result
         results = self.db.get_class()

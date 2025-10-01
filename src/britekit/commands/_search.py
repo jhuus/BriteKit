@@ -1,19 +1,14 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 from typing import Optional
 import zlib
 
 import click
-import numpy as np
-import scipy
 
-from britekit.core.audio import Audio
 from britekit.core.config_loader import get_config
-from britekit.core.plot import plot_spec
 from britekit.core import util
-from britekit.models.model_loader import load_from_checkpoint
-from britekit.training_db.training_db import TrainingDatabase
 
 
 def search(
@@ -58,6 +53,14 @@ def search(
             self.specvalue_id = specvalue_id
             self.embedding = embedding
             self.distance = 0
+
+    import numpy as np
+    import scipy
+
+    from britekit.core.audio import Audio
+    from britekit.core.plot import plot_spec
+    from britekit.models.model_loader import load_from_checkpoint
+    from britekit.training_db.training_db import TrainingDatabase
 
     cfg, _ = get_config(cfg_path)
 

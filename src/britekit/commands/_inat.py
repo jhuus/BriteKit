@@ -1,16 +1,17 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
-import requests
 from typing import Any, Dict, Optional
 
 import click
-import pyinaturalist
 
 from britekit.core import util
 
 
 def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[str]:
+    import requests
+
     if url is None or len(url.strip()) == 0:
         return None
 
@@ -58,6 +59,8 @@ def inat(
         name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
         no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
     """
+    import pyinaturalist
+
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 

@@ -1,14 +1,11 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Set
 
 import click
-import numpy as np
-import librosa
-import pandas as pd
-import soundfile as sf
 
 from britekit.core import util
 
@@ -21,6 +18,8 @@ def _download_recording(
 ) -> bool:
     # download it as wav, which is faster than downloading as mp3;
     # then convert to mp3 when the 10-second clip is extracted
+    import librosa
+
     command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
     logging.info(f"Downloading {youtube_id}")
     os.system(command)
@@ -32,6 +31,10 @@ def _download_recording(
         audio_path2 = os.path.join(output_dir, f"{youtube_id}-{int(start_seconds)}.mp3")
         audio, sr = librosa.load(audio_path1, sr=sampling_rate)
         assert isinstance(sr, int)
+
+        import numpy as np
+        import soundfile as sf
+
         assert isinstance(audio, np.ndarray)
         start_sample = int(start_seconds * sr)
         end_sample = int((start_seconds + 10) * sr)
@@ -52,6 +55,8 @@ def _download_class(
     root_dir: str,
 ) -> None:
     # read class info
+    import pandas as pd
+
     class_label_path = str(Path(root_dir) / "data" / "audioset" / "class_list.csv")
     df: pd.DataFrame = pd.read_csv(class_label_path)
     name_to_index: Dict[str, int] = {}
@@ -154,6 +159,8 @@ def _download_curated(
     sampling_rate: int,
     num_to_skip: int,
 ) -> None:
+    import pandas as pd
+
     curated = pd.read_csv(curated_csv_path)
     count: int = 0
     for i, row in curated.iterrows():

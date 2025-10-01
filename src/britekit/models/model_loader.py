@@ -5,13 +5,6 @@ import torch
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError, ModelError
 from britekit.core.util import get_device
-from britekit.models.base_model import BaseModel
-from britekit.models.timm_model import TimmModel
-from britekit.models.dla import DlaModel
-from britekit.models.effnet import EffNetModel
-from britekit.models.gernet import GerNetModel
-from britekit.models.hgnet import HGNetModel
-from britekit.models.vovnet import VovNetModel
 
 
 def load_new_model(
@@ -21,6 +14,14 @@ def load_new_model(
     train_class_alt_codes: List[str],
     num_train_specs: int,
 ):
+    # defer these imports to improve --help performance
+    from britekit.models.timm_model import TimmModel
+    from britekit.models.dla import DlaModel
+    from britekit.models.effnet import EffNetModel
+    from britekit.models.gernet import GerNetModel
+    from britekit.models.hgnet import HGNetModel
+    from britekit.models.vovnet import VovNetModel
+
     cfg, _ = get_config()
     device = get_device()
 
@@ -75,9 +76,15 @@ def load_new_model(
     ).to(device)
 
 
-def load_from_checkpoint(
-    checkpoint_path: str, multi_label: Optional[bool] = None
-) -> BaseModel:
+def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = None):
+    # defer these imports to improve --help performance
+    from britekit.models.timm_model import TimmModel
+    from britekit.models.dla import DlaModel
+    from britekit.models.effnet import EffNetModel
+    from britekit.models.gernet import GerNetModel
+    from britekit.models.hgnet import HGNetModel
+    from britekit.models.vovnet import VovNetModel
+
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     device = get_device()
 

@@ -1,8 +1,6 @@
+# Defer some imports to improve initialization performance.
 import logging
 import os
-
-import numpy as np
-import pandas as pd
 
 from britekit.core.config_loader import get_config
 from britekit.testing.base_tester import BaseTester
@@ -123,6 +121,8 @@ class PerRecordingTester(BaseTester):
             Sets self.annotations, self.annotated_class_set, and self.annotated_classes.
             Calls self.set_class_indexes() to update class indexing.
         """
+        import pandas as pd
+
         unknown_classes = set()
         self.annotations = {}
         self.annotated_class_set = set()
@@ -189,6 +189,7 @@ class PerRecordingTester(BaseTester):
         Note:
             Rows with precision=0 at the end are trimmed to avoid unnecessary data points.
         """
+        import numpy as np
 
         precisions = []  # precision in segments or recordings
         recalls = []
@@ -255,6 +256,8 @@ class PerRecordingTester(BaseTester):
             Requires that self.map_dict, self.roc_dict, self.details_dict, and
             self.pr_table_dict have been calculated by calling the corresponding methods.
         """
+        import numpy as np
+        import pandas as pd
 
         # calculate and output precision/recall per threshold
         threshold = self.pr_table_dict["thresholds"]
@@ -465,6 +468,7 @@ class PerRecordingTester(BaseTester):
         """
         Create a dataframe representing the ground truth data, with recordings segmented into segments
         """
+        import pandas as pd
 
         # convert self.annotations to 2D array with a row per segment and a column per class;
         # set cells to 1 if class is present and 0 if not present
@@ -495,6 +499,7 @@ class PerRecordingTester(BaseTester):
         """
         Create y_pred dataframe with per-recording granularity
         """
+        import pandas as pd
 
         rows = []
         for i, recording in enumerate(sorted(self.labels_per_recording.keys())):

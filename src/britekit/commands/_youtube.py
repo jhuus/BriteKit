@@ -1,11 +1,9 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 
 import click
-import numpy as np
-import librosa
-import soundfile as sf
 
 from britekit.core import util
 
@@ -23,6 +21,9 @@ def youtube(
         output_dir (str): Directory where downloaded recordings will be saved.
         sampling_rate (float): Output sampling rate in Hz. Default is 32000.
     """
+    import librosa
+    import numpy as np
+    import soundfile as sf
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

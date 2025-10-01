@@ -1,18 +1,18 @@
+# Defer some imports to improve initialization performance.
 import logging
 import pickle
 from typing import Any, List, Tuple
 
-from torch.utils.data import DataLoader, Subset
 from pytorch_lightning import LightningDataModule
-from sklearn.model_selection import StratifiedKFold
 
 from britekit.core.config_loader import get_config
-from britekit.core.dataset import SpectrogramDataset
 
 
 class DataModule(LightningDataModule):
     def __init__(self):
         super().__init__()
+        from britekit.core.dataset import SpectrogramDataset
+
         self.cfg, _ = get_config()
         self.train_data = None
         self.val_data = None
@@ -109,6 +109,8 @@ class DataModule(LightningDataModule):
 
         if self.cfg.train.num_folds > 1:
             # Stratified k-fold split
+            from sklearn.model_selection import StratifiedKFold
+
             skf = StratifiedKFold(
                 n_splits=self.cfg.train.num_folds, shuffle=True, random_state=42
             )
@@ -177,6 +179,8 @@ class DataModule(LightningDataModule):
         Raises:
             ValueError: If fold_index is invalid or val_portion is invalid
         """
+        from torch.utils.data import Subset
+
         if not hasattr(self, "full_dataset") or self.full_dataset is None:
             raise ValueError("Full dataset not initialized")
 
@@ -216,6 +220,8 @@ class DataModule(LightningDataModule):
             self.val_data = Subset(self.full_dataset, val_idx)
 
     def train_dataloader(self):
+        from torch.utils.data import DataLoader
+
         if self.train_data is None:
             raise ValueError("Training data not prepared. Call prepare_fold() first.")
         return DataLoader(
@@ -226,6 +232,8 @@ class DataModule(LightningDataModule):
         )
 
     def val_dataloader(self):
+        from torch.utils.data import DataLoader
+
         if self.val_data is None:
             raise ValueError("Validation data not prepared. Call prepare_fold() first.")
         return DataLoader(
@@ -236,6 +244,8 @@ class DataModule(LightningDataModule):
         )
 
     def test_dataloader(self):
+        from torch.utils.data import DataLoader
+
         if self.test_data is None:
             logging.error("Test data not available, returning None")
             return None

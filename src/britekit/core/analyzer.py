@@ -1,17 +1,13 @@
+# Defer some imports to improve initialization performance.
 import logging
 import os
 from pathlib import Path
 import threading
 from typing import Dict, Any
-import yaml
-
-import pandas as pd
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
-from britekit.core.predictor import Predictor
 from britekit.core import util
-from britekit.models.base_model import BaseModel
 
 
 class Analyzer:
@@ -23,10 +19,12 @@ class Analyzer:
         self.cfg, self.fn_cfg = get_config()
         self.dataframes = []
 
-    def _save_manifest(self, output_path: str, predictor: Predictor):
+    def _save_manifest(self, output_path: str, predictor):
         """
         Save a text file summarizing the inference configuration.
         """
+        import yaml
+        from britekit.models.base_model import BaseModel
 
         # Add class list
         model: BaseModel = predictor.models[0]
@@ -67,6 +65,8 @@ class Analyzer:
             output_path (str): Where to write the output.
             rtype (str): Output format: "audacity", "csv" or "both".
         """
+        from britekit.core.predictor import Predictor
+
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
             logging.info(f"[Thread {thread_num}] Processing {recording_path}")
@@ -112,6 +112,8 @@ class Analyzer:
             output_path (str): Output directory.
             rtype (str): Output format: "audacity", "csv" or "both".
         """
+        import pandas as pd
+
         if os.path.isfile(input_path):
             recording_paths = [input_path]
         else:

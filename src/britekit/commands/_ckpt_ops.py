@@ -1,16 +1,14 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import glob
 import logging
 import os
 from typing import Optional
 
 import click
-import pytorch_lightning as pl
-import torch
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
-from britekit.models.model_loader import load_from_checkpoint
 
 
 def ckpt_avg(input_path: str="", output_path: Optional[str]=None):
@@ -25,6 +23,8 @@ def ckpt_avg(input_path: str="", output_path: Optional[str]=None):
         output_path (str, optional): Path for the output averaged checkpoint.
                                    Defaults to "average.ckpt" in the input directory.
     """
+    import torch
+
     ckpt_paths = glob.glob(os.path.join(input_path, "*.ckpt"))
     if not output_path:
         output_path = os.path.join(input_path, "average.ckpt")
@@ -90,6 +90,9 @@ def ckpt_freeze(input_path: str=""):
     Args:
         input_path (str): Path to the checkpoint file to freeze.
     """
+    import pytorch_lightning as pl
+    from britekit.models.model_loader import load_from_checkpoint
+
     renamed_path = input_path + ".original"
     os.rename(input_path, renamed_path)
     model = load_from_checkpoint(renamed_path)
@@ -136,6 +139,9 @@ def ckpt_onnx(
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
         input_path (str): Path to the PyTorch checkpoint file to convert.
     """
+    import torch
+    from britekit.models.model_loader import load_from_checkpoint
+
     cfg, _ = get_config(cfg_path)
     base, _ = os.path.splitext(input_path)
     output_path = base + ".onnx"

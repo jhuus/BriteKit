@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 import re
@@ -8,7 +9,6 @@ import click
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
-from britekit.training_db.training_db import TrainingDatabase
 
 
 def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
@@ -23,6 +23,8 @@ def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the category to delete (e.g., "Birds", "Mammals").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -74,6 +76,8 @@ def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the class to delete (e.g., "Common Yellowthroat").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -122,6 +126,8 @@ def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -164,6 +170,8 @@ def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -207,6 +215,8 @@ def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -250,6 +260,8 @@ def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
@@ -297,6 +309,8 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
         class_name (str): Name of the class whose segments should be considered for deletion.
         dir_path (str): Path to directory containing spectrogram image files.
     """
+    from britekit.training_db.training_db import TrainingDatabase
+
     cfg, _ = get_config()
     if db_path is None:
         db_path = cfg.train.train_db

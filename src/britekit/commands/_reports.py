@@ -1,4 +1,5 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import glob
 import logging
 import os
@@ -8,19 +9,10 @@ import tempfile
 from typing import Optional
 
 import click
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import pandas as pd
 
-from britekit.core.analyzer import Analyzer
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
 from britekit.core import util
-from britekit.testing.per_minute_tester import PerMinuteTester
-from britekit.testing.per_recording_tester import PerRecordingTester
-from britekit.testing.per_segment_tester import PerSegmentTester
-from britekit.training_db.training_db import TrainingDatabase
-from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
 def rpt_ann(
@@ -38,6 +30,8 @@ def rpt_ann(
         annotations_path (str): Path to CSV file containing per-segment annotations.
         output_path (str): Directory where summary reports will be saved.
     """
+    import pandas as pd
+
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     df = pd.read_csv(annotations_path, dtype={"recording": str, "class": str})
@@ -146,6 +140,9 @@ def rpt_db(cfg_path: Optional[str] = None,
         db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
         output_path (str): Directory where database reports will be saved.
     """
+    from britekit.training_db.training_db import TrainingDatabase
+    from britekit.training_db.training_data_provider import TrainingDataProvider
+
     cfg, _ = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
@@ -210,6 +207,13 @@ def rpt_epochs(
         annotations_path (str): Path to CSV file containing ground truth annotations.
         output_path (str): Directory where the graph image will be saved.
     """
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import MaxNLocator
+    import pandas as pd
+
+    from britekit.core.analyzer import Analyzer
+    from britekit.testing.per_segment_tester import PerSegmentTester
+
     cfg, _ = get_config(cfg_path)
     ckpt_paths = glob.glob(str(Path(input_path) / "*.ckpt"))
     if len(ckpt_paths) == 0:
@@ -396,6 +400,8 @@ def rpt_labels(
         output_path (str): Directory where summary reports will be saved.
         min_score (float, optional): Ignore detections below this confidence threshold.
     """
+    import pandas as pd
+
     cfg, _ = get_config()
     if min_score is None:
         min_score = cfg.infer.min_score
@@ -545,6 +551,10 @@ def rpt_test(
         min_score (float, optional): Provide detailed reports for this confidence threshold.
         precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
     """
+    from britekit.testing.per_minute_tester import PerMinuteTester
+    from britekit.testing.per_recording_tester import PerRecordingTester
+    from britekit.testing.per_segment_tester import PerSegmentTester
+
     cfg, _ = get_config()
     try:
         if not recordings_path:

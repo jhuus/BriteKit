@@ -1,14 +1,11 @@
+# Defer some imports to improve initialization performance.
 from typing import Optional
-
-import librosa
-import matplotlib.pyplot as plt
-import numpy as np
 
 from britekit.core.config_loader import get_config
 
 
 def plot_spec(
-    spec: np.ndarray,
+    spec,
     output_path: str,
     show_dims: bool = False,
     spec_duration: Optional[float] = None,
@@ -28,6 +25,8 @@ def plot_spec(
         width (int, optional): Output image width in pixels. If not specified,
             the existing square behavior is preserved.
     """
+    import matplotlib.pyplot as plt
+    import numpy as np
 
     cfg, _ = get_config()
     assert cfg.audio.freq_scale in {"linear", "log", "mel"}
@@ -62,6 +61,8 @@ def plot_spec(
             frequencies = 2**log2_ticks
         else:
             # mel scale
+            import librosa
+
             frequencies = librosa.mel_frequencies(
                 n_mels=cfg.audio.spec_height,
                 fmin=cfg.audio.min_freq,

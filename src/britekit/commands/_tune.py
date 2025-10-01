@@ -1,16 +1,15 @@
-# File name starts with _ to keep it out of typeahead for API users
+# File name starts with _ to keep it out of typeahead for API users.
+# Defer some imports to improve --help performance.
 import logging
 import os
 from pathlib import Path
 import shutil
 import time
 from typing import Optional
-import yaml
 
 import click
 
 from britekit.core import util
-from britekit.core.tuner import Tuner
 
 
 def tune(
@@ -54,6 +53,8 @@ def tune(
         skip_training (bool): Iterate on inference only, using checkpoints from the last training run.
         classes_path (str, optional): Path to CSV containing class names for extract option. Default is all classes.
     """
+    import yaml
+    from britekit.core.tuner import Tuner
 
     try:
         if extract and skip_training:

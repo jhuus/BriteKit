@@ -1,5 +1,5 @@
+# Defer some imports to improve initialization performance.
 from typing import cast, Optional
-from omegaconf import OmegaConf, DictConfig
 from britekit.core.base_config import BaseConfig, FunctionConfig
 
 _base_config: Optional[BaseConfig] = None
@@ -7,6 +7,8 @@ _func_config: Optional[FunctionConfig] = None
 
 
 def get_config(cfg_path: Optional[str] = None) -> tuple[BaseConfig, FunctionConfig]:
+    from omegaconf import OmegaConf, DictConfig
+
     if cfg_path is None:
         return get_config_with_dict()
     else:
@@ -15,8 +17,10 @@ def get_config(cfg_path: Optional[str] = None) -> tuple[BaseConfig, FunctionConf
 
 
 def get_config_with_dict(
-    cfg_dict: Optional[DictConfig] = None,
+    cfg_dict=None,
 ) -> tuple[BaseConfig, FunctionConfig]:
+    from omegaconf import OmegaConf
+
     global _base_config, _func_config
     if _base_config is None:
         _base_config = OmegaConf.structured(BaseConfig())

@@ -1,8 +1,8 @@
 # File name starts with _ to keep it out of typeahead for API users
+# Defer some imports to improve --help performance.
 import json
 import logging
 import os
-import requests
 from typing import Optional
 
 import click
@@ -82,6 +82,8 @@ def xeno(
         scientific_name (bool): If True, treat the name as a scientific name rather than common name.
         seen_only (bool): If True, only download recordings where the animal was seen (animal-seen=yes).
     """
+    import requests
+
     if key is None:
         if "XCKEY" in os.environ:
             key = os.environ["XCKEY"]
