@@ -26,10 +26,10 @@
 
 ## Reference Guides
 
-- [Command Reference](command-reference.md)
-- [Command API Reference](command-api-reference.md)
-- [General API Reference](api-reference.md)
-- [Configuration Reference](config-reference.md)
+- [Command Reference](https://github.com/jhuus/BriteKit/blob/master/command-reference.md)
+- [Command API Reference](https://github.com/jhuus/BriteKit/blob/master/command-api-reference.md)
+- [General API Reference](https://github.com/jhuus/BriteKit/blob/master/api-reference.md)
+- [Configuration Reference](https://github.com/jhuus/BriteKit/blob/master/config-reference.md)
 
 # Getting Started
 
