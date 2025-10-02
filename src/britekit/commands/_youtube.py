@@ -60,6 +60,7 @@ def youtube(
     help="Youtube ID.",
 )
 @click.option(
+    "-o",
     "--output",
     "output_dir",
     required=True,

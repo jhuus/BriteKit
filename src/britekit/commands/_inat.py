@@ -103,6 +103,7 @@ def inat(
 )
 @click.option("--name", required=True, type=str, help="Species name.")
 @click.option(
+    "-o",
     "--output",
     "output_dir",
     required=True,

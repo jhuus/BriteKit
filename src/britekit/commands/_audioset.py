@@ -255,6 +255,7 @@ def audioset(
     help="Path to CSV with curated list of clips.",
 )
 @click.option(
+    "-o",
     "--output",
     "output_dir",
     required=True,
