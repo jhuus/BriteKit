@@ -38,7 +38,7 @@
 ## Introduction
 BriteKit (Bioacoustic Recognizer Technology Kit) is a Python package that facilitates the development of bioacoustic recognizers using deep learning.
 It provides a command-line interface (CLI) as well as a Python API, to support functions such as:
-- downloading recordings from Xeno-Canto, iNaturalist, and Youtube (optionally using Google Audioset metadata)
+- downloading recordings from Xeno-Canto, iNaturalist, and YouTube (optionally using Google Audioset metadata)
 - managing training data in a SQLite database
 - training models
 - testing, tuning and calibrating models
@@ -62,7 +62,7 @@ britekit init --dest=<directory path>
 This creates the directories needed and installs sample files. If you omit `--dest`, it will create
 directories under the current working directory.
 ## Configuration
-Configuration parameters are documented [here](config-reference.md). After running `britekit init`, the file `yaml/base_config.yaml` contains all parameters in YAML format.
+Configuration parameters are documented [here](config-reference.md). After running `britekit init`, the file `yaml/samples/base_config.yaml` contains all parameters in YAML format.
 Most CLI commands have a `--config` argument that allows you to specify the path to a YAML file that overrides selected parameters. For example, when running the `train` command,
 you could provide a YAML file containing the following:
 ```
@@ -79,13 +79,13 @@ cfg, _ = bk.get_config()
 cfg.train.model_type = "effnet.4"
 ```
 ## Downloading Recordings
-The `inat`, `xeno` and `youtube` commands make it easy to download recordings from Xeno_Canto, iNaturalist and Youtube. For iNaturalist it is important to provide the scientific name. For example, to download recordings of the American Green Frog (lithobates clamitans), type:
+The `inat`, `xeno` and `youtube` commands make it easy to download recordings from Xeno-Canto, iNaturalist and YouTube. For iNaturalist it is important to provide the scientific name. For example, to download recordings of the American Green Frog (lithobates clamitans), type:
 ```
 britekit inat --name "lithobates clamitans" --output <output-path>
 ```
-For Xeno-Canto, use `--name` for the common name or `--sci` for the scientific name. For Youtube, specify the ID of the corresponding video. For example, specify `--id K_EsxukdNXM` to download the audio from https://www.youtube.com/watch?v=K_EsxukdNXM.
+For Xeno-Canto, use `--name` for the common name or `--sci` for the scientific name. For YouTube, specify the ID of the corresponding video. For example, specify `--id K_EsxukdNXM` to download the audio from https://www.youtube.com/watch?v=K_EsxukdNXM.
 
-BriteKit also supports downloads using [Google Audioset](https://research.google.com/audioset/), which is metadata that classifies sounds in Youtube videos. Audioset was released in March 2017, so any videos uploaded later than that are not included. Also, some videos that are tagged in Audioset are no longer available. Type `britekit audioset --help` for more information.
+BriteKit also supports downloads using [Google Audioset](https://research.google.com/audioset/), which is metadata that classifies sounds in YouTube videos. Audioset was released in March 2017, so any videos uploaded later than that are not included. Also, some videos that are tagged in Audioset are no longer available. Type `britekit audioset --help` for more information.
 ## Managing Training Data
 Once you have a collection of recordings, the steps to prepare it for training are:
 1. Extract spectrograms from recordings and insert them into the training database.
@@ -161,7 +161,7 @@ To run a test, you need to annotate a set of test recordings, analyze them with 
 | Column | Description |
 |---|---|
 | recording | Just the stem of the recording name, e.g. XC12345, not XC12345.mp3. |
-| classes | Defined classes found in the recording, separated by commas. For example "AMCR,BCCH,COYE", but without the quotes.
+| classes | Defined classes found in the recording, separated by commas. For example: AMCR,BCCH,COYE.
 
 Per-minute annotations are defined in a CSV file with these columns:
 | Column | Description |
@@ -193,7 +193,7 @@ Here is a practical approach:
 2. Do an initial tuning pass of the main training hyperparameters, especially model_type, head_type and num_epochs.
 3. Based on the above, carefully tune the audio/spectrogram parameters.
 
-This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc), and then you can proceed to fine-tuning the training and inference. For inference, it is usually worth tuning the `audio_power` parameter. If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`. For traininf, it may be worth tuning the data augmentation hyperparameters, which are described in detail in the [Data Augmentation](#data-augmentation) section below.
+This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc), and then you can proceed to fine-tuning the training and inference. For inference, it is usually worth tuning the `audio_power` parameter. If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`. For training, it may be worth tuning the data augmentation hyperparameters, which are described in detail in the [Data Augmentation](#data-augmentation) section below.
 
 To run the `tune` command, you would typically use a config YAML file as described earlier, plus a special tuning YAML file, as in this example:
 ```
@@ -204,7 +204,7 @@ To run the `tune` command, you would typically use a config YAML file as describ
   - 512
   step: 64
 ```
-This gives the name of the parameter to tune, its datatype, and the bounds and step sizes to try. In this case, we want to try spec_width values of 256, 320, 384, 448 and 512. You can also tune multiple parameters at the same time, by simply appending more definitions similar to this one. Parameters that have a choice of defined values rather than a range are specified like this:
+This gives the name of the parameter to tune, its data type, and the bounds and step sizes to try. In this case, we want to try spec_width values of 256, 320, 384, 448 and 512. You can also tune multiple parameters at the same time, by simply appending more definitions similar to this one. Parameters that have a choice of defined values rather than a range are specified like this:
 ```
 - name: head_type
   type: categorical
