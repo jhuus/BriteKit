@@ -62,7 +62,7 @@ britekit init --dest=<directory path>
 This creates the directories needed and installs sample files. If you omit `--dest`, it will create
 directories under the current working directory.
 ## Configuration
-Configuration parameters are documented [here](config-reference.md). After running `britekit init`, the file `yaml/samples/base_config.yaml` contains all parameters in YAML format.
+Configuration parameters are documented [here](config-reference.md). After running `britekit init`, the file `yaml/base_config.yaml` contains all parameters in YAML format.
 Most CLI commands have a `--config` argument that allows you to specify the path to a YAML file that overrides selected parameters. For example, when running the `train` command,
 you could provide a YAML file containing the following:
 ```
