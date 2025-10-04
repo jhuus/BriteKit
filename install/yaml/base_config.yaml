@@ -11,7 +11,7 @@ audio: !!python/object:britekit.core.base_config.Audio
   sampling_rate: 18000
   spec_duration: 5.0
   spec_height: 128
-  spec_width: 500
+  spec_width: 480
   top_db: 80
   win_length: 0.055
 infer: !!python/object:britekit.core.base_config.Inference
@@ -25,12 +25,12 @@ infer: !!python/object:britekit.core.base_config.Inference
   min_score: 0.8
   num_threads: 3
   openvino_block_size: 100
+  overlap: 0.0
   raise_min_to_confirm: 0.5
   scaling_coefficient: 1.0
   scaling_intercept: 0.0
   seed: 99
   segment_len: null
-  spec_overlap_seconds: 0.0
 misc: !!python/object:britekit.core.base_config.Miscellaneous
   ckpt_folder: data/ckpt
   classes_file: data/classes.txt
@@ -41,13 +41,16 @@ misc: !!python/object:britekit.core.base_config.Miscellaneous
   search_ckpt_path: null
   source_regexes:
   - !!python/tuple
-    - XC\d+
+    - ^[A-Za-z0-9_-]{11}-\d+$
+    - Audioset
+  - !!python/tuple
+    - ^XC\d+$
     - Xeno-Canto
   - !!python/tuple
-    - N\d+
+    - ^N\d+$
     - iNaturalist
   - !!python/tuple
-    - \d+
+    - ^\d+$
     - Macaulay Library
   - !!python/tuple
     - .*
@@ -108,7 +111,7 @@ train: !!python/object:britekit.core.base_config.Training
   noise_class_name: Noise
   num_epochs: 10
   num_folds: 1
-  num_workers: 2
+  num_workers: 3
   offpeak_weight: 0.002
   opt_beta1: 0.9
   opt_beta2: 0.999
@@ -124,6 +127,6 @@ train: !!python/object:britekit.core.base_config.Training
   shuffle: true
   test_pickle: null
   train_db: data/training.db
-  train_pickle: null
+  train_pickle: data/training.pkl
   val_portion: 0
   warmup_fraction: 0.0
