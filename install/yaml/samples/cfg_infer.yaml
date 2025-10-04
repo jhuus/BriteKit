@@ -1,0 +1,3 @@
+# force 5-second segments when using SED
+infer:
+  segment_len: 5
