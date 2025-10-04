@@ -178,15 +178,10 @@ class BaseModel(pl.LightningModule):
         else:
             preds = torch.softmax(seg_logits, dim=1)
 
-        acc = accuracy(preds, y, task="multilabel", num_labels=self.num_classes)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
 
-        pr_auc = metrics.average_precision_score(y.cpu(), preds.cpu(), average="micro")
         roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
-
-        self.log("val_pr_auc", pr_auc, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val_roc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss
 
@@ -199,18 +194,8 @@ class BaseModel(pl.LightningModule):
 
         if self.multi_label:
             preds = torch.sigmoid(seg_logits)
-            micro_aps = metrics.average_precision_score(
-                y.cpu(), preds.cpu(), average="micro"
-            )
-            self.log(
-                "test_micro_aps", micro_aps, on_step=False, on_epoch=True, prog_bar=True
-            )
-            macro_aps = metrics.average_precision_score(
-                y.cpu(), preds.cpu(), average="macro"
-            )
-            self.log(
-                "test_macro_aps", macro_aps, on_step=False, on_epoch=True, prog_bar=True
-            )
+            roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
+            self.log("test_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss
 
