@@ -51,10 +51,16 @@ The classes used by the commands can also be accessed, and are documented [here]
 ## License
 BriteKit is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
 ## Installation
-Install the BriteKit package using pip:
+It is best to install BriteKit in a virtual environment, such as a [Python venv](https://docs.python.org/3/library/venv.html). Once you have that set up, install the BriteKit package using pip:
 ```console
 pip install britekit
 ```
+In Windows environments, you then need to uninstall and reinstall PyTorch:
+```
+pip uninstall -y torch torchvision torchaudio
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+```
+Note that cu126 refers to CUDA 12.6.\
 Once BriteKit is installed, initialize a working environment using the `init` command:
 ```console
 britekit init --dest=<directory path>

@@ -56,6 +56,16 @@ def _train_cmd(
     cfg_path: str,
 ):
     util.set_logging()
+
+    import platform, torch
+    if platform.system() == "Windows" and not torch.cuda.is_available():
+        logging.warning(
+            "CUDA is not available. On Windows, reinstall a CUDA-enabled PyTorch build like this:\n"
+            "  pip uninstall -y torch torchvision torchaudio\n"
+            "  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuxxx"
+            "For example, use cu126 for CUDA 12.6."
+        )
+
     train(cfg_path)
 
 
