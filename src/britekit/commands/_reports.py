@@ -244,12 +244,14 @@ def rpt_epochs(
     max_roc_score, max_roc_epoch = 0, 0
     pr_scores = []
     roc_scores = []
-    util.set_logging(level=logging.ERROR) # suppress output from Analyzer and PerSegmentTester
     with tempfile.TemporaryDirectory() as temp_dir:
         cfg.misc.ckpt_folder = temp_dir
 
         for epoch_num in epoch_nums:
+            util.set_logging() # restore console output
             logging.info(f"Processing epoch {epoch_num}")
+            # suppress output from Analyzer and PerSegmentTester
+            util.set_logging(level=logging.ERROR)
 
             # copy checkpoint to temp dir
             from_path = epoch_to_ckpt[epoch_num]
@@ -270,6 +272,7 @@ def rpt_epochs(
                 temp_dir,
                 threshold=0.8,
             )
+
             tester.initialize()
 
             pr_stats = tester.get_pr_auc_stats()
@@ -287,8 +290,6 @@ def rpt_epochs(
                 max_roc_epoch = epoch_num
 
             os.remove(to_path)
-
-    util.set_logging() # restore console output
 
     # Save CSV
     df = pd.DataFrame()
