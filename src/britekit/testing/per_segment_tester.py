@@ -543,7 +543,7 @@ class PerSegmentTester(BaseTester):
             f"Average of macro-ROC-annotated and micro-ROC-trained = {self.roc_auc_dict['combined_roc_auc_trained']:.4f}\n"
         )
 
-        logging.info()
+        logging.info("")
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
             for rpt_line in rpt:
                 logging.info(rpt_line[:-1])

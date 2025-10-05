@@ -237,7 +237,7 @@ class PerMinuteTester(BaseTester):
                 f"\rPercent complete: {int(threshold * 100)}%", end="", flush=True
             )
 
-        logging.info()
+        logging.info("")
         pr_table_dict = {}
         pr_table_dict["annotated_thresholds"] = thresholds
         pr_table_dict["annotated_precisions_minutes"] = precision_annotated_minutes
@@ -425,7 +425,7 @@ class PerMinuteTester(BaseTester):
         rpt.append(
             f"      Recall (minutes) = {100 * self.details_dict['recall_trained']:.2f}%\n"
         )
-        logging.info()
+        logging.info("")
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
             for rpt_line in rpt:
                 logging.info(rpt_line[:-1])
