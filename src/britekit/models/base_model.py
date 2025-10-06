@@ -11,7 +11,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
-from torchmetrics.functional import accuracy
 
 from britekit.core.config_loader import get_config
 from britekit.core import util
@@ -195,7 +194,9 @@ class BaseModel(pl.LightningModule):
         if self.multi_label:
             preds = torch.sigmoid(seg_logits)
             roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
-            self.log("test_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
+            self.log(
+                "test_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True
+            )
 
         return loss
 

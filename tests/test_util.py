@@ -12,7 +12,6 @@ import pytest
 import torch
 
 from britekit.core.util import (
-    get_device,
     format_elapsed_time,
     get_range,
     cfg_to_pure,
@@ -127,6 +126,7 @@ class TestEnum(Enum):
 # =============================================================================
 # Core Utility Functions Tests
 # =============================================================================
+
 
 class TestFormatElapsedTime:
     """Test format_elapsed_time function."""

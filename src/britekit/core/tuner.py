@@ -1,7 +1,6 @@
 # Defer some imports to improve initialization performance.
 import copy
 import logging
-import os
 from pathlib import Path
 import random
 import re
@@ -263,6 +262,21 @@ class Tuner:
             self.trial_num += 1
             self.trial_metrics[self.trial_num] = {}
 
+    @staticmethod
+    def _find_latest_version_dir(root):
+        root = Path(root)
+        version_dirs = []
+        for d in root.iterdir():
+            if d.is_dir() and d.name.startswith("version"):
+                m = re.search(r"\d+", d.name)
+                if m:
+                    version_dirs.append((int(m.group()), d))
+
+        assert version_dirs, "Failed to find training log directory"
+
+        # Sort numerically by the extracted version number
+        return max(version_dirs, key=lambda x: x[0])[1].name
+
     def _run_test(self):
         """
         Run inference with the generated checkpoints and return the selected metric.
@@ -270,10 +284,11 @@ class Tuner:
         from britekit.core.analyzer import Analyzer
         from britekit.testing.per_segment_tester import PerSegmentTester
 
-        train_dir = sorted(os.listdir(self.train_log_dir), key=natural_key)[-1]
+        train_dir = self._find_latest_version_dir(self.train_log_dir)
         self.cfg.misc.ckpt_folder = str(
             Path(self.train_log_dir) / train_dir / "checkpoints"
         )
+        print(f"{self.cfg.misc.ckpt_folder=}")
         self.cfg.infer.min_score = 0
 
         # suppress console output during inference and test analysis
