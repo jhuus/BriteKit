@@ -288,7 +288,7 @@ class Tuner:
         self.cfg.misc.ckpt_folder = str(
             Path(self.train_log_dir) / train_dir / "checkpoints"
         )
-        print(f"{self.cfg.misc.ckpt_folder=}")
+        logging.info(f"Using checkpoints in {self.cfg.misc.ckpt_folder}")
         self.cfg.infer.min_score = 0
 
         # suppress console output during inference and test analysis

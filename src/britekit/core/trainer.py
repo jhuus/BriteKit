@@ -1,4 +1,5 @@
 # Defer some imports to improve initialization performance.
+import logging
 from pathlib import Path
 
 from britekit.core.config_loader import get_config
@@ -43,6 +44,7 @@ class Trainer:
         # load all the data once for performance, then split as needed in each fold
         dm = DataModule()
 
+        val_rocs = []
         for k in range(self.cfg.train.num_folds):
             logger = TensorBoardLogger(
                 save_dir="logs", name=f"fold-{k}", default_hp_metric=False
@@ -115,6 +117,26 @@ class Trainer:
 
             if self.cfg.train.test_pickle is not None:
                 trainer.test(model, dm)
+
+            # save stats from k-fold cross-validation
+            if self.cfg.train.num_folds > 1 and "val_roc" in trainer.callback_metrics:
+                val_rocs.append(float(trainer.callback_metrics["val_roc"]))
+
+        if val_rocs:
+            import math
+            import numpy as np
+            mean = float(np.mean(val_rocs))
+            std  = float(np.std(val_rocs, ddof=1)) if len(val_rocs) > 1 else 0.0
+            n = len(val_rocs)
+            se = std / math.sqrt(n) if n > 1 else 0.0
+            ci95 = 1.96 * se # 95% CI using normal approximation
+
+            logging.info("Using micro-averaged ROC AUC")
+            scores_str = ", ".join(f"{v:.4f}" for v in val_rocs)
+            logging.info(f"folds: {scores_str}")
+            logging.info(f"mean: {mean:.4f}")
+            logging.info(f"standard deviation: {std:.4f}")
+            logging.info(f"95% confidence interval: {mean-ci95:.4f} to {mean+ci95:.4f}")
 
     def find_lr(self, num_batches: int = 100):
         """
