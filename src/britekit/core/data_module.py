@@ -52,6 +52,7 @@ class DataModule(LightningDataModule):
             )
         except Exception as e:
             logging.error(f"Failed to load training data: {e}")
+            raise
 
         if (
             self.cfg.train.noise_class_name
