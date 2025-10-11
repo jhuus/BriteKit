@@ -276,14 +276,14 @@ def rpt_epochs(
             tester.initialize()
 
             pr_stats = tester.get_pr_auc_stats()
-            pr_score = pr_stats["macro_pr_auc"]
+            pr_score = pr_stats["micro_pr_auc"]
             pr_scores.append(pr_score)
             if pr_score > max_pr_score:
                 max_pr_score = pr_score
                 max_pr_epoch = epoch_num
 
             roc_stats = tester.get_roc_auc_stats()
-            roc_score = roc_stats["macro_roc_auc"]
+            roc_score = roc_stats["micro_roc_auc"]
             roc_scores.append(roc_score)
             if roc_score > max_roc_score:
                 max_roc_score = roc_score
@@ -323,8 +323,8 @@ def rpt_epochs(
     plot_path = str(Path(output_path) / "training_scores.jpeg")
     plt.savefig(plot_path, dpi=300, bbox_inches="tight")
 
-    logging.info(f"Maximum PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}")
-    logging.info(f"Maximum ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
+    logging.info(f"Maximum micro-averaged PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}")
+    logging.info(f"Maximum micro-averaged ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
     logging.info(f"See plot at {plot_path}")
 
 
