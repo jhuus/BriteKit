@@ -276,14 +276,14 @@ def rpt_epochs(
             tester.initialize()
 
             pr_stats = tester.get_pr_auc_stats()
-            pr_score = pr_stats["micro_pr_auc"]
+            pr_score = pr_stats["micro_pr_auc_trained"]
             pr_scores.append(pr_score)
             if pr_score > max_pr_score:
                 max_pr_score = pr_score
                 max_pr_epoch = epoch_num
 
             roc_stats = tester.get_roc_auc_stats()
-            roc_score = roc_stats["micro_roc_auc"]
+            roc_score = roc_stats["micro_roc_auc_trained"]
             roc_scores.append(roc_score)
             if roc_score > max_roc_score:
                 max_roc_score = roc_score
