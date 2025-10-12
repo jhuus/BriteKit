@@ -13,6 +13,7 @@ from ._db_delete import (
     del_stype,
 )
 from ._embed import embed
+from ._ensemble import ensemble
 from ._extract import extract_all, extract_by_image
 from ._find_dup import find_dup
 from ._inat import inat
@@ -54,6 +55,7 @@ __all__ = [
     "del_src",
     "del_stype",
     "embed",
+    "ensemble",
     "extract_all",
     "extract_by_image",
     "find_dup",

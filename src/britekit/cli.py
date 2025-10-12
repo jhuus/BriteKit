@@ -30,6 +30,7 @@ from .commands._db_delete import (
     _del_stype_cmd,
 )
 from .commands._embed import _embed_cmd
+from .commands._ensemble import _ensemble_cmd
 from .commands._extract import _extract_all_cmd, _extract_by_image_cmd
 from .commands._find_dup import _find_dup_cmd
 from .commands._inat import _inat_cmd
@@ -80,6 +81,7 @@ cli.add_command(_del_src_cmd)
 cli.add_command(_del_stype_cmd)
 
 cli.add_command(_embed_cmd)
+cli.add_command(_ensemble_cmd)
 cli.add_command(_extract_all_cmd)
 cli.add_command(_extract_by_image_cmd)
 

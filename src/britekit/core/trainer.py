@@ -125,11 +125,12 @@ class Trainer:
         if val_rocs:
             import math
             import numpy as np
+
             mean = float(np.mean(val_rocs))
-            std  = float(np.std(val_rocs, ddof=1)) if len(val_rocs) > 1 else 0.0
+            std = float(np.std(val_rocs, ddof=1)) if len(val_rocs) > 1 else 0.0
             n = len(val_rocs)
             se = std / math.sqrt(n) if n > 1 else 0.0
-            ci95 = 1.96 * se # 95% CI using normal approximation
+            ci95 = 1.96 * se  # 95% CI using normal approximation
 
             logging.info("Using micro-averaged ROC AUC")
             scores_str = ", ".join(f"{v:.4f}" for v in val_rocs)
