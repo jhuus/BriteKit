@@ -18,7 +18,7 @@ def tune(
     param_path: Optional[str] = None,
     output_path: str = "",
     annotations_path: str = "",
-    metric: str = "macro_roc",
+    metric: str = "micro_roc",
     recordings_path: str = "",
     train_log_path: str = "",
     num_trials: int = 0,
@@ -159,7 +159,7 @@ def tune(
             "micro_roc",
         ]
     ),
-    default="macro_roc",
+    default="micro_roc",
     help="Metric used to compare runs. Macro-averaging uses annotated classes only, but micro-averaging uses all classes.",
 )
 @click.option(
