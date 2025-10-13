@@ -313,7 +313,7 @@ Args:
 ### ensemble
 **Function**  
 ```python
-ensemble(cfg_path: Optional[str] = None, ckpt_path: str = '', ensemble_size: int = 3, num_tries: int = 100, metric: str = 'micro_roc', annotations_path: str = '', recordings_path: Optional[str] = None, output_path: str = '') -> None
+ensemble(cfg_path: Optional[str] = None, ckpt_path: str = '', ensemble_size: int = 3, num_tries: int = 100, metric: str = 'micro_roc', annotations_path: str = '', recordings_path: Optional[str] = None) -> None
 ```
 Find the best ensemble of a given size from a group of checkpoints.
 
@@ -328,7 +328,6 @@ Args:
     metric (str): Metric to use to compare ensembles (default=micro_roc).
     annotations_path (str): Path to CSV file containing ground truth annotations.
     recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-    output_path (str): Directory where reports will be saved.
 
 ### extract_all
 **Function**  

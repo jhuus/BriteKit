@@ -403,7 +403,6 @@ Options:
                                   ground truth).  [required]
   -r, --recordings DIRECTORY      Recordings directory. Default is directory
                                   containing annotations file.
-  -o, --output DIRECTORY          Path to output directory.  [required]
   --help                          Show this message and exit.
 ```
 ### britekit extract-all
