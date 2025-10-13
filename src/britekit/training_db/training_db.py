@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from typing import Optional
 
 from britekit.core.exceptions import DatabaseError
-from britekit.core.config_loader import get_config
 
 
 class TrainingDatabase:
@@ -20,7 +19,6 @@ class TrainingDatabase:
 
     def __init__(self, db_path: str = os.path.join("data", "training.db")):
         self.today = datetime.today().strftime("%Y-%m-%d")
-        _, self.fn_cfg = get_config()
         try:
             self.conn = sqlite3.connect(db_path)
             self.conn.execute("PRAGMA foreign_keys = ON")

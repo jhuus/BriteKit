@@ -6,7 +6,7 @@ _base_config: Optional[BaseConfig] = None
 _func_config: Optional[FunctionConfig] = None
 
 
-def get_config(cfg_path: Optional[str] = None) -> tuple[BaseConfig, FunctionConfig]:
+def get_config(cfg_path: Optional[str] = None) -> BaseConfig:
     from omegaconf import OmegaConf, DictConfig
 
     if cfg_path is None:
@@ -16,21 +16,27 @@ def get_config(cfg_path: Optional[str] = None) -> tuple[BaseConfig, FunctionConf
         return get_config_with_dict(yaml_cfg)
 
 
-def get_config_with_dict(
-    cfg_dict=None,
-) -> tuple[BaseConfig, FunctionConfig]:
+def get_func_config() -> FunctionConfig:
+    global _func_config
+    if _func_config is None:
+        _func_config = FunctionConfig()
+
+    return _func_config
+
+
+def get_config_with_dict(cfg_dict=None) -> BaseConfig:
     from omegaconf import OmegaConf
 
-    global _base_config, _func_config
+    global _base_config
     if _base_config is None:
         _base_config = OmegaConf.structured(BaseConfig())
-        _func_config = FunctionConfig()
+
     # allow late merges/overrides even if already initialized
     if cfg_dict is not None:
         _base_config = cast(
             BaseConfig, OmegaConf.merge(_base_config, OmegaConf.create(cfg_dict))
         )
-    return cast(tuple[BaseConfig, FunctionConfig], (_base_config, _func_config))
+    return _base_config
 
 
 def set_base_config(cfg: BaseConfig) -> None:

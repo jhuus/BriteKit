@@ -105,7 +105,7 @@ def find_dup(
         else:
             return False
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if db_path is None:
         db_path = cfg.train.train_db
 

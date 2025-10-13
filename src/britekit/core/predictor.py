@@ -37,7 +37,7 @@ class Predictor:
         """
         from britekit.core.audio import Audio
 
-        self.cfg, _ = get_config()
+        self.cfg = get_config()
         self.audio = Audio()
         self.class_names: Optional[List[str]] = None
         self.class_codes: Optional[List[str]] = None

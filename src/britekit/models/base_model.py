@@ -72,7 +72,7 @@ class BaseModel(pl.LightningModule):
             )
 
         self.save_hyperparameters()
-        self.cfg, _ = get_config()
+        self.cfg = get_config()
 
         # Save parameters
         self.model_type = model_type

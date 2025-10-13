@@ -16,7 +16,7 @@ class Analyzer:
     """
 
     def __init__(self):
-        self.cfg, self.fn_cfg = get_config()
+        self.cfg = get_config()
         self.dataframes = []
 
     def _save_manifest(self, output_path: str, predictor):

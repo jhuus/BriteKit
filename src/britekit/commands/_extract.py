@@ -42,7 +42,7 @@ def extract_all(
     from britekit.training_db.extractor import Extractor
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
 
@@ -172,7 +172,7 @@ def extract_by_image(
     from britekit.training_db.extractor import Extractor
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
 

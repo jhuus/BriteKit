@@ -13,7 +13,7 @@ class DataModule(LightningDataModule):
         super().__init__()
         from britekit.core.dataset import SpectrogramDataset
 
-        self.cfg, _ = get_config()
+        self.cfg = get_config()
         self.train_data = None
         self.val_data = None
         self.test_data = None

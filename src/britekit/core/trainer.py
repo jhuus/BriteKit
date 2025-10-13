@@ -14,7 +14,7 @@ class Trainer:
         import pytorch_lightning as pl
         import torch
 
-        self.cfg, _ = get_config()
+        self.cfg = get_config()
         torch.set_float32_matmul_precision("medium")
         if self.cfg.train.seed is not None:
             pl.seed_everything(self.cfg.train.seed, workers=True)

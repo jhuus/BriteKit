@@ -477,7 +477,7 @@ class TestGetSourceName:
         """Test with empty filename."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = []
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         result = get_source_name("")
         assert result == "default"
@@ -487,7 +487,7 @@ class TestGetSourceName:
         """Test when no regexes are configured."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = None
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         result = get_source_name("test.mp3")
         assert result == "default"
@@ -497,7 +497,7 @@ class TestGetSourceName:
         """Test with matching regex."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = [("test.*", "test_source")]
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         result = get_source_name("test_file.mp3")
         assert result == "test_source"
@@ -507,7 +507,7 @@ class TestGetSourceName:
         """Test when no regex matches."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = [("test.*", "test_source")]
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         result = get_source_name("other_file.mp3")
         assert result == "default"
@@ -517,7 +517,7 @@ class TestGetSourceName:
         """Test with invalid regex pattern."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = [("[invalid", "test_source")]
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         result = get_source_name("test_file.mp3")
         assert result == "default"
@@ -527,7 +527,7 @@ class TestGetSourceName:
         """Test filename with extension."""
         mock_cfg = MagicMock()
         mock_cfg.misc.source_regexes = [("test.*", "test_source")]
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         result = get_source_name("test_file.mp3")
         assert result == "test_source"
@@ -577,7 +577,7 @@ class TestExpandSpectrogram:
         mock_cfg = MagicMock()
         mock_cfg.audio.spec_height = 64
         mock_cfg.audio.spec_width = 128
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         compressed = compress_spectrogram(sample_spectrogram)
         result = expand_spectrogram(compressed)
@@ -606,7 +606,7 @@ class TestExpandSpectrogram:
         mock_cfg = MagicMock()
         mock_cfg.audio.spec_height = 64  # Different from test_spectrogram height (32)
         mock_cfg.audio.spec_width = 128  # Different from test_spectrogram width (64)
-        mock_get_config.return_value = (mock_cfg, None)
+        mock_get_config.return_value = mock_cfg
 
         # Compress with one size, try to expand with different expected size
         compressed = compress_spectrogram(test_spectrogram)

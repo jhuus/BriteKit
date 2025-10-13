@@ -89,7 +89,7 @@ def plot_db(
     from britekit.core.plot import plot_spec
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
 
@@ -247,7 +247,7 @@ def plot_dir(
     """
     from britekit.core.audio import Audio
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
 
@@ -363,7 +363,7 @@ def plot_rec(
     """
     from britekit.core.audio import Audio
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if power is not None:
         cfg.audio.power = power
 

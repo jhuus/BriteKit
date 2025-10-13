@@ -9,7 +9,7 @@ os.makedirs(plot_path, exist_ok=True)
 
 
 def test_audio_main():
-    cfg, _ = get_config()
+    cfg = get_config()
     _audio = audio.Audio()
     _audio.load(str(Path(recording_path) / "CommonYellowthroat.mp3"))
 
@@ -25,7 +25,7 @@ def test_audio_main():
 
 
 def test_low_band():
-    cfg, _ = get_config()
+    cfg = get_config()
 
     # have to set audio parameters before creating audio object
     cfg.audio.spec_height = 64

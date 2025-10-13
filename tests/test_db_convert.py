@@ -2,13 +2,9 @@ import shutil
 from pathlib import Path
 
 from britekit import TrainingDatabase, TrainingDataProvider
-from britekit.core.config_loader import get_config
 
 
 def test_db_convert():
-    _, fn_cfg = get_config()
-    fn_cfg.echo = print
-
     # copy the old database (named ".saved" since ".db" is in gitignore.txt)
     from_path = str(Path("tests") / "db" / "old.db.saved")
     to_path = str(Path("tests") / "db" / "new.db")

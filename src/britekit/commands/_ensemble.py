@@ -95,7 +95,7 @@ def ensemble(
         logging.error(f"Error: invalid metric ({metric})")
         return
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     ckpt_paths = sorted(glob.glob(os.path.join(ckpt_path, "*.ckpt")))
     num_ckpts = len(ckpt_paths)
     if num_ckpts == 0:
@@ -145,6 +145,7 @@ def ensemble(
 
     logging.info(f"Best score = {best_score:.4f}")
 
+    assert best_ensemble is not None
     best_names = [Path(ckpt_path).name for ckpt_path in best_ensemble]
     logging.info(f"Best ensemble = {best_names}")
 

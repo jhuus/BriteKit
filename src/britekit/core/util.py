@@ -101,7 +101,7 @@ def get_device() -> str:
     """Return the device for pytorch to use."""
     import torch
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if cfg.misc.force_cpu:
         return "cpu"  # for performance comparisons
     elif torch.cuda.is_available():
@@ -362,7 +362,7 @@ def get_source_name(filename: str) -> str:
     if not filename:
         return "default"
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if not cfg.misc.source_regexes:
         return "default"
 
@@ -432,7 +432,7 @@ def expand_spectrogram(spec: bytes):
         raise TypeError("spec must be bytes")
 
     try:
-        cfg, _ = get_config()
+        cfg = get_config()
         bytes_data = zlib.decompress(spec)
         spec_array = np.frombuffer(bytes_data, dtype=np.uint8) / 255
         spec_array = spec_array.astype(np.float32)

@@ -59,7 +59,7 @@ class SpectrogramDataset(Dataset):
         self.noise_class_index = noise_class_index
         self.is_training = is_training
 
-        self.cfg, _ = get_config()
+        self.cfg = get_config()
 
         # get indexes of all specs that contain only noise
         self.noise_indexes = []

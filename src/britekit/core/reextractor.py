@@ -61,7 +61,7 @@ class Reextractor:
         import numpy as np
         import pandas as pd
 
-        cfg, _ = get_config()
+        cfg = get_config()
 
         with TrainingDatabase(self.db_path) as db:
             if self.class_name is None and self.classes_path is None:

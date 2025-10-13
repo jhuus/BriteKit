@@ -39,7 +39,7 @@ class TimmModel(BaseModel):
 
         # head replacement is not supported here since it
         # would be very complicated with so many model types
-        cfg, _ = get_config()
+        cfg = get_config()
         assert model_type.startswith("timm.")
         self.backbone = timm.create_model(
             model_type[5:],  # strip off the "timm." prefix

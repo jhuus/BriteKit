@@ -62,7 +62,7 @@ def search(
     from britekit.models.model_loader import load_from_checkpoint
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)

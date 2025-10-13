@@ -68,7 +68,7 @@ class PerSegmentTester(BaseTester):
         self.coefficient = coef
         self.intercept = inter
 
-        self.cfg, self.fn_cfg = get_config()
+        self.cfg = get_config()
 
     def _get_recording_info(self):
         """

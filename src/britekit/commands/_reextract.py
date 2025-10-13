@@ -38,7 +38,7 @@ def reextract(
         spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
     """
     from britekit.core.reextractor import Reextractor
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
 
     if class_name and classes_path:
         logging.error("Only one of --name and --classes may be specified.")

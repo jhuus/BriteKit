@@ -51,7 +51,7 @@ class Audio:
         import torchaudio as ta
 
         if cfg is None:
-            self.cfg, _ = get_config()
+            self.cfg = get_config()
         else:
             self.cfg = cfg
 

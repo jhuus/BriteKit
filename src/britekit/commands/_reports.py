@@ -143,7 +143,7 @@ def rpt_db(cfg_path: Optional[str] = None,
     from britekit.training_db.training_db import TrainingDatabase
     from britekit.training_db.training_data_provider import TrainingDataProvider
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
 
@@ -214,7 +214,7 @@ def rpt_epochs(
     from britekit.core.analyzer import Analyzer
     from britekit.testing.per_segment_tester import PerSegmentTester
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     ckpt_paths = glob.glob(str(Path(input_path) / "*.ckpt"))
     if len(ckpt_paths) == 0:
         logging.error(f"No checkpoint files found in {input_path}")
@@ -403,7 +403,7 @@ def rpt_labels(
     """
     import pandas as pd
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if min_score is None:
         min_score = cfg.infer.min_score
 
@@ -556,7 +556,7 @@ def rpt_test(
     from britekit.testing.per_recording_tester import PerRecordingTester
     from britekit.testing.per_segment_tester import PerSegmentTester
 
-    cfg, _ = get_config()
+    cfg = get_config()
     try:
         if not recordings_path:
             recordings_path = str(Path(annotations_path).parent)

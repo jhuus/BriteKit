@@ -25,7 +25,7 @@ def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -78,7 +78,7 @@ def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -128,7 +128,7 @@ def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -172,7 +172,7 @@ def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -217,7 +217,7 @@ def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -262,7 +262,7 @@ def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -311,7 +311,7 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 

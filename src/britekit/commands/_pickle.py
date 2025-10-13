@@ -37,7 +37,7 @@ def pickle(
     """
     from britekit.core.pickler import Pickler
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     if db_path is None:
         db_path = cfg.train.train_db
 

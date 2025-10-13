@@ -30,7 +30,7 @@ class Pickler:
     ):
         from britekit.training_db.training_db import TrainingDatabase
 
-        self.cfg, self.fn_cfg = get_config()
+        self.cfg = get_config()
         self.classes_path = classes_path
         self.output_path = output_path
         self.max_per_class = max_per_class

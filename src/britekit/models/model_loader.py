@@ -22,7 +22,7 @@ def load_new_model(
     from britekit.models.hgnet import HGNetModel
     from britekit.models.vovnet import VovNetModel
 
-    cfg, _ = get_config()
+    cfg = get_config()
     device = get_device()
 
     # create a dict of optional keyword arguments

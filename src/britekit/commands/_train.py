@@ -31,7 +31,7 @@ def train(
     """
     from britekit.core.trainer import Trainer
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     try:
         start_time = time.time()
         Trainer().run()
@@ -89,7 +89,7 @@ def find_lr(cfg_path: str, num_batches: int):
     """
     from britekit.core.trainer import Trainer
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     try:
         suggested_lr, fig = Trainer().find_lr(num_batches)
         fig.savefig("learning_rates.jpeg")

@@ -56,7 +56,7 @@ class PerRecordingTester(BaseTester):
         self.tp_secs_at_precision = tp_secs_at_precision
         self.per_recording = True
 
-        self.cfg, self.fn_cfg = get_config()
+        self.cfg = get_config()
 
     # ============================================================================
     # Public methods - Main execution

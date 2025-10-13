@@ -47,7 +47,7 @@ def analyze(
     from britekit.core.analyzer import Analyzer
 
     util.set_logging()
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     try:
         if rtype not in {"audacity", "csv", "both"}:
             logging.error(f"Error. invalid rtype value: {rtype}")

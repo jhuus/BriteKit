@@ -42,7 +42,7 @@ class Tuner:
         from britekit.core.pickler import Pickler
         from britekit.core.reextractor import Reextractor
 
-        self.cfg, self.fn_cfg = get_config()
+        self.cfg = get_config()
         self.original_seed = self.cfg.train.seed
         self.recording_dir = recording_dir
         self.output_dir = output_dir

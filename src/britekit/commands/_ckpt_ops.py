@@ -142,7 +142,7 @@ def ckpt_onnx(
     import torch
     from britekit.models.model_loader import load_from_checkpoint
 
-    cfg, _ = get_config(cfg_path)
+    cfg = get_config(cfg_path)
     base, _ = os.path.splitext(input_path)
     output_path = base + ".onnx"
     model = load_from_checkpoint(input_path)

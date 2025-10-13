@@ -62,7 +62,7 @@ class PerMinuteTester(BaseTester):
         self.threshold = threshold
         self.gen_pr_table = gen_pr_table
 
-        self.cfg, self.fn_cfg = get_config()
+        self.cfg = get_config()
 
     # ============================================================================
     # Public methods - Main execution

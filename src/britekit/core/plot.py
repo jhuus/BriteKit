@@ -28,7 +28,7 @@ def plot_spec(
     import matplotlib.pyplot as plt
     import numpy as np
 
-    cfg, _ = get_config()
+    cfg = get_config()
     assert cfg.audio.freq_scale in {"linear", "log", "mel"}
 
     if spec_duration is None:

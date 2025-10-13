@@ -43,7 +43,7 @@ class Extractor:
         self.spec_group = spec_group if spec_group is not None else "default"
 
         self.provider = TrainingDataProvider(self.db)
-        self.cfg, _ = get_config()
+        self.cfg = get_config()
         self.audio = audio.Audio()
 
         if overlap is None:

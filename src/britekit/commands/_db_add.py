@@ -23,7 +23,7 @@ def add_cat(db_path: Optional[str]=None, name: str="") -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -63,7 +63,7 @@ def add_stype(db_path: Optional[str]=None, name: str="") -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -103,7 +103,7 @@ def add_src(db_path: Optional[str]=None, name: str="") -> None:
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
@@ -154,7 +154,7 @@ def add_class(
     """
     from britekit.training_db.training_db import TrainingDatabase
 
-    cfg, _ = get_config()
+    cfg = get_config()
     if db_path is None:
         db_path = cfg.train.train_db
 
