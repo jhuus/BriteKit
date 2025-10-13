@@ -68,7 +68,6 @@ def ensemble(
     metric: str = "micro_roc",
     annotations_path: str = "",
     recordings_path: Optional[str] = None,
-    output_path: str = "",
 ) -> None:
     """
     Find the best ensemble of a given size from a group of checkpoints.
@@ -84,7 +83,6 @@ def ensemble(
         metric (str): Metric to use to compare ensembles (default=micro_roc).
         annotations_path (str): Path to CSV file containing ground truth annotations.
         recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-        output_path (str): Directory where reports will be saved.
     """
     import glob
     import itertools
@@ -216,14 +214,6 @@ def ensemble(
     required=False,
     help="Recordings directory. Default is directory containing annotations file.",
 )
-@click.option(
-    "-o",
-    "--output",
-    "output_path",
-    type=click.Path(file_okay=False, dir_okay=True),
-    required=True,
-    help="Path to output directory.",
-)
 def _ensemble_cmd(
     cfg_path: Optional[str],
     ckpt_path: str,
@@ -232,7 +222,6 @@ def _ensemble_cmd(
     metric: str,
     annotations_path: str,
     recordings_path: Optional[str],
-    output_path: str,
 ) -> None:
     util.set_logging()
-    ensemble(cfg_path, ckpt_path, ensemble_size, num_tries, metric, annotations_path, recordings_path, output_path)
+    ensemble(cfg_path, ckpt_path, ensemble_size, num_tries, metric, annotations_path, recordings_path)
