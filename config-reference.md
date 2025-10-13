@@ -113,4 +113,4 @@
 ### FunctionConfig
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `echo` | `Union[Callable[], NoneType]` | None | print, log, echo, ... |
+| `not_defined_yet` | `Union[Callable[], NoneType]` | None |  |

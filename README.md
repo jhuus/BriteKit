@@ -81,7 +81,7 @@ train:
 This overrides the default values for model_type, learning_rate, drop_rate and num_epochs. When using the API, you can update configuration parameters like this:
 ```
 import britekit as bk
-cfg, _ = bk.get_config()
+cfg = bk.get_config()
 cfg.train.model_type = "effnet.4"
 ```
 ## Downloading Recordings

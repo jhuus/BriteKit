@@ -310,6 +310,26 @@ Args:
     class_name (str, optional): Name of a specific class to process. If omitted, processes all classes.
     spec_group (str): Spectrogram group name to process. Defaults to 'default'.
 
+### ensemble
+**Function**  
+```python
+ensemble(cfg_path: Optional[str] = None, ckpt_path: str = '', ensemble_size: int = 3, num_tries: int = 100, metric: str = 'micro_roc', annotations_path: str = '', recordings_path: Optional[str] = None, output_path: str = '') -> None
+```
+Find the best ensemble of a given size from a group of checkpoints.
+
+Given a directory containing checkpoints, and an ensemble size (default=3), select random
+ensembles of the given size and test each one to identify the best ensemble.
+
+Args:
+    cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    ckpt_path (str): Path to directory containing checkpoints.
+    ensemble_size (int): Number of checkpoints in ensemble (default=3).
+    num_tries (int): Maximum number of ensembles to try (default=100).
+    metric (str): Metric to use to compare ensembles (default=micro_roc).
+    annotations_path (str): Path to CSV file containing ground truth annotations.
+    recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+    output_path (str): Directory where reports will be saved.
+
 ### extract_all
 **Function**  
 ```python
@@ -647,7 +667,7 @@ Args:
 ### tune
 **Function**  
 ```python
-tune(cfg_path: Optional[str] = None, param_path: Optional[str] = None, output_path: str = '', annotations_path: str = '', metric: str = 'macro_roc', recordings_path: str = '', train_log_path: str = '', num_trials: int = 0, num_runs: int = 1, extract: bool = False, skip_training: bool = False, classes_path: Optional[str] = None)
+tune(cfg_path: Optional[str] = None, param_path: Optional[str] = None, output_path: str = '', annotations_path: str = '', metric: str = 'micro_roc', recordings_path: str = '', train_log_path: str = '', num_trials: int = 0, num_runs: int = 1, extract: bool = False, skip_training: bool = False, classes_path: Optional[str] = None)
 ```
 Find and print the best hyperparameter settings based on exhaustive or random search.
 

@@ -183,7 +183,7 @@ Returns:
 
 **extract_by_image**  
 ```python
-Extractor.extract_by_image(self, rec_dir: str, spec_dir: str, echo, dest_dir: Optional[str] = None)
+Extractor.extract_by_image(self, rec_dir: str, spec_dir: str, dest_dir: Optional[str] = None)
 ```
 Extract spectrograms that match names of spectrogram images in a given directory.
 Typically the spectrograms were generated using the 'search' or 'plot-db' commands.
@@ -193,7 +193,6 @@ Args:
 - `rec_dir` *(str)* — Directory containing recordings.
 - `spec_dir` *(str)* — Directory containing spectrogram images.
 - `dest_dir` *(str, optional)* — Optionally copy used recordings to this directory.
-- `echo` — Function that prints a message to the console
 
 Returns:
 
@@ -853,7 +852,7 @@ Given a recording and a model or ensemble of models, provide methods to return s
 
 **get_dataframe**  
 ```python
-Predictor.get_dataframe(self, score_array: numpy.ndarray, frame_map: Optional[numpy.ndarray], start_times: list[float], recording_name: str) -> pandas.core.frame.DataFrame
+Predictor.get_dataframe(self, score_array, frame_map, start_times: list[float], recording_name: str)
 ```
 Given an array of raw scores, return as a pandas dataframe.
 
@@ -873,7 +872,7 @@ Returns:
 
 **get_frame_labels**  
 ```python
-Predictor.get_frame_labels(self, frame_map: numpy.ndarray) -> dict[str, list[britekit.core.predictor.Label]]
+Predictor.get_frame_labels(self, frame_map) -> dict[str, list[britekit.core.predictor.Label]]
 ```
 Given a frame map, return dict of labels.
 
@@ -892,7 +891,7 @@ Returns:
 
 **get_raw_scores**  
 ```python
-Predictor.get_raw_scores(self, recording_path: str) -> tuple[typing.Optional[numpy.ndarray], typing.Optional[numpy.ndarray], list[float]]
+Predictor.get_raw_scores(self, recording_path: str)
 ```
 Get scores in array format from the loaded models for the given recording.
 
@@ -908,7 +907,7 @@ Returns:
 
 **get_segment_labels**  
 ```python
-Predictor.get_segment_labels(self, scores: numpy.ndarray, start_times: list[float]) -> dict[str, list[britekit.core.predictor.Label]]
+Predictor.get_segment_labels(self, scores, start_times: list[float]) -> dict[str, list[britekit.core.predictor.Label]]
 ```
 Given an array of raw segment-level scores, return dict of labels.
 
@@ -926,7 +925,7 @@ Returns:
 
 **save_audacity_labels**  
 ```python
-Predictor.save_audacity_labels(self, scores: numpy.ndarray, frame_map: Optional[numpy.ndarray], start_times: list[float], file_path: str) -> None
+Predictor.save_audacity_labels(self, scores, frame_map, start_times: list[float], file_path: str) -> None
 ```
 Given an array of raw scores, convert to Audacity labels and save in the given file.
 
@@ -945,7 +944,7 @@ Returns:
 
 **to_global_frames**  
 ```python
-Predictor.to_global_frames(self, frame_scores: torch.Tensor, offsets_sec: Sequence[float], recording_duration_sec: float) -> torch.Tensor
+Predictor.to_global_frames(self, frame_scores, offsets_sec: Sequence[float], recording_duration_sec: float)
 ```
 Map overlapping per-spectrogram frame scores onto a global frame grid.
 Use mean rather than max or weighted values.
@@ -1858,5 +1857,5 @@ errors defaults to 'strict'.
 ### get_config
 **Function**  
 ```python
-get_config(cfg_path: Optional[str] = None) -> tuple[britekit.core.base_config.BaseConfig, britekit.core.base_config.FunctionConfig]
+get_config(cfg_path: Optional[str] = None) -> britekit.core.base_config.BaseConfig
 ```

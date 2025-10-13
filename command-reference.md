@@ -19,6 +19,7 @@
 | [britekit del-src](#britekit-del-src) | Delete a recording source and associated records from a database. |
 | [britekit del-stype](#britekit-del-stype) | Delete a sound type from a database. |
 | [britekit embed](#britekit-embed) | Insert spectrogram embeddings into database. |
+| [britekit ensemble](#britekit-ensemble) | Find the best ensemble of a given size from a group of checkpoints. |
 | [britekit extract-all](#britekit-extract-all) | Insert all spectrograms from recordings into database. |
 | [britekit extract-by-image](#britekit-extract-by-image) | Insert spectrograms that correspond to images. |
 | [britekit find-dup](#britekit-find-dup) | Find and optionally delete duplicate recordings in a database. |
@@ -150,16 +151,17 @@ Usage: britekit audioset [OPTIONS]
   specified class.
 
 Options:
-  --name TEXT         Class name.
-  --curated FILE      Path to CSV with curated list of clips.
-  --output DIRECTORY  Output directory.  [required]
-  --max INTEGER       Maximum number of recordings to download. Default = 500.
-  --sr INTEGER        Output sampling rate (default = 32000).
-  --skip INTEGER      Skip this many initial recordings (default = 0).
-  --rpt               Report on secondary classes associated with the specified
-                      class.
-  --root DIRECTORY    Root directory containing data directory.
-  --help              Show this message and exit.
+  --name TEXT             Class name.
+  --curated FILE          Path to CSV with curated list of clips.
+  -o, --output DIRECTORY  Output directory.  [required]
+  --max INTEGER           Maximum number of recordings to download. Default =
+                          500.
+  --sr INTEGER            Output sampling rate (default = 32000).
+  --skip INTEGER          Skip this many initial recordings (default = 0).
+  --rpt                   Report on secondary classes associated with the
+                          specified class.
+  --root DIRECTORY        Root directory containing data directory.
+  --help                  Show this message and exit.
 ```
 ### britekit calibrate
 ```
@@ -376,6 +378,34 @@ Options:
   --sgroup TEXT   Spectrogram group name. Defaults to 'default'.
   --help          Show this message and exit.
 ```
+### britekit ensemble
+```
+Usage: britekit ensemble [OPTIONS]
+
+  Find the best ensemble of a given size from a group of checkpoints.
+
+  Given a directory containing checkpoints, and an ensemble size (default=3),
+  select random ensembles of the given size and test each one to identify the
+  best ensemble.
+
+Options:
+  -c, --cfg PATH                  Path to YAML file defining config overrides.
+  --ckpt_path DIRECTORY           Directory containing checkpoints.  [required]
+  -e, --ensemble_size INTEGER     Number of checkpoints in ensemble (default=3).
+  -n, --num_tries INTEGER         Maximum number of ensembles to try
+                                  (default=100).
+  -m, --metric [macro_pr|micro_pr|macro_roc|micro_roc]
+                                  Metric used to compare ensembles
+                                  (default=micro_roc). Macro-averaging uses
+                                  annotated classes only, but micro-averaging
+                                  uses all classes.
+  -a, --annotations FILE          Path to CSV file containing annotations or
+                                  ground truth).  [required]
+  -r, --recordings DIRECTORY      Recordings directory. Default is directory
+                                  containing annotations file.
+  -o, --output DIRECTORY          Path to output directory.  [required]
+  --help                          Show this message and exit.
+```
 ### britekit extract-all
 ```
 Usage: britekit extract-all [OPTIONS]
@@ -494,12 +524,13 @@ Usage: britekit inat [OPTIONS]
   optionally add filename prefixes.
 
 Options:
-  --name TEXT         Species name.  [required]
-  --output DIRECTORY  Output directory.  [required]
-  --max INTEGER       Maximum number of recordings to download. Default = 500.
-  --noprefix          By default, filenames use an 'N' prefix and recording
-                      number. Specify this flag to skip the prefix.
-  --help              Show this message and exit.
+  --name TEXT             Species name.  [required]
+  -o, --output DIRECTORY  Output directory.  [required]
+  --max INTEGER           Maximum number of recordings to download. Default =
+                          500.
+  --noprefix              By default, filenames use an 'N' prefix and recording
+                          number. Specify this flag to skip the prefix.
+  --help                  Show this message and exit.
 ```
 ### britekit init
 ```
@@ -874,16 +905,17 @@ Usage: britekit xeno [OPTIONS]
   XCKEY=<key>.
 
 Options:
-  --key TEXT          Xeno-Canto API key.
-  --name TEXT         Species name.  [required]
-  --output DIRECTORY  Output directory.  [required]
-  --max INTEGER       Maximum number of recordings to download. Default = 500.
-  --nolic             Specify this flag to ignore the licence. By default,
-                      exclude if licence is BY-NC-ND.
-  --sci               Specify this flag when using a scientific name rather than
-                      a common name.
-  --seen              Specify this flag to download only if animal-seen=yes.
-  --help              Show this message and exit.
+  --key TEXT              Xeno-Canto API key.
+  --name TEXT             Species name.  [required]
+  -o, --output DIRECTORY  Output directory.  [required]
+  --max INTEGER           Maximum number of recordings to download. Default =
+                          500.
+  --nolic                 Specify this flag to ignore the licence. By default,
+                          exclude if licence is BY-NC-ND.
+  --sci                   Specify this flag when using a scientific name rather
+                          than a common name.
+  --seen                  Specify this flag to download only if animal-seen=yes.
+  --help                  Show this message and exit.
 ```
 ### britekit youtube
 ```
@@ -892,8 +924,8 @@ Usage: britekit youtube [OPTIONS]
   Download an audio recording from Youtube, given a Youtube ID.
 
 Options:
-  --id TEXT           Youtube ID.  [required]
-  --output DIRECTORY  Output directory.  [required]
-  --sr INTEGER        Output sampling rate (default = 32000).
-  --help              Show this message and exit.
+  --id TEXT               Youtube ID.  [required]
+  -o, --output DIRECTORY  Output directory.  [required]
+  --sr INTEGER            Output sampling rate (default = 32000).
+  --help                  Show this message and exit.
 ```
