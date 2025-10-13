@@ -104,6 +104,10 @@ def tune(
             to_path = os.path.join(output_path, Path(cfg_path).name)
             shutil.copy(cfg_path, to_path)
 
+        if param_path:
+            to_path = os.path.join(output_path, Path(param_path).name)
+            shutil.copy(param_path, to_path)
+
         elapsed_time = util.format_elapsed_time(start_time, time.time())
         logging.info(f"Elapsed time = {elapsed_time}")
 
