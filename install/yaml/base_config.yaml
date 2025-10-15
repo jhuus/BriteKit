@@ -5,6 +5,7 @@ audio: !!python/object:britekit.core.base_config.Audio
   db_power: 1.0
   decibels: false
   freq_scale: mel
+  log_freq_gain: 0.6
   max_freq: 8000
   min_freq: 100
   power: 1.0
