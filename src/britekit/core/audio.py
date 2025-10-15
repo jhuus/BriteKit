@@ -264,7 +264,6 @@ class Audio:
         import numpy as np
         import torch
 
-        """Create a filterbank for log spectrograms."""
         f_min = self.cfg.audio.min_freq
         f_max = self.cfg.audio.max_freq
         n_bins = self.cfg.audio.spec_height
@@ -282,13 +281,19 @@ class Audio:
 
         filters = []
         for log_cf in log2_centers:
+            # Gaussian filter in log2(f)
             weight = np.exp(-0.5 * ((fft_log2 - log_cf) / sigma_log2) ** 2)
-            weight_sum = np.sum(weight)
-            if weight_sum > 0:
-                filters.append(weight / weight_sum)
-            else:
-                # Fallback: use uniform weights if sum is zero
-                filters.append(weight)
+
+            # Normalize per filter (contrast-preserving)
+            weight /= np.sum(weight) + 1e-12
+
+            # Boost power in higher frequencies, so more like mel scale;
+            # increase log_freq_gain to increase the boost
+            cf_hz = 2**log_cf
+            gain = (cf_hz / f_min) ** self.cfg.audio.log_freq_gain
+            weight *= gain
+
+            filters.append(weight)
 
         filters = np.array(filters)
         return torch.tensor(filters, dtype=torch.float32).to(self.device)
@@ -323,28 +328,41 @@ class Audio:
         tensor = torch.from_numpy(signal).to(self.device)
 
         if freq_scale == "log":
-            spec = self.linear_transform(tensor)
-            spec = torch.matmul(self.log2_filterbank, spec.squeeze(0)).unsqueeze(0)
+            spec = self.linear_transform(tensor)  # [1, n_freqs, n_frames]
+            spec = torch.matmul(
+                self.log2_filterbank, spec.squeeze(0)
+            )  # [n_mels, n_frames]
+            spec = spec.unsqueeze(0).unsqueeze(1)  # [1, 1, n_mels, n_frames]
+
         elif freq_scale == "mel":
-            spec = self.mel_transform(tensor)
+            spec = self.mel_transform(tensor).unsqueeze(1)  # [1, 1, n_mels, T]
+
         elif freq_scale == "linear":
             spec = self.linear_transform(tensor)
-
             freqs = torch.fft.rfftfreq(
                 2 * self.win_length, d=1 / self.cfg.audio.sampling_rate
-            )  # [freq_bins]
+            )
             mask = (freqs >= self.cfg.audio.min_freq) & (
                 freqs <= self.cfg.audio.max_freq
             )
-            spec = spec[:, mask, :]  # shape: [channel, selected_freq_bins, time_frames]
-            spec = spec.unsqueeze(1)
-            spec = F.interpolate(
-                spec,
-                size=(self.cfg.audio.spec_height, self.cfg.audio.spec_width),
-                mode="bilinear",
-                align_corners=False,
-            )
-            spec = spec.squeeze(1)
+            spec = spec[:, mask, :].unsqueeze(1)  # [1, 1, F_sel, T]
+
+        # downsample frequency to spec_height (energy-preserving)
+        spec = F.interpolate(
+            spec,
+            size=(self.cfg.audio.spec_height, spec.shape[-1]),
+            mode="area",
+        )
+
+        # pad or crop to spec_width
+        T = spec.shape[-1]
+        if T < self.cfg.audio.spec_width:
+            pad_width = self.cfg.audio.spec_width - T
+            spec = F.pad(spec, (0, pad_width))  # pad on the right (time axis)
+        else:
+            spec = spec[..., : self.cfg.audio.spec_width]
+
+        spec = spec.squeeze(1)
 
         if decibels:
             spec = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(spec)

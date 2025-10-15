@@ -23,6 +23,7 @@ class Audio:
     decibels: bool = False  # Use decibel amplitude scale?
     top_db: float = 80  # Parameter to decibel conversion
     db_power: float = 1.0  # Raise to this exponent after convert to decibels
+    log_freq_gain: float = 0.6  # Boost loudness of higher frequencies with log scale
 
 
 @dataclass
