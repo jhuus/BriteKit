@@ -137,6 +137,9 @@ def xeno(
         if not os.path.exists(outfile):
             logging.info(f"Downloading {outfile}")
             url = recording["file"]
+            if not url:
+                url = f"https:{recording['url']}/download"
+
             response = requests.get(url)
             with open(outfile, "wb") as mp3:
                 mp3.write(response.content)
