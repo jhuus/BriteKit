@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from typing import Optional
+from urllib.parse import quote
 
 import click
 
@@ -100,6 +101,8 @@ def xeno(
         name = f'sp:"{name.lower()}"'
     else:
         name = f'en:"={name.lower()}"'
+
+    name = quote(name)
 
     # get list of recordings
     recordings: list = []
