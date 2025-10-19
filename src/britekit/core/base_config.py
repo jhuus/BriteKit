@@ -62,7 +62,7 @@ class Training:
     # "adam" with decay = 1e-6
     # "adamp" with decay = 0
     optimizer: str = "radam"  # Any timm optimizer
-    opt_weight_decay: float = 1e-6  # Weight decay option (L2 normalization)
+    opt_weight_decay: float = 1e-6  # Weight decay option (L2 regularization)
     opt_beta1: float = 0.9  # Optimizer parameter
     opt_beta2: float = 0.999  # Optimizer parameter
 
