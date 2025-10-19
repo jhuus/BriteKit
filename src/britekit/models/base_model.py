@@ -177,7 +177,7 @@ class BaseModel(pl.LightningModule):
         else:
             preds = torch.softmax(seg_logits, dim=1)
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=False)
 
         roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
         self.log("val_roc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
