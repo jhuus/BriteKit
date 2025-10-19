@@ -47,7 +47,9 @@ class Trainer:
         val_rocs = []
         for k in range(self.cfg.train.num_folds):
             logger = TensorBoardLogger(
-                save_dir="logs", name=f"fold-{k}", default_hp_metric=False
+                save_dir="logs",
+                name=None if self.cfg.train.num_folds == 1 else f"fold-{k}",
+                default_hp_metric=False
             )
             version = (
                 logger.version
