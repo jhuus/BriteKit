@@ -24,6 +24,7 @@
 | `decibels` | `bool` | False | Use decibel amplitude scale? |
 | `top_db` | `float` | 80 | Parameter to decibel conversion |
 | `db_power` | `float` | 1.0 | Raise to this exponent after convert to decibels |
+| `log_freq_gain` | `float` | 0.6 | Boost loudness of higher frequencies with log scale |
 
 ### Training
 | Field | Type | Default | Description |
@@ -54,7 +55,7 @@
 | `pos_label_smoothing` | `float` | 0.08 | Positive side of asymmetric label smoothing |
 | `neg_label_smoothing` | `float` | 0.01 | Negative side of asymmetric label smoothing |
 | `optimizer` | `str` | 'radam' | Any timm optimizer |
-| `opt_weight_decay` | `float` | 1e-06 | Weight decay option (L2 normalization) |
+| `opt_weight_decay` | `float` | 1e-06 | Weight decay option (L2 regularization) |
 | `opt_beta1` | `float` | 0.9 | Optimizer parameter |
 | `opt_beta2` | `float` | 0.999 | Optimizer parameter |
 | `drop_rate` | `Union[float, NoneType]` | None | Standard dropout |
