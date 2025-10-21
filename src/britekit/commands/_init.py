@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from importlib.resources import files as pkg_files
 from importlib.abc import Traversable
-from typing import Iterator, Tuple, List, cast
+from typing import Iterator, Optional, Tuple, List, cast
 
 import click
 
@@ -23,7 +23,7 @@ def _iter_traversable_files(
             yield (prefix + (child.name,)), child
 
 
-def init(dest: Path) -> None:
+def init(dest: Optional[Path]=None) -> None:
     """
     Setup default BriteKit directory structure and copy packaged sample files.
 
@@ -55,6 +55,9 @@ def init(dest: Path) -> None:
         files.append((rel_posix, trav_file))
 
     # Copy
+    if dest is None:
+        dest = Path('.')
+
     dest.mkdir(parents=True, exist_ok=True)
     copied = 0
     skipped = 0
