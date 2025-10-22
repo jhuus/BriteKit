@@ -11,34 +11,24 @@ import click
 from britekit.core.config_loader import get_config
 from britekit.core import util
 
-def _eval_ensemble(ensemble, temp_dir, annotations_path, recording_dir):
-    import shutil
-
-    from britekit.core.analyzer import Analyzer
+def _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir):
+    import pandas as pd
     from britekit.testing.per_segment_tester import PerSegmentTester
 
-    # delete any checkpoints in the temp dir
-    for filename in os.listdir(temp_dir):
-        file_path = os.path.join(temp_dir, filename)
-        os.remove(file_path)
+    # create a dataframe with the average scores for the ensemble
+    avg_df: pd.DataFrame = dataframe_dict[ensemble[0]].copy()
+    avg_df["score"] = sum(dataframe_dict[ckpt_path]["score"] for ckpt_path in ensemble) / len(ensemble)
 
-    # copy checkpoints to the temp dir
-    for file_path in ensemble:
-        file_name = Path(file_path).name
-        dest_path = os.path.join(temp_dir, file_name)
-        shutil.copyfile(file_path, dest_path)
+    # save the dataframe to the usual inference output location
+    scores_csv_path = str(Path(inference_output_dir) / 'scores.csv')
+    avg_df.to_csv(scores_csv_path, index=False)
 
-    # run inference on the given test
-    util.set_logging(level=logging.ERROR) # suppress logging during inference and analysis
-    label_dir = "ensemble_evaluation_labels"
-    inference_output_dir = str(Path(recording_dir) / label_dir)
-    Analyzer().run(recording_dir, inference_output_dir)
-
-    min_score = 0.8 # irrelevant really
     with tempfile.TemporaryDirectory() as output_dir:
+        util.set_logging(level=logging.ERROR) # suppress logging during test reporting
+        min_score = 0.8 # arbitrary threshold
         tester = PerSegmentTester(
             annotations_path,
-            recording_dir,
+            recordings_path,
             inference_output_dir,
             output_dir,
             min_score,
@@ -47,6 +37,7 @@ def _eval_ensemble(ensemble, temp_dir, annotations_path, recording_dir):
 
         pr_stats = tester.get_pr_auc_stats()
         roc_stats = tester.get_roc_auc_stats()
+        util.set_logging() # restore logging
 
         scores = {
             "macro_pr": pr_stats["macro_pr_auc"],
@@ -55,10 +46,8 @@ def _eval_ensemble(ensemble, temp_dir, annotations_path, recording_dir):
             "micro_roc": roc_stats["micro_roc_auc_trained"]
         }
 
-        shutil.rmtree(inference_output_dir)
-        util.set_logging() # restore logging
-
     return scores
+
 
 def ensemble(
     cfg_path: Optional[str]=None,
@@ -87,7 +76,13 @@ def ensemble(
     import glob
     import itertools
     import math
+    import os
     import random
+    import shutil
+
+    import pandas as pd
+
+    from britekit.core.analyzer import Analyzer
 
     if metric not in ["macro_pr", "micro_pr", "macro_roc", "micro_roc"]:
         logging.error(f"Error: invalid metric ({metric})")
@@ -106,9 +101,28 @@ def ensemble(
     if not recordings_path:
         recordings_path = str(Path(annotations_path).parent)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        cfg.misc.ckpt_folder = temp_dir
+    with tempfile.TemporaryDirectory() as ensemble_dir:
+        cfg.misc.ckpt_folder = ensemble_dir
         cfg.infer.min_score = 0
+
+        # get a dataframe of predictions per checkpoint
+        label_dir = "ensemble_evaluation_labels"
+        inference_output_dir = str(Path(recordings_path) / label_dir)
+        scores_csv_path = str(Path(inference_output_dir) / 'scores.csv')
+        dataframe_dict = {}
+        for ckpt_path in ckpt_paths:
+            ckpt_name = Path(ckpt_path).name
+            logging.info(f"Running inference with {ckpt_name}")
+            dest_path = str(Path(ensemble_dir) / ckpt_name)
+            shutil.copyfile(ckpt_path, dest_path)
+
+            util.set_logging(level=logging.ERROR) # suppress logging during inference
+            Analyzer().run(recordings_path, inference_output_dir, rtype='csv')
+            util.set_logging()
+
+            df = pd.read_csv(scores_csv_path)
+            dataframe_dict[ckpt_path] = df
+            os.remove(dest_path)
 
         best_score = 0
         best_ensemble = None
@@ -118,7 +132,7 @@ def ensemble(
             # Exhaustive search
             logging.info("Doing exhaustive search")
             for ensemble in itertools.combinations(ckpt_paths, ensemble_size):
-                scores = _eval_ensemble(ensemble, temp_dir, annotations_path, recordings_path)
+                scores = _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir)
                 logging.info(f"For ensemble {count} of {total_combinations}, score = {scores[metric]:.4f}")
                 if scores[metric] > best_score:
                     best_score = scores[metric]
@@ -133,13 +147,15 @@ def ensemble(
                 ensemble = tuple(sorted(random.sample(ckpt_paths, ensemble_size)))
                 if ensemble not in seen:
                     seen.add(ensemble)
-                    scores = _eval_ensemble(ensemble, temp_dir, annotations_path, recordings_path)
+                    scores = _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir)
                     logging.info(f"For ensemble {count} of {num_tries}, score = {scores[metric]:.4f}")
                     if scores[metric] > best_score:
                         best_score = scores[metric]
                         best_ensemble = ensemble
 
                 count += 1
+
+        shutil.rmtree(inference_output_dir)
 
     logging.info(f"Best score = {best_score:.4f}")
 
