@@ -528,6 +528,7 @@ def rpt_test(
     output_path: str = "",
     recordings_path: Optional[str] = None,
     min_score: Optional[float] = None,
+    block_size: int = 60,
     precision: float = 0.95,
 ):
     """
@@ -536,7 +537,7 @@ def rpt_test(
     This command evaluates model performance by comparing inference results against
     ground truth annotations. It supports three granularity levels:
     - "recording": Evaluate at the recording level (presence/absence)
-    - "minute": Evaluate at the minute level (presence/absence per minute)
+    - "block": Evaluate at the block level (presence/absence per block)
     - "segment": Evaluate at the segment level (detailed temporal alignment)
 
     The command generates detailed performance metrics including precision, recall,
@@ -544,15 +545,16 @@ def rpt_test(
 
     Args:
         cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        granularity (str): Evaluation granularity ("recording", "minute", or "segment"). Default is "segment".
+        granularity (str): Evaluation granularity ("recording", "block", or "segment"). Default is "segment".
         annotations_path (str): Path to CSV file containing ground truth annotations.
         label_dir (str): Directory containing model prediction labels (Audacity format).
         output_path (str): Directory where test reports will be saved.
         recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
         min_score (float, optional): Provide detailed reports for this confidence threshold.
+        block_size (int, optional): block_size in seconds (default=60).
         precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
     """
-    from britekit.testing.per_minute_tester import PerMinuteTester
+    from britekit.testing.per_block_tester import PerBlockTester
     from britekit.testing.per_recording_tester import PerRecordingTester
     from britekit.testing.per_segment_tester import PerSegmentTester
 
@@ -583,12 +585,13 @@ def rpt_test(
                 precision,
             ).run()
         elif granularity.startswith("min"):
-            PerMinuteTester(
+            PerBlockTester(
                 annotations_path,
                 recordings_path,
                 labels_path,
                 output_path,
                 min_score,
+                block_size,
             ).run()
         elif granularity.startswith("seg"):
             PerSegmentTester(
@@ -600,7 +603,7 @@ def rpt_test(
             ).run()
         else:
             logging.error(
-                'Invalid granularity (expected "recording", "minute" or "segment").'
+                'Invalid granularity (expected "recording", "block" or "segment").'
             )
 
     except InputError as e:
@@ -626,7 +629,7 @@ def rpt_test(
     "granularity",
     type=str,
     default="segment",
-    help='Test annotation and reporting granularity ("recording", "minute" or "segment"). Default = "segment".',
+    help='Test annotation and reporting granularity ("recording", "block" or "segment"). Default = "segment".',
 )
 @click.option(
     "-a",
@@ -669,6 +672,15 @@ def rpt_test(
     help="Provide detailed reports for this threshold.",
 )
 @click.option(
+    "-b",
+    "--block",
+    "block_size",
+    type=int,
+    required=False,
+    default=60,
+    help="Block size in seconds, when granularity=block (default=60).",
+)
+@click.option(
     "--precision",
     required=False,
     type=float,
@@ -683,6 +695,7 @@ def _rpt_test_cmd(
     output_path: str,
     recordings_path: Optional[str],
     min_score: Optional[float],
+    block_size: int,
     precision: float,
 ):
     util.set_logging()
@@ -694,5 +707,6 @@ def _rpt_test_cmd(
         output_path,
         recordings_path,
         min_score,
+        block_size,
         precision,
     )

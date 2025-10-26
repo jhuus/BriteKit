@@ -17,16 +17,16 @@ class Annotation:
         return f"{self.class_code}: {self.start_time}-{self.end_time}"
 
 
-class PerMinuteTester(BaseTester):
+class PerBlockTester(BaseTester):
     """
-    Calculate test metrics when annotations are specified per minute. That is, for selected minutes of
-    each recording, a list of classes known to be present is given, and we are to calculate metrics for
-    those minutes only.
+    Calculate test metrics when annotations are specified per block, where a block is a fixed length, such
+    as a minute. That is, for selected blocks of each recording, a list of classes known to be present is given,
+    and we are to calculate metrics for those blocks only.
 
-    Annotations are read as a CSV with three columns: "recording", "minute", and "classes".
+    Annotations are read as a CSV with three columns: "recording", "block", and "classes".
     The recording column is the file name without the path or type suffix, e.g. "recording1".
-    The minute column contains 1 for the first minute, 2 for the second minute etc. and may
-    exclude some minutes. The classes column contains a comma-separated list of codes for the classes found in the corresponding minute.
+    The block column contains 1 for the first block, 2 for the second block etc. and may exclude some blocks.
+    The classes column contains a comma-separated list of codes for the classes found in the corresponding block.
     If your annotations are in a different format, simply convert to this format to use this script.
 
     Classifiers should be run with a threshold of 0, and with label merging disabled so segment-specific scores are retained.
@@ -37,6 +37,7 @@ class PerMinuteTester(BaseTester):
         label_dir (str): Directory containing Audacity labels.
         output_dir (str): Output directory, where reports will be written.
         threshold (float): Score threshold for precision/recall reporting.
+        block_size (int, optional): block_size in seconds (default=60).
         gen_pr_table (bool, optional): If true, generate a PR table, which may be slow (default = False).
     """
 
@@ -47,10 +48,11 @@ class PerMinuteTester(BaseTester):
         label_dir: str,
         output_dir: str,
         threshold: float,
+        block_size: int = 60,
         gen_pr_table: bool = False,
     ):
         """
-        Initialize the PerMinuteTester.
+        Initialize the PerBlockTester.
 
         See class docstring for detailed parameter descriptions and usage information.
         """
@@ -60,6 +62,7 @@ class PerMinuteTester(BaseTester):
         self.label_dir = label_dir
         self.output_dir = output_dir
         self.threshold = threshold
+        self.block_size = block_size
         self.gen_pr_table = gen_pr_table
 
         self.cfg = get_config()
@@ -119,8 +122,8 @@ class PerMinuteTester(BaseTester):
         Load annotation data from CSV file and process into internal format.
 
         This method reads a CSV file containing ground truth annotations where each row
-        represents a recording, minute, and its associated classes. The CSV should have columns:
-        "recording" (filename without path/extension), "minute" (minute number starting from 1),
+        represents a recording, block, and its associated classes. The CSV should have columns:
+        "recording" (filename without path/extension), "block" (block number starting from 1),
         and "classes" (comma-separated class codes).
 
         The method processes the annotations, handles class code mapping, filters out
@@ -151,10 +154,10 @@ class PerMinuteTester(BaseTester):
                 self.annotations[recording] = {}
                 self.segments_per_recording[recording] = []
 
-            minute = row["minute"]
-            if minute not in self.annotations[recording]:
-                self.annotations[recording][minute] = []
-                self.segments_per_recording[recording].append(minute - 1)
+            block = row["block"]
+            if block not in self.annotations[recording]:
+                self.annotations[recording][block] = []
+                self.segments_per_recording[recording].append(block - 1)
 
             input_class_list = []
             for code in row["classes"].split(","):
@@ -176,7 +179,7 @@ class PerMinuteTester(BaseTester):
                         continue  # exclude from saved annotations
 
                 if class_code:
-                    self.annotations[recording][minute].append(class_code)
+                    self.annotations[recording][block].append(class_code)
                     self.annotated_class_set.add(class_code)
 
         self.annotated_classes = sorted(list(self.annotated_class_set))
@@ -192,12 +195,12 @@ class PerMinuteTester(BaseTester):
 
         This method evaluates precision and recall metrics at different threshold values
         (0.01 to 1.00 in 0.01 increments) to create comprehensive precision-recall curves.
-        It calculates both per-minute granularity metrics and per-second granularity metrics.
+        It calculates both per-block granularity metrics and per-second granularity metrics.
 
         Returns:
             dict: Dictionary containing precision-recall data with keys:
                 - annotated_thresholds: List of threshold values for annotated classes
-                - annotated_precisions_minutes: List of precision values (minutes) for annotated classes
+                - annotated_precisions_blocks: List of precision values (blocks) for annotated classes
                 - annotated_precisions_seconds: List of precision values (seconds) for annotated classes
                 - annotated_recalls: List of recall values for annotated classes
                 - trained_thresholds: List of threshold values for trained classes
@@ -219,20 +222,20 @@ class PerMinuteTester(BaseTester):
 
         # use the looping method so we get per_second precision
         thresholds = []
-        recall_annotated, precision_annotated_minutes, precision_annotated_seconds = (
+        recall_annotated, precision_annotated_blocks, precision_annotated_seconds = (
             [],
             [],
             [],
         )
-        recall_trained, precision_trained_minutes = [], []
+        recall_trained, precision_trained_blocks = [], []
         for threshold in np.arange(0.01, 1.01, 0.01):
             info = self.get_precision_recall(threshold)
             thresholds.append(threshold)
             recall_annotated.append(info["recall_annotated"])
-            precision_annotated_minutes.append(info["precision_annotated"])
+            precision_annotated_blocks.append(info["precision_annotated"])
             precision_annotated_seconds.append(info["precision_secs"])
             recall_trained.append(info["recall_trained"])
-            precision_trained_minutes.append(info["precision_trained"])
+            precision_trained_blocks.append(info["precision_trained"])
             logging.info(
                 f"\rPercent complete: {int(threshold * 100)}%", end="", flush=True
             )
@@ -240,12 +243,12 @@ class PerMinuteTester(BaseTester):
         logging.info("")
         pr_table_dict = {}
         pr_table_dict["annotated_thresholds"] = thresholds
-        pr_table_dict["annotated_precisions_minutes"] = precision_annotated_minutes
+        pr_table_dict["annotated_precisions_blocks"] = precision_annotated_blocks
         pr_table_dict["annotated_precisions_seconds"] = precision_annotated_seconds
         pr_table_dict["annotated_recalls"] = recall_annotated
 
         pr_table_dict["trained_thresholds"] = thresholds
-        pr_table_dict["trained_precisions"] = precision_trained_minutes
+        pr_table_dict["trained_precisions"] = precision_trained_blocks
         pr_table_dict["trained_recalls"] = recall_trained
 
         # use this method for more granular results without per_second precision
@@ -303,7 +306,7 @@ class PerMinuteTester(BaseTester):
         if self.gen_pr_table:
             # calculate and output precision/recall per threshold
             threshold_annotated = self.pr_table_dict["annotated_thresholds"]
-            precision_annotated = self.pr_table_dict["annotated_precisions_minutes"]
+            precision_annotated = self.pr_table_dict["annotated_precisions_blocks"]
             precision_annotated_secs = self.pr_table_dict[
                 "annotated_precisions_seconds"
             ]
@@ -401,13 +404,13 @@ class PerMinuteTester(BaseTester):
         )
         rpt.append(f"   For threshold = {self.threshold}:\n")
         rpt.append(
-            f"      Precision (minutes) = {100 * self.details_dict['precision_annotated']:.2f}%\n"
+            f"      Precision (blocks) = {100 * self.details_dict['precision_annotated']:.2f}%\n"
         )
         rpt.append(
             f"      Precision (seconds) = {100 * self.details_dict['precision_secs']:.2f}%\n"
         )
         rpt.append(
-            f"      Recall (minutes) = {100 * self.details_dict['recall_annotated']:.2f}%\n"
+            f"      Recall (blocks) = {100 * self.details_dict['recall_annotated']:.2f}%\n"
         )
 
         rpt.append("\n")
@@ -420,10 +423,10 @@ class PerMinuteTester(BaseTester):
         )
         rpt.append(f"   For threshold = {self.threshold}:\n")
         rpt.append(
-            f"      Precision (minutes) = {100 * self.details_dict['precision_trained']:.2f}%\n"
+            f"      Precision (blocks) = {100 * self.details_dict['precision_trained']:.2f}%\n"
         )
         rpt.append(
-            f"      Recall (minutes) = {100 * self.details_dict['recall_trained']:.2f}%\n"
+            f"      Recall (blocks) = {100 * self.details_dict['recall_trained']:.2f}%\n"
         )
         logging.info("")
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
@@ -551,7 +554,7 @@ class PerMinuteTester(BaseTester):
 
         # initialize y_true and y_pred and save them as CSV files
         logging.info("Initializing")
-        self.get_labels(self.label_dir, segment_len=60, overlap=0)
+        self.get_labels(self.label_dir, segment_len=self.block_size, overlap=0)
         self.get_annotations()
         self._init_y_true()
         self.init_y_pred(segments_per_recording=self.segments_per_recording)
@@ -573,7 +576,7 @@ class PerMinuteTester(BaseTester):
 
     def _init_y_true(self):
         """
-        Create a dataframe representing the ground truth data, with recordings segmented into 1-minute segments
+        Create a dataframe representing the ground truth data, with recordings segmented into 1-block segments
         """
         import pandas as pd
 
@@ -582,11 +585,11 @@ class PerMinuteTester(BaseTester):
         self.recordings = []  # base class needs array with recording per row
         rows = []
         for recording in sorted(self.annotations.keys()):
-            for minute in sorted(self.annotations[recording].keys()):
+            for block in sorted(self.annotations[recording].keys()):
                 self.recordings.append(recording)
-                row = [f"{recording}-{minute - 1}"]
+                row = [f"{recording}-{block - 1}"]
                 row.extend([0 for class_code in self.trained_classes])
-                for class_code in self.annotations[recording][minute]:
+                for class_code in self.annotations[recording][block]:
                     if class_code in self.trained_class_indexes:
                         row[self.trained_class_indexes[class_code] + 1] = 1
 
@@ -618,8 +621,8 @@ class PerMinuteTester(BaseTester):
 
         df = pd.DataFrame()
         df["threshold"] = pd.Series(threshold)
-        df["recall (minutes)"] = pd.Series(recall)
-        df["precision (minutes)"] = pd.Series(precision)
+        df["recall (blocks)"] = pd.Series(recall)
+        df["precision (blocks)"] = pd.Series(precision)
         if precision_secs is not None:
             df["precision (seconds)"] = pd.Series(precision_secs)
 
@@ -631,7 +634,7 @@ class PerMinuteTester(BaseTester):
 
         plt.clf()
         plt.plot(recall, label="Recall")
-        plt.plot(precision, label="Precision (Minutes)")
+        plt.plot(precision, label="Precision (blocks)")
         if precision_secs is not None:
             plt.plot(precision_secs, label="Precision (Seconds)")
 

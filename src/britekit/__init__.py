@@ -30,7 +30,7 @@ from britekit.models.model_loader import load_new_model
 from britekit.models.model_loader import load_from_checkpoint
 from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
 from britekit.occurrence_db.occurrence_data_provider import OccurrenceDataProvider
-from britekit.testing.per_minute_tester import PerMinuteTester
+from britekit.testing.per_block_tester import PerBlockTester
 from britekit.testing.per_recording_tester import PerRecordingTester
 from britekit.testing.per_segment_tester import PerSegmentTester
 from britekit.training_db.extractor import Extractor
@@ -51,7 +51,7 @@ __all__ = [
     "OccurrenceDatabase",
     "OccurrenceDataProvider",
     "Pickler",
-    "PerMinuteTester",
+    "PerBlockTester",
     "PerRecordingTester",
     "PerSegmentTester",
     "Predictor",
