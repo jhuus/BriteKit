@@ -584,7 +584,7 @@ def rpt_test(
                 min_score,
                 precision,
             ).run()
-        elif granularity.startswith("min"):
+        elif granularity.startswith("bl"):
             PerBlockTester(
                 annotations_path,
                 recordings_path,
