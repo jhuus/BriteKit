@@ -745,9 +745,9 @@ Usage: britekit rpt-test [OPTIONS]
 
   This command evaluates model performance by comparing inference results
   against ground truth annotations. It supports three granularity levels: -
-  "recording": Evaluate at the recording level (presence/absence) - "minute":
-  Evaluate at the minute level (presence/absence per minute) - "segment":
-  Evaluate at the segment level (detailed temporal alignment)
+  "recording": Evaluate at the recording level (presence/absence) - "block":
+  Evaluate at the block level (presence/absence per block) - "segment": Evaluate
+  at the segment level (detailed temporal alignment)
 
   The command generates detailed performance metrics including precision,
   recall, F1 scores, and various visualization plots to help understand model
@@ -756,7 +756,7 @@ Usage: britekit rpt-test [OPTIONS]
 Options:
   -c, --cfg PATH              Path to YAML file defining config overrides.
   -g, --granularity TEXT      Test annotation and reporting granularity
-                              ("recording", "minute" or "segment"). Default =
+                              ("recording", "block" or "segment"). Default =
                               "segment".
   -a, --annotations FILE      Path to CSV file containing annotations or ground
                               truth).  [required]
@@ -767,6 +767,8 @@ Options:
   -r, --recordings DIRECTORY  Recordings directory. Default is directory
                               containing annotations file.
   -m, --min_score FLOAT       Provide detailed reports for this threshold.
+  -b, --block INTEGER         Block size in seconds, when granularity=block
+                              (default=60).
   --precision FLOAT           For granularity=recording, report TP seconds at
                               this precision (default=.95).
   --help                      Show this message and exit.

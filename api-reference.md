@@ -5,7 +5,7 @@
 - [Extractor](#extractor)
 - [OccurrenceDataProvider](#occurrencedataprovider)
 - [OccurrenceDatabase](#occurrencedatabase)
-- [PerMinuteTester](#perminutetester)
+- [PerBlockTester](#perblocktester)
 - [PerRecordingTester](#perrecordingtester)
 - [PerSegmentTester](#persegmenttester)
 - [Pickler](#pickler)
@@ -407,19 +407,19 @@ OccurrenceDatabase.insert_occurrences(self, county_id, class_id, value)
 ```
 Insert an occurrence record for a given county and class.
 
-### PerMinuteTester
+### PerBlockTester
 **Class**  
 ```python
-PerMinuteTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, gen_pr_table: bool = False)
+PerBlockTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, block_size: int = 60, gen_pr_table: bool = False)
 ```
-Calculate test metrics when annotations are specified per minute. That is, for selected minutes of
-each recording, a list of classes known to be present is given, and we are to calculate metrics for
-those minutes only.
+Calculate test metrics when annotations are specified per block, where a block is a fixed length, such
+as a minute. That is, for selected blocks of each recording, a list of classes known to be present is given,
+and we are to calculate metrics for those blocks only.
 
-Annotations are read as a CSV with three columns: "recording", "minute", and "classes".
+Annotations are read as a CSV with three columns: "recording", "block", and "classes".
 The recording column is the file name without the path or type suffix, e.g. "recording1".
-The minute column contains 1 for the first minute, 2 for the second minute etc. and may
-exclude some minutes. The classes column contains a comma-separated list of codes for the classes found in the corresponding minute.
+The block column contains 1 for the first block, 2 for the second block etc. and may exclude some blocks.
+The classes column contains a comma-separated list of codes for the classes found in the corresponding block.
 If your annotations are in a different format, simply convert to this format to use this script.
 
 Classifiers should be run with a threshold of 0, and with label merging disabled so segment-specific scores are retained.
@@ -430,19 +430,20 @@ Attributes:
     label_dir (str): Directory containing Audacity labels.
     output_dir (str): Output directory, where reports will be written.
     threshold (float): Score threshold for precision/recall reporting.
+    block_size (int, optional): block_size in seconds (default=60).
     gen_pr_table (bool, optional): If true, generate a PR table, which may be slow (default = False).
 
 **Public methods & properties**
 
 **get_annotations**  
 ```python
-PerMinuteTester.get_annotations(self)
+PerBlockTester.get_annotations(self)
 ```
 Load annotation data from CSV file and process into internal format.
 
 This method reads a CSV file containing ground truth annotations where each row
-represents a recording, minute, and its associated classes. The CSV should have columns:
-"recording" (filename without path/extension), "minute" (minute number starting from 1),
+represents a recording, block, and its associated classes. The CSV should have columns:
+"recording" (filename without path/extension), "block" (block number starting from 1),
 and "classes" (comma-separated class codes).
 
 The method processes the annotations, handles class code mapping, filters out
@@ -454,17 +455,17 @@ Note:
 
 **get_pr_table**  
 ```python
-PerMinuteTester.get_pr_table(self)
+PerBlockTester.get_pr_table(self)
 ```
 Calculate precision-recall table across multiple thresholds.
 
 This method evaluates precision and recall metrics at different threshold values
 (0.01 to 1.00 in 0.01 increments) to create comprehensive precision-recall curves.
-It calculates both per-minute granularity metrics and per-second granularity metrics.
+It calculates both per-block granularity metrics and per-second granularity metrics.
 
 Returns:
 
-- `dict` *(Dictionary containing precision-recall data with keys:)* — - annotated_thresholds: List of threshold values for annotated classes - annotated_precisions_minutes: List of precision values (minutes) for annotated classes - annotated_precisions_seconds: List of precision values (seconds) for annotated classes - annotated_recalls: List of recall values for annotated classes - trained_thresholds: List of threshold values for trained classes - trained_precisions: List of precision values for trained classes - trained_recalls: List of recall values for trained classes - annotated_thresholds_fine: Fine-grained thresholds for annotated classes - annotated_precisions_fine: Fine-grained precision values for annotated classes - annotated_recalls_fine: Fine-grained recall values for annotated classes - trained_thresholds_fine: Fine-grained thresholds for trained classes - trained_precisions_fine: Fine-grained precision values for trained classes - trained_recalls_fine: Fine-grained recall values for trained classes
+- `dict` *(Dictionary containing precision-recall data with keys:)* — - annotated_thresholds: List of threshold values for annotated classes - annotated_precisions_blocks: List of precision values (blocks) for annotated classes - annotated_precisions_seconds: List of precision values (seconds) for annotated classes - annotated_recalls: List of recall values for annotated classes - trained_thresholds: List of threshold values for trained classes - trained_precisions: List of precision values for trained classes - trained_recalls: List of recall values for trained classes - annotated_thresholds_fine: Fine-grained thresholds for annotated classes - annotated_precisions_fine: Fine-grained precision values for annotated classes - annotated_recalls_fine: Fine-grained recall values for annotated classes - trained_thresholds_fine: Fine-grained thresholds for trained classes - trained_precisions_fine: Fine-grained precision values for trained classes - trained_recalls_fine: Fine-grained recall values for trained classes
 
 Note:
     Uses both manual threshold evaluation and scikit-learn's precision_recall_curve
@@ -472,7 +473,7 @@ Note:
 
 **produce_reports**  
 ```python
-PerMinuteTester.produce_reports(self)
+PerBlockTester.produce_reports(self)
 ```
 Generate comprehensive output reports and CSV files.
 
@@ -502,7 +503,7 @@ Note:
 
 **run**  
 ```python
-PerMinuteTester.run(self)
+PerBlockTester.run(self)
 ```
 Execute the complete testing workflow.
 
@@ -1858,4 +1859,14 @@ errors defaults to 'strict'.
 **Function**  
 ```python
 get_config(cfg_path: Optional[str] = None) -> britekit.core.base_config.BaseConfig
+```
+### load_from_checkpoint
+**Function**  
+```python
+load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = None)
+```
+### load_new_model
+**Function**  
+```python
+load_new_model(train_class_names: List[str], train_class_codes: List[str], train_class_alt_names: List[str], train_class_alt_codes: List[str], num_train_specs: int)
 ```

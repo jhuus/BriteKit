@@ -596,14 +596,14 @@ Args:
 ### rpt_test
 **Function**  
 ```python
-rpt_test(cfg_path: Optional[str] = None, granularity: str = 'segment', annotations_path: str = '', label_dir: str = '', output_path: str = '', recordings_path: Optional[str] = None, min_score: Optional[float] = None, precision: float = 0.95)
+rpt_test(cfg_path: Optional[str] = None, granularity: str = 'segment', annotations_path: str = '', label_dir: str = '', output_path: str = '', recordings_path: Optional[str] = None, min_score: Optional[float] = None, block_size: int = 60, precision: float = 0.95)
 ```
 Generate comprehensive test metrics and reports comparing model predictions to ground truth.
 
 This command evaluates model performance by comparing inference results against
 ground truth annotations. It supports three granularity levels:
 - "recording": Evaluate at the recording level (presence/absence)
-- "minute": Evaluate at the minute level (presence/absence per minute)
+- "block": Evaluate at the block level (presence/absence per block)
 - "segment": Evaluate at the segment level (detailed temporal alignment)
 
 The command generates detailed performance metrics including precision, recall,
@@ -611,12 +611,13 @@ F1 scores, and various visualization plots to help understand model behavior.
 
 Args:
     cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    granularity (str): Evaluation granularity ("recording", "minute", or "segment"). Default is "segment".
+    granularity (str): Evaluation granularity ("recording", "block", or "segment"). Default is "segment".
     annotations_path (str): Path to CSV file containing ground truth annotations.
     label_dir (str): Directory containing model prediction labels (Audacity format).
     output_path (str): Directory where test reports will be saved.
     recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
     min_score (float, optional): Provide detailed reports for this confidence threshold.
+    block_size (int, optional): block_size in seconds (default=60).
     precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
 
 ### search
