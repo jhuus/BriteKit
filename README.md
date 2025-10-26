@@ -202,7 +202,7 @@ Here is a practical approach:
 5. Tune the inference `audio_power` hyperparameter.
 6. Perform a second tuning pass, starting at step 2 above.
 
-This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc).If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`.
+This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc). If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`.
 
 To run the [tune](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-tune) command, you would typically use a config YAML file as described earlier, plus a special tuning YAML file, as in this example:
 ```
