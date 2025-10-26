@@ -46,7 +46,6 @@ def analyze(
     from britekit.core import util
     from britekit.core.analyzer import Analyzer
 
-    util.set_logging()
     cfg = get_config(cfg_path)
     try:
         if rtype not in {"audacity", "csv", "both"}:
@@ -155,6 +154,9 @@ def _analyze_cmd(
     overlap: Optional[float] = None,
     segment_len: Optional[float] = None,
 ):
+    from britekit.core import util
+
+    util.set_logging()
     analyze(
         cfg_path,
         input_path,

@@ -26,6 +26,8 @@ from britekit.core.pickler import Pickler
 from britekit.core.predictor import Predictor
 from britekit.core.trainer import Trainer
 from britekit.core.tuner import Tuner
+from britekit.models.model_loader import load_new_model
+from britekit.models.model_loader import load_from_checkpoint
 from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
 from britekit.occurrence_db.occurrence_data_provider import OccurrenceDataProvider
 from britekit.testing.per_minute_tester import PerMinuteTester
@@ -39,6 +41,8 @@ __all__ = [
     "__version__",
     "commands",
     "get_config",
+    "load_new_model",
+    "load_from_checkpoint",
     "util",
     "Analyzer",
     "Audio",
