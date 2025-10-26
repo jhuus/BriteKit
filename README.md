@@ -122,7 +122,7 @@ audio:
   spec_height: 192
   spec_width: 256
 ```
-Note that the window length is specified as a fraction of a second, so .08 seconds in this example. That way the real window length does not vary if you change the sampling rate. As a rule of thumb, the sampling rate should be about 2.1 times the maximum frequency. Before training your first model, it is advisable to examine some spectrogram images and choose settings that seem reasonable as a starting point. For example, the frequency range needed for your application may be greater or less than the defaults.
+The FFT window length is specified as a fraction of a second: .08 seconds in this example. That way the real window length does not vary if you change the sampling rate. As a rule of thumb, the sampling rate should be about 2.1 times the maximum frequency. Before training your first model, it is advisable to examine some spectrogram images and choose settings that seem reasonable as a starting point. For example, the frequency range needed for your application may be greater or less than the defaults.
 
 The SpecGroup table allows you to easily experiment with different spectrogram settings. Running `extract-all` or `extract-by-image` creates spectrograms assigned to the default SpecGroup, if none is specified. Once you have curated some training data, use the `reextract` command to create another set of spectrograms, assigned to a different SpecGroup. That way you can keep spectrograms with different settings for easy experimentation.
 ## Training
@@ -141,13 +141,13 @@ train:
 The model_type parameter can be "timm.x" for any model x supported by [timm](https://github.com/huggingface/pytorch-image-models). However, many bioacoustic recognizers benefit from a smaller model than typical timm models. Therefore BriteKit provides a set of scalable models, such as "effnet.3" and "effnet.4", where larger numbers indicate larger models. The scalable models are:
 | Model | Original Name | Comments | Original Paper |
 |---|---|---|---|
-| dla | DLA | Slow and not good for large models, but often a good choice for very small models. | [here](https://arxiv.org/abs/1707.06484) |
+| dla | DLA | Slow and not good for large models, but works well for some very small models. | [here](https://arxiv.org/abs/1707.06484) |
 | effnet | EfficientNetV2 | Medium speed, widely used, useful for all sizes. | [here](https://arxiv.org/abs/2104.00298) |
 | gernet | GerNet | Fast, useful for all but the smallest models. | [here](https://arxiv.org/abs/2006.14090) |
 | hgnet |  HgNetV2| Fast, useful for all but the smallest models. | not published |
 | vovnet | VovNet  | Medium-fast, useful for all sizes. | [here](https://arxiv.org/abs/1904.09730) |
 
-For very small models, say with less than 10 classes and just a few thousand training spectrograms, DLA and VovNet are good candidates. As model size increases, DLA becomes slower and less appropriate.
+For very small models, say with less than 10 classes and just a few thousand training spectrograms, DLA and VovNet are good candidates. As model size increases, DLA becomes slower and less appropriate. Of course, it is best to try different models and model sizes to see which works best for your application.
 
 If `head_type` is not specified, BriteKit uses the default classifier head defined by the model. However, you can also specify any of the following head types:
 | Head Type | Description |
@@ -156,25 +156,25 @@ If `head_type` is not specified, BriteKit uses the default classifier head defin
 | effnet | The classifier head used in EfficientNetV2. |
 | hgnet | The classifier head used in HgNetV2. |
 | basic_sed | A basic SED head. |
-| scalable_sed | The basic_sed head can be larger than desired.  |
+| scalable_sed | The basic_sed head can be larger than desired, and this one allows you to control the size.  |
 
 Specifying head_type="effnet" is sometimes helpful for other models such as DLA and VovNet. See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
 
-You can specify val_portion > 0 to run validation on a portion of the training data, or num_folds > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0, logs/fold-1 etc. Otherwise output is under logs/fold-0. Output from the first training run is saved in logs/fold-0/version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to access it from a web browser.
+You can specify val_portion > 0 to run validation on a portion of the training data, or num_folds > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0/version_x etc. Otherwise it is under logs/version_x. Output from the first training run is saved in version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to view graphs such as the learning rate in a web browser.
 
 ## Testing
-To run a test, you need to annotate a set of test recordings, analyze them with your model or ensemble, and then run the `rpt-test` command. Annotations must be saved in a CSV file with a defined format. We recommend annotating each relevant sound (per-segment), but you can also do per-minute and per-recording annotations to save time. Per-recording annotations are defined in a CSV file with these columns:
+To run a test, you need to annotate a set of test recordings, analyze them with your model or ensemble, and then run the `rpt-test` command. Annotations must be saved in a CSV file with a defined format. For initial testing and tuning it is best to annotate each relevant sound (per-segment), but for later usage you may wish to use per-block (e.g. minute) or per-recording annotations. Per-recording annotations are defined in a CSV file with these columns:
 | Column | Description |
 |---|---|
 | recording | Just the stem of the recording name, e.g. XC12345, not XC12345.mp3. |
 | classes | Defined classes found in the recording, separated by commas. For example: AMCR,BCCH,COYE.
 
-Per-minute annotations are defined in a CSV file with these columns:
+Per-block annotations are defined in a CSV file with these columns:
 | Column | Description |
 |---|---|
 | recording | Just the stem of the recording name, as above. |
-| minute | 1 for the first minute, 2 for the second, etc. |
-| classes | Defined classes found in that minute, separated by commas.
+| block | 1 for the first block (e.g. minute), 2 for the second, etc. |
+| classes | Defined classes found in that block, if any, separated by commas.
 
 Per-segment annotations are recommended, and are defined in a CSV file with these columns:
 | Column | Description |
@@ -190,16 +190,19 @@ It's usually best for a test to consist of a single directory of recordings, con
 ```
 britekit rpt-test -a recordings/annotations.csv -l labels -o <output-dir>
 ```
-If your annotations were per-minute or per-recording, you would specify the `--granularity minute` or `--granularity recording` argument (`--granularity segment` is the default).
+If your annotations were per-block or per-recording, you would specify the `--granularity block` or `--granularity recording` argument (`--granularity segment` is the default).
 ## Tuning
-Before tuning your model, you need to create a good test, as described in the previous section. Then you can use the `tune` command to find optimal settings for a given test. If you are only tuning inference parameters, you can run many iterations very quickly, since no training is needed. To tune training hyperparameters, many training runs are needed, which takes longer. You can also use the `tune` command to tune audio/spectrogram settings. In that case, every iteration extracts a new set of spectrograms, which takes even longer.
+Before tuning your model, you need to create a good test, as described in the previous section. Then you can use the `tune` command to find optimal settings for a given test. If you are only tuning inference parameters, you can run many iterations very quickly, since no training is needed. To tune training hyperparameters, many training runs are needed, which takes longer. You can also use the `tune` command to tune audio and spectrogram settings. In that case, every iteration extracts a new set of spectrograms, which takes even longer.
 
 Here is a practical approach:
-1. Review spectrogram plots with different settings, especially spec_duration, spec_width, spec_height, min_frequency, max_frequency and win_length. Then choose reasonable-looking initial settings. For example, if all the relevant sounds fall between 1000 and 5000 Hz, set min and max frequency accordingly.
-2. Do an initial tuning pass of the main training hyperparameters, especially model_type, head_type and num_epochs.
-3. Based on the above, carefully tune the audio/spectrogram parameters.
+1. Review spectrogram plots with different settings, especially `spec_duration`, `spec_width`, `spec_height`, `min_frequency`, `max_frequency` and `win_length`. Then choose reasonable-looking initial settings. For example, if all the relevant sounds fall between 1000 and 5000 Hz, set min and max frequency accordingly.
+2. Tune the main training hyperparameters, especially `model_type`, `head_type` and `num_epochs`.
+3. Tune the audio/spectrogram hyperparameters.
+4. Tune data augmentation hyperparameters, which are described in the [Data Augmentation](#data-augmentation) section below.
+5. Tune the inference `audio_power` hyperparameter.
+6. Perform a second tuning pass, starting at step 2 above.
 
-This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc), and then you can proceed to fine-tuning the training and inference. For inference, it is usually worth tuning the `audio_power` parameter. If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`. For training, it may be worth tuning the data augmentation hyperparameters, which are described in detail in the [Data Augmentation](#data-augmentation) section below.
+This usually leads to a substantial improvement in scores (see [Metrics (PR-AUC and ROC-AUC)](#metrics-pr-auc-and-roc-auc).If you are using a SED classifier head, it is also worth tuning `segment_len` and `overlap`.
 
 To run the `tune` command, you would typically use a config YAML file as described earlier, plus a special tuning YAML file, as in this example:
 ```
@@ -210,7 +213,7 @@ To run the `tune` command, you would typically use a config YAML file as describ
   - 512
   step: 64
 ```
-This gives the name of the parameter to tune, its data type, and the bounds and step sizes to try. In this case, we want to try spec_width values of 256, 320, 384, 448 and 512. You can also tune multiple parameters at the same time, by simply appending more definitions similar to this one. Parameters that have a choice of defined values rather than a range are specified like this:
+This gives the name of the parameter to tune, its data type, and the bounds and step sizes to try. In this case, we want to try `spec_width` values of 256, 320, 384, 448 and 512. You can also tune multiple parameters at the same time, by simply appending more definitions similar to this one. Parameters that have a choice of defined values rather than a range are specified like this:
 ```
 - name: head_type
   type: categorical
