@@ -78,7 +78,7 @@ train:
   drop_rate: 0.1
   num_epochs: 20
 ```
-This overrides the default values for model_type, learning_rate, drop_rate and num_epochs. When using the API, you can update configuration parameters like this:
+This overrides the default values for `model_type`, `learning_rate`, `drop_rate` and `num_epochs`. When using the API, you can update configuration parameters like this:
 ```
 import britekit as bk
 cfg = bk.get_config()
@@ -138,7 +138,7 @@ train:
   val_portion: 0.1
   num_epochs: 20
 ```
-The model_type parameter can be "timm.x" for any model x supported by [timm](https://github.com/huggingface/pytorch-image-models). However, many bioacoustic recognizers benefit from a smaller model than typical timm models. Therefore BriteKit provides a set of scalable models, such as "effnet.3" and "effnet.4", where larger numbers indicate larger models. The scalable models are:
+The `model_type` parameter can be "timm.x" for any model x supported by [timm](https://github.com/huggingface/pytorch-image-models). However, many bioacoustic recognizers benefit from a smaller model than typical timm models. Therefore BriteKit provides a set of scalable models, such as "effnet.3" and "effnet.4", where larger numbers indicate larger models. The scalable models are:
 | Model | Original Name | Comments | Original Paper |
 |---|---|---|---|
 | dla | DLA | Slow and not good for large models, but works well for some very small models. | [here](https://arxiv.org/abs/1707.06484) |
@@ -158,9 +158,9 @@ If `head_type` is not specified, BriteKit uses the default classifier head defin
 | basic_sed | A basic SED head. |
 | scalable_sed | The basic_sed head can be larger than desired, and this one allows you to control the size.  |
 
-Specifying head_type="effnet" is sometimes helpful for other models such as DLA and VovNet. See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
+Specifying `head_type="effnet"` is sometimes helpful for other models such as DLA and VovNet. See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
 
-You can specify val_portion > 0 to run validation on a portion of the training data, or num_folds > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0/version_x etc. Otherwise it is under logs/version_x. Output from the first training run is saved in version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to view graphs such as the learning rate in a web browser.
+You can specify `val_portion` > 0 to run validation on a portion of the training data, or `num_folds` > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0/version_x etc. Otherwise it is under logs/version_x. Output from the first training run is saved in version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to view graphs such as the learning rate in a web browser.
 
 ## Testing
 To run a test, you need to annotate a set of test recordings, analyze them with your model or ensemble, and then run the `rpt-test` command. Annotations must be saved in a CSV file with a defined format. For initial testing and tuning it is best to annotate each relevant sound (per-segment), but for later usage you may wish to use per-block (e.g. minute) or per-recording annotations. Per-recording annotations are defined in a CSV file with these columns:
