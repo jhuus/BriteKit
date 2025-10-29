@@ -91,7 +91,7 @@ britekit inat --name "lithobates clamitans" --output <output-path>
 ```
 For Xeno-Canto, use `--name` for the common name or `--sci` for the scientific name. For YouTube, specify the ID of the corresponding video. For example, specify `--id K_EsxukdNXM` to download the audio from https://www.youtube.com/watch?v=K_EsxukdNXM.
 
-The [audioset](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-audioset) lets you download using [Google Audioset](https://research.google.com/audioset/), which is metadata that classifies sounds in YouTube videos. Audioset was released in March 2017, so any videos uploaded later than that are not included. Also, some videos that are tagged in Audioset are no longer available. Type `britekit audioset --help` for more information.
+The [audioset](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-audioset) command lets you download using [Google Audioset](https://research.google.com/audioset/), which is metadata that classifies sounds in YouTube videos. Audioset was released in March 2017, so any videos uploaded later than that are not included. Also, some videos that are tagged in Audioset are no longer available. Type `britekit audioset --help` for more information.
 ## Managing Training Data
 Once you have a collection of recordings, the steps to prepare it for training are:
 1. Extract spectrograms from recordings and insert them into the training database.
