@@ -21,6 +21,7 @@
 | [britekit embed](#britekit-embed) | Insert spectrogram embeddings into database. |
 | [britekit ensemble](#britekit-ensemble) | Find the best ensemble of a given size from a group of checkpoints. |
 | [britekit extract-all](#britekit-extract-all) | Insert all spectrograms from recordings into database. |
+| [britekit extract-by-csv](#britekit-extract-by-csv) | Insert spectrograms that correspond to rows in a CSV file. |
 | [britekit extract-by-image](#britekit-extract-by-image) | Insert spectrograms that correspond to images. |
 | [britekit find-dup](#britekit-find-dup) | Find and optionally delete duplicate recordings in a database. |
 | [britekit find-lr](#britekit-find-lr) | Suggest a learning rate. |
@@ -431,6 +432,36 @@ Options:
   --sgroup TEXT    Spectrogram group name. Defaults to 'default'.
   --help           Show this message and exit.
 ```
+### britekit extract-by-csv
+```
+Usage: britekit extract-by-csv [OPTIONS]
+
+  Extract spectrograms that correspond to rows in a CSV file.
+
+  This command parses a CSV file to identify the corresponding audio segments
+  and extracts those spectrograms from the original recordings. This is useful
+  when you have pre-selected spectrograms (e.g., from manual review or search
+  results) and want to extract only those specific segments. The CSV file needs
+  two columns: recording and start_time, where recording is the stem of the
+  recording file name (e.g. XC12345) and start_time is the offset in seconds
+  from the start of the recording.
+
+Options:
+  -c, --cfg PATH        Path to YAML file defining config overrides.
+  -d, --db TEXT         Path to the training database.
+  --cat TEXT            Category name, e.g. 'bird' for when new class is added.
+                        Defaults to 'default'.
+  --code TEXT           Class code for when new class is added.
+  --name TEXT           Class name.  [required]
+  --rec-dir DIRECTORY   Path to directory containing recordings.  [required]
+  --csv-path FILE       Path to CSV file containing two columns (recording and
+                        offset) to identify segments to extract.  [required]
+  --dest-dir DIRECTORY  Copy used recordings to this directory if specified.
+  --src TEXT            Source name for inserted recordings. Defaults to
+                        'default'.
+  --sgroup TEXT         Spectrogram group name. Defaults to 'default'.
+  --help                Show this message and exit.
+```
 ### britekit extract-by-image
 ```
 Usage: britekit extract-by-image [OPTIONS]
@@ -581,8 +612,8 @@ Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
   --name TEXT             Plot spectrograms for this class.  [required]
   -d, --db TEXT           Path to the training database.
-  --ndims                 If specified, do not show time and frequency
-                          dimensions on the spectrogram plots.
+  --ndims                 If specified, do not show seconds on x-axis and
+                          frequencies on y-axis.
   --max INTEGER           Max number of spectrograms to plot.
   -o, --output DIRECTORY  Path to output directory.  [required]
   --prefix TEXT           Only include recordings that start with this prefix.
@@ -603,8 +634,8 @@ Usage: britekit plot-dir [OPTIONS]
 
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
-  --ndims                 If specified, show seconds on x-axis and frequencies
-                          on y-axis.
+  --ndims                 If specified, do not show seconds on x-axis and
+                          frequencies on y-axis.
   -i, --input DIRECTORY   Path to input directory.  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
   --all                   If specified, plot whole recordings in one spectrogram
@@ -626,8 +657,8 @@ Usage: britekit plot-rec [OPTIONS]
 
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
-  --ndims                 If specified, show seconds on x-axis and frequencies
-                          on y-axis.
+  --ndims                 If specified, do not show seconds on x-axis and
+                          frequencies on y-axis.
   -i, --input FILE        Path to input directory.  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
   --all                   If specified, plot whole recordings in one spectrogram

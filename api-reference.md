@@ -178,6 +178,24 @@ Returns:
 
 
 
+**extract_by_csv**  
+```python
+Extractor.extract_by_csv(self, rec_dir: str, csv_path: str, dest_dir: Optional[str] = None)
+```
+Extract spectrograms that match names of spectrogram images in a given directory.
+Typically the spectrograms were generated using the 'search' or 'plot-db' commands.
+
+Args:
+- rec_dir (str): Directory containing recordings.
+- csv_path (str): Path to CSV file containing two columns (recording and offset) to identify segments to extract.
+- dest_dir (str, optional): Optionally copy used recordings to this directory.
+
+Returns:
+
+- Number of spectrograms inserted.
+
+
+
 **extract_by_image**  
 ```python
 Extractor.extract_by_image(self, rec_dir: str, spec_dir: str, dest_dir: Optional[str] = None)

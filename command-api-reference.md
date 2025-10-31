@@ -352,6 +352,33 @@ Args:
 - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
 - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
 
+### extract_by_csv
+**Function**  
+```python
+extract_by_csv(cfg_path: Optional[str] = None, db_path: Optional[str] = None, cat_name: Optional[str] = None, class_code: Optional[str] = None, class_name: str = '', rec_dir: str = '', csv_path: str = '', dest_dir: Optional[str] = None, src_name: Optional[str] = None, spec_group: Optional[str] = None) -> None
+```
+Extract spectrograms that correspond to rows in a CSV file.
+
+This command parses a CSV file to identify the corresponding audio
+segments and extracts those spectrograms from the original recordings.
+This is useful when you have pre-selected spectrograms (e.g., from manual review
+or search results) and want to extract only those specific segments. The CSV file
+needs two columns: recording and start_time, where recording is the stem of the
+recording file name (e.g. XC12345) and start_time is the offset in seconds from the
+start of the recording.
+
+Args:
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
+- class_code (str, optional): Class code for new class creation (e.g., "COYE").
+- class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
+- rec_dir (str): Path to directory containing the original audio recordings.
+- csv_path (str): Path to CSV file containing two columns (recording and offset) to identify segments to extract.
+- dest_dir (str, optional): If specified, copy used recordings to this directory.
+- src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
+- spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+
 ### extract_by_image
 **Function**  
 ```python
