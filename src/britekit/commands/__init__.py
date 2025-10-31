@@ -14,7 +14,7 @@ from ._db_delete import (
 )
 from ._embed import embed
 from ._ensemble import ensemble
-from ._extract import extract_all, extract_by_image
+from ._extract import extract_all, extract_by_csv, extract_by_image
 from ._find_dup import find_dup
 from ._inat import inat
 from ._init import init
@@ -57,6 +57,7 @@ __all__ = [
     "embed",
     "ensemble",
     "extract_all",
+    "extract_by_csv",
     "extract_by_image",
     "find_dup",
     "find_lr",

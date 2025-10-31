@@ -109,6 +109,38 @@ class Extractor:
 
         return offsets_per_file
 
+    def _insert_by_dict(self, recording_dir, destination_dir, offsets_per_file):
+        """
+        Given a recording directory and a dict from recording stems to offsets,
+        insert the corresponding spectrograms.
+        """
+        num_inserted = 0
+        recording_paths = util.get_audio_files(recording_dir)
+        for recording_dir in recording_paths:
+            filename = Path(recording_dir).stem
+            if filename not in offsets_per_file:
+                continue
+
+            if destination_dir is not None:
+                dest_path = os.path.join(destination_dir, Path(recording_dir).name)
+                if not os.path.exists(dest_path):
+                    shutil.copy(recording_dir, dest_path)
+
+                recording_dir = dest_path
+
+            logging.info(f"Processing {recording_dir}")
+            try:
+                self.audio.load(recording_dir)
+            except Exception as e:
+                logging.error(f"Caught exception: {e}")
+                continue
+
+            num_inserted += self.insert_spectrograms(
+                recording_dir, offsets_per_file[filename]
+            )
+
+        return num_inserted
+
     def insert_spectrograms(self, recording_path, offsets):
         """
         Insert a spectrogram at each of the given offsets of the specified file.
@@ -187,6 +219,34 @@ class Extractor:
 
         return num_inserted
 
+    def extract_by_csv(
+        self, rec_dir: str, csv_path: str, dest_dir: Optional[str] = None
+    ):
+        """
+        Extract spectrograms that match names of spectrogram images in a given directory.
+        Typically the spectrograms were generated using the 'search' or 'plot-db' commands.
+
+        Args:
+        - rec_dir (str): Directory containing recordings.
+        - csv_path (str): Path to CSV file containing two columns (recording and offset) to identify segments to extract.
+        - dest_dir (str, optional): Optionally copy used recordings to this directory.
+
+        Returns:
+            Number of spectrograms inserted.
+        """
+        import pandas as pd
+
+        df = pd.read_csv(csv_path)
+        offsets_per_file: dict[str, list] = {}
+        for i, row in df.iterrows():
+            recording = row["recording"]
+            if recording not in offsets_per_file:
+                offsets_per_file[recording] = []
+
+            offsets_per_file[recording].append(row["offset"])
+
+        return self._insert_by_dict(rec_dir, dest_dir, offsets_per_file)
+
     def extract_by_image(
         self, rec_dir: str, spec_dir: str, dest_dir: Optional[str] = None
     ):
@@ -203,29 +263,4 @@ class Extractor:
             Number of spectrograms inserted.
         """
         offsets_per_file = self._process_image_dir(spec_dir)
-        num_inserted = 0
-        recording_paths = util.get_audio_files(rec_dir)
-        for recording_path in recording_paths:
-            filename = Path(recording_path).stem
-            if filename not in offsets_per_file:
-                continue
-
-            if dest_dir is not None:
-                dest_path = os.path.join(dest_dir, Path(recording_path).name)
-                if not os.path.exists(dest_path):
-                    shutil.copy(recording_path, dest_path)
-
-                recording_path = dest_path
-
-            logging.info(f"Processing {recording_path}")
-            try:
-                self.audio.load(recording_path)
-            except Exception as e:
-                logging.error(f"Caught exception: {e}")
-                continue
-
-            num_inserted += self.insert_spectrograms(
-                recording_path, offsets_per_file[filename]
-            )
-
-        return num_inserted
+        return self._insert_by_dict(rec_dir, dest_dir, offsets_per_file)
