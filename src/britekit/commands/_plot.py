@@ -158,7 +158,7 @@ def plot_db(
     "--ndims",
     "ndims",
     is_flag=True,
-    help="If specified, do not show time and frequency dimensions on the spectrogram plots.",
+    help="If specified, do not show seconds on x-axis and frequencies on y-axis.",
 )
 @click.option(
     "--max",
@@ -284,7 +284,7 @@ def plot_dir(
     "--ndims",
     "ndims",
     is_flag=True,
-    help="If specified, show seconds on x-axis and frequencies on y-axis.",
+    help="If specified, do not show seconds on x-axis and frequencies on y-axis.",
 )
 @click.option(
     "-i",
@@ -394,7 +394,7 @@ def plot_rec(
     "--ndims",
     "ndims",
     is_flag=True,
-    help="If specified, show seconds on x-axis and frequencies on y-axis.",
+    help="If specified, do not show seconds on x-axis and frequencies on y-axis.",
 )
 @click.option(
     "-i",
