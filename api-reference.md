@@ -31,12 +31,9 @@ Analyzer.run(self, input_path: str, output_path: str, rtype: str = 'audacity')
 Run inference.
 
 Args:
-
-- `input_path` *(str)* — Recording or directory containing recordings.
-- `output_path` *(str)* — Output directory.
-- `rtype` *(str)* — Output format: "audacity", "csv" or "both".
-
-
+- input_path (str): Recording or directory containing recordings.
+- output_path (str): Output directory.
+- rtype (str): Output format: "audacity", "csv" or "both".
 
 ### Audio
 **Class**  
@@ -62,13 +59,18 @@ Supports different frequency scales (linear, log, mel) and optional decibel conv
 Returns both normalized (0-1 range) and unnormalized versions of the spectrograms.
 
 Args:
-
-- `start_times` *(list[float])* — List of start times in seconds from the beginning of the recording for each spectrogram.
-- `spec_duration` *(Optional[float])* — Length of each spectrogram in seconds. Defaults to cfg.audio.spec_duration.
-- `freq_scale` *(Optional[str])* — Frequency scale to use ('linear', 'log', 'mel'). Defaults to cfg.audio.freq_scale.
-- `decibels` *(Optional[float])* — Whether to convert to decibels. Defaults to cfg.audio.decibels.
-- `top_db` *(Optional[int])* — Maximum decibel value for normalization. Defaults to cfg.audio.top_db.
-- `db_power` *(Optional[int])* — Power to apply after decibel conversion. Defaults to cfg.audio.db_power.
+- start_times (list[float]): List of start times in seconds from the beginning
+    of the recording for each spectrogram.
+- spec_duration (Optional[float]): Length of each spectrogram in seconds.
+    Defaults to cfg.audio.spec_duration.
+- freq_scale (Optional[str]): Frequency scale to use ('linear', 'log', 'mel').
+    Defaults to cfg.audio.freq_scale.
+- decibels (Optional[float]): Whether to convert to decibels.
+    Defaults to cfg.audio.decibels.
+- top_db (Optional[int]): Maximum decibel value for normalization.
+    Defaults to cfg.audio.top_db.
+- db_power (Optional[int]): Power to apply after decibel conversion.
+    Defaults to cfg.audio.db_power.
 
 Returns:
 
@@ -89,8 +91,7 @@ For stereo recordings, can automatically choose the cleaner channel
 if choose_channel is enabled in the configuration.
 
 Args:
-
-- `path` *(str)* — Path to the audio recording file.
+- path (str): Path to the audio recording file.
 
 Returns:
 
@@ -130,10 +131,7 @@ If max_frequency is changing, it is best to start with the highest frequency,
 so we downsample rather than upsampling.
 
 Args:
-
-- `cfg` *(Optional[BaseConfig])* — Configuration object. If None, uses default config.
-
-
+- cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
 
 **signal_len**  
 ```python
@@ -172,8 +170,7 @@ Extractor.extract_all(self, dir_path: str)
 Extract spectrograms for all recordings in the given directory.
 
 Args:
-
-- `dir_path` *(str)* — Directory containing recordings.
+- dir_path (str): Directory containing recordings.
 
 Returns:
 
@@ -189,10 +186,9 @@ Extract spectrograms that match names of spectrogram images in a given directory
 Typically the spectrograms were generated using the 'search' or 'plot-db' commands.
 
 Args:
-
-- `rec_dir` *(str)* — Directory containing recordings.
-- `spec_dir` *(str)* — Directory containing spectrogram images.
-- `dest_dir` *(str, optional)* — Optionally copy used recordings to this directory.
+- rec_dir (str): Directory containing recordings.
+- spec_dir (str): Directory containing spectrogram images.
+- dest_dir (str, optional): Optionally copy used recordings to this directory.
 
 Returns:
 
@@ -207,9 +203,8 @@ Extractor.insert_spectrograms(self, recording_path, offsets)
 Insert a spectrogram at each of the given offsets of the specified file.
 
 Args:
-
-- `recording_path` *(str)* — Path to audio recording.
-- `offsets` *(list[float])* — List of offsets, where each represents number of seconds to start of spectrogram.
+- recording_path (str): Path to audio recording.
+- offsets (list[float]): List of offsets, where each represents number of seconds to start of spectrogram.
 
 Returns:
 
@@ -227,8 +222,7 @@ If you insert or delete records after creating an instance of this,
 you must call the refresh method.
 
 Args:
-
-- `db` *(OccurrenceDatabase)* — The database object.
+- db (OccurrenceDatabase): The database object.
 
 **Public methods & properties**
 
@@ -242,10 +236,9 @@ and "CA-ON" returns the average for Ontario, when eBird county prefixes are used
 If area_weight = True, weight each county by its area.
 
 Args:
-
-- `county_prefix` *(str)* — County code prefix
-- `class_name` *(str)* — Class name
-- `area_weight` *(bool, Optional)* — If true, weight by county area (default = False)
+- county_prefix (str): County code prefix
+- class_name (str): Class name
+- area_weight (bool, Optional): If true, weight by county area (default = False)
 
 Returns:
 
@@ -260,9 +253,8 @@ OccurrenceDataProvider.find_county(self, latitude: float, longitude: float)
 Return county info for a given latitude/longitude, or None if not found.
 
 Args:
-
-- `latitude` *(float)* — Latitude.
-- `longitude` *(float)* — Longitude.
+- latitude (float): Latitude.
+- longitude (float): Longitude.
 
 Returns:
 
@@ -283,10 +275,9 @@ This is not quite the same as average_occurrences.max(), since maximum values in
 county don't occur in the same week.
 
 Args:
-
-- `county_prefix` *(str)* — County code prefix
-- `class_name` *(str)* — Class name
-- `area_weight` *(bool, Optional)* — If true, weight by county area (default = False)
+- county_prefix (str): County code prefix
+- class_name (str): Class name
+- area_weight (bool, Optional): If true, weight by county area (default = False)
 
 Returns:
 
@@ -301,9 +292,8 @@ OccurrenceDataProvider.occurrences(self, county_code: str, class_name: str)
 Return list of occurrence values for given county code and class name.
 
 Args:
-
-- `county_code` *(str)* — County code
-- `class_name` *(str)* — Class name
+- county_code (str): County code
+- class_name (str): Class name
 
 Returns:
 
@@ -325,9 +315,8 @@ Return list of occurrence values for given county code and class name.
 For each week, return the maximum of it and the adjacent weeks.
 
 Args:
-
-- `county_code` *(str)* — County code
-- `class_name` *(str)* — Class name
+- county_code (str): County code
+- class_name (str): Class name
 
 Returns:
 
@@ -858,11 +847,11 @@ Predictor.get_dataframe(self, score_array, frame_map, start_times: list[float], 
 Given an array of raw scores, return as a pandas dataframe.
 
 Args:
-
-- `score_array` *(np.ndarray)* — Array of scores of shape (num_spectrograms, num_species).
-- `frame_map` *(np.ndarray, optional)* — Frame-level scores of shape (num_frames, num_species). If provided, uses frame-level labels; otherwise uses segment-level labels.
-- `start_times` *(list[float])* — Start time in seconds for each spectrogram.
-- `recording_name` *(str)* — Name of the recording for the dataframe.
+- score_array (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
+- frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
+    If provided, uses frame-level labels; otherwise uses segment-level labels.
+- start_times (list[float]): Start time in seconds for each spectrogram.
+- recording_name (str): Name of the recording for the dataframe.
 
 Returns:
 
@@ -878,8 +867,7 @@ Predictor.get_frame_labels(self, frame_map) -> dict[str, list[britekit.core.pred
 Given a frame map, return dict of labels.
 
 Args:
-
-- `frame_map` *(np.ndarray)* — Array of scores of shape (num_frames, num_species).
+- frame_map (np.ndarray): Array of scores of shape (num_frames, num_species).
 
 Returns:
 
@@ -897,8 +885,7 @@ Predictor.get_raw_scores(self, recording_path: str)
 Get scores in array format from the loaded models for the given recording.
 
 Args:
-
-- `recording_path` *(str)* — Path to the audio recording file.
+- recording_path (str): Path to the audio recording file.
 
 Returns:
 
@@ -913,9 +900,8 @@ Predictor.get_segment_labels(self, scores, start_times: list[float]) -> dict[str
 Given an array of raw segment-level scores, return dict of labels.
 
 Args:
-
-- `scores` *(np.ndarray)* — Array of scores of shape (num_spectrograms, num_species).
-- `start_times` *(list[float])* — Start time in seconds for each spectrogram.
+- scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
+- start_times (list[float]): Start time in seconds for each spectrogram.
 
 Returns:
 
@@ -931,11 +917,11 @@ Predictor.save_audacity_labels(self, scores, frame_map, start_times: list[float]
 Given an array of raw scores, convert to Audacity labels and save in the given file.
 
 Args:
-
-- `scores` *(np.ndarray)* — Segment-level scores of shape (num_spectrograms, num_species).
-- `frame_map` *(np.ndarray, optional)* — Frame-level scores of shape (num_frames, num_species). If provided, uses frame-level labels; otherwise uses segment-level labels.
-- `start_times` *(list[float])* — Start time in seconds for each spectrogram.
-- `file_path` *(str)* — Output path for the Audacity label file.
+- scores (np.ndarray): Segment-level scores of shape (num_spectrograms, num_species).
+- frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
+    If provided, uses frame-level labels; otherwise uses segment-level labels.
+- start_times (list[float]): Start time in seconds for each spectrogram.
+- file_path (str): Output path for the Audacity label file.
 
 Returns:
 
@@ -951,10 +937,9 @@ Map overlapping per-spectrogram frame scores onto a global frame grid.
 Use mean rather than max or weighted values.
 
 Args:
-
-- `frame_scores` — (num_specs, num_classes, T_spec) scores in [0, 1].
-- `offsets_sec` — start time (s) for each spectrogram within the recording.
-- `recording_duration_sec` — total recording length in seconds.
+- frame_scores: (num_specs, num_classes, T_spec) scores in [0, 1].
+- offsets_sec: start time (s) for each spectrogram within the recording.
+- recording_duration_sec: total recording length in seconds.
 
 Returns:
 
@@ -991,8 +976,7 @@ TrainingDataProvider(db: britekit.training_db.training_db.TrainingDatabase)
 Data access layer on top of TrainingDatabase.
 
 Args:
-
-- `db` *(TrainingDatabase)* — The database object.
+- db (TrainingDatabase): The database object.
 
 **Public methods & properties**
 
@@ -1088,8 +1072,10 @@ TrainingDatabase.delete_category(self, filters: Optional[dict] = None)
 Delete one or more Category records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Category table are: - ID (int): record ID - Name (str): source name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Category table are:
+    - ID (int): record ID
+    - Name (str): source name
 
 Returns:
 
@@ -1104,8 +1090,7 @@ TrainingDatabase.delete_class(self, filters: Optional[dict] = None)
 Delete one ore more Class records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1120,8 +1105,7 @@ TrainingDatabase.delete_recording(self, filters: Optional[dict] = None)
 Delete one or more Recording records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1136,10 +1120,7 @@ TrainingDatabase.delete_segment(self, filters: Optional[dict] = None)
 Delete one or more Segment records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
-
-
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 **delete_soundtype**  
 ```python
@@ -1148,8 +1129,7 @@ TrainingDatabase.delete_soundtype(self, filters: Optional[dict] = None)
 Delete one or more SoundType records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1164,8 +1144,10 @@ TrainingDatabase.delete_source(self, filters: Optional[dict] = None)
 Delete one or more Source records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Source table are: - ID (int): record ID - Name (str): source name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Source table are:
+    - ID (int): record ID
+    - Name (str): source name
 
 Returns:
 
@@ -1180,8 +1162,10 @@ TrainingDatabase.delete_specgroup(self, filters: Optional[dict] = None)
 Delete one or more SpecGroup records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Category table are: - ID (int): record ID - Name (str): specgroup name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Category table are:
+    - ID (int): record ID
+    - Name (str): specgroup name
 
 Returns:
 
@@ -1196,8 +1180,9 @@ TrainingDatabase.delete_specvalue(self, filters: Optional[dict] = None)
 Delete one or more SpecValue records.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the SpecValue table are: - ID (int): record ID
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the SpecValue table are:
+    - ID (int): record ID
 
 Returns:
 
@@ -1210,9 +1195,6 @@ Returns:
 TrainingDatabase.get_all_segment_counts(self)
 ```
 Get the class name and segment count for all classes.
-
-Args:
-    None
 
 Returns:
 
@@ -1229,8 +1211,10 @@ TrainingDatabase.get_category(self, filters: Optional[dict] = None)
 Query the Category table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Category table are: - ID (int): record ID - Name (str): category name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Category table are:
+    - ID (int): record ID
+    - Name (str): category name
 
 Returns:
 
@@ -1247,8 +1231,10 @@ TrainingDatabase.get_category_count(self, filters: Optional[dict] = None)
 Get the number of records in the Category table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Category table are: - ID (int): record ID - Name (str): category name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Category table are:
+    - ID (int): record ID
+    - Name (str): category name
 
 Returns:
 
@@ -1263,8 +1249,7 @@ TrainingDatabase.get_class(self, filters: Optional[dict] = None)
 Query the Class table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1284,8 +1269,7 @@ TrainingDatabase.get_class_count(self, filters: Optional[dict] = None)
 Get the number of records in the Class table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1300,8 +1284,7 @@ TrainingDatabase.get_recording(self, filters: Optional[dict] = None)
 Query the Recording table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1322,8 +1305,7 @@ TrainingDatabase.get_recording_by_class(self, class_name: str)
 Return all recordings that have segments with the given class.
 
 Args:
-
-- `class_name` *(str)* — name of the class.
+- class_name (str): name of the class.
 
 Returns:
 
@@ -1344,8 +1326,7 @@ TrainingDatabase.get_recording_count(self, filters: Optional[dict] = None)
 Get the number of records in the Recording table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1360,9 +1341,8 @@ TrainingDatabase.get_segment(self, filters: Optional[dict] = None, include_audio
 Query the Segment table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
-- `include_audio` *(bool, optional)* — if True, include audio in the returned objects. Default = False.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
+- include_audio (bool, optional): if True, include audio in the returned objects. Default = False.
 
 Returns:
 
@@ -1382,9 +1362,8 @@ TrainingDatabase.get_segment_by_class(self, class_name: str, include_audio: bool
 Get segment info for the given class.
 
 Args:
-
-- `class_name` *(str)* — class name.
-- `include_audio` *(bool, optional)* — if True, include audio in the returned objects. Default = False.
+- class_name (str): class name.
+- include_audio (bool, optional): if True, include audio in the returned objects. Default = False.
 
 Returns:
 
@@ -1418,8 +1397,7 @@ TrainingDatabase.get_segment_class_count(self, filters: Optional[dict] = None)
 Get the number of records in the SegmentClass table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1434,8 +1412,7 @@ TrainingDatabase.get_segment_count(self, filters: Optional[dict] = None)
 Get the number of records in the Segment table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1450,8 +1427,7 @@ TrainingDatabase.get_soundtype(self, filters: Optional[dict] = None)
 Query the SoundType table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1472,8 +1448,7 @@ TrainingDatabase.get_soundtype_count(self, filters: Optional[dict] = None)
 Get the number of records in the SoundType table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1488,8 +1463,10 @@ TrainingDatabase.get_source(self, filters: Optional[dict] = None)
 Query the Source table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Source table are: - ID (int): record ID - Name (str): source name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Source table are:
+    - ID (int): record ID
+    - Name (str): source name
 
 Returns:
 
@@ -1506,8 +1483,10 @@ TrainingDatabase.get_source_count(self, filters: Optional[dict] = None)
 Get the number of records in the Source table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Source table are: - ID (int): record ID - Name (str): source name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Source table are:
+    - ID (int): record ID
+    - Name (str): source name
 
 Returns:
 
@@ -1522,8 +1501,10 @@ TrainingDatabase.get_specgroup(self, filters: Optional[dict] = None)
 Query the SpecGroup table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the SpecGroup table are: - ID (int): record ID - Name (str): specgroup name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the SpecGroup table are:
+    - ID (int): record ID
+    - Name (str): specgroup name
 
 Returns:
 
@@ -1540,8 +1521,10 @@ TrainingDatabase.get_specgroup_count(self, filters: Optional[dict] = None)
 Get the number of records in the SpecGroup table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters. Valid column names for the Source table are: - ID (int): record ID - Name (str): spec group name
+- filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+column names for the Source table are:
+    - ID (int): record ID
+    - Name (str): spec group name
 
 Returns:
 
@@ -1556,12 +1539,11 @@ TrainingDatabase.get_spectrogram_by_class(self, class_name: str, include_value: 
 Fetch joined spectrogram records for the given class.
 
 Args:
-
-- `class_name` *(str)* — class name.
-- `include_value` *(bool, optional)* — If True, include the compressed spectrogram. Default = True.
-- `include_embedding` *(bool, optional)* — If True, include embeddings in the returned objects. Default = False.
-- `spec_group` *(str)* — Name of spectrogram group. Default = "default".
-- `limit` *(int, optional)* — If specified, only return up to this many records.
+- class_name (str): class name.
+- include_value (bool, optional): If True, include the compressed spectrogram. Default = True.
+- include_embedding (bool, optional): If True, include embeddings in the returned objects. Default = False.
+- spec_group (str): Name of spectrogram group. Default = "default".
+- limit (int, optional): If specified, only return up to this many records.
 
 Returns:
 
@@ -1581,8 +1563,7 @@ TrainingDatabase.get_specvalue(self, filters: Optional[dict] = None)
 Query the SpecValue table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1602,8 +1583,7 @@ TrainingDatabase.get_specvalue_count(self, filters: Optional[dict] = None)
 Get the number of records in the SpecValue table.
 
 Args:
-
-- `filters` *(dict, optional)* — a dict of column_name/value pairs that define filters.
+- filters (dict, optional): a dict of column_name/value pairs that define filters.
 
 Returns:
 
@@ -1618,8 +1598,7 @@ TrainingDatabase.insert_category(self, name: str)
 Insert a Category record.
 
 Args:
-
-- `name` *(str)* — Name of the category (e.g. "bird").
+- name (str): Name of the category (e.g. "bird").
 
 Returns:
 
@@ -1634,12 +1613,11 @@ TrainingDatabase.insert_class(self, category_id: int, name: str, alt_name: Optio
 Insert a Class record.
 
 Args:
-
-- `category_id` *(int, required)* — Record ID of the category (e.g. ID of "bird" in the Category table).
-- `name` *(str, required)* — Name of the class (e.g. "White-winged Crossbill").
-- `alt_name` *(str, optional)* — Alternate name of the class (e.g. "Two-barred Crossbill").
-- `code` *(str, optional)* — Code for the class (e.g. "WWCR").
-- `alt_code` *(str, optional)* — Alternate code
+- category_id (int, required): Record ID of the category (e.g. ID of "bird" in the Category table).
+- name (str, required): Name of the class (e.g. "White-winged Crossbill").
+- alt_name (str, optional): Alternate name of the class (e.g. "Two-barred Crossbill").
+- code (str, optional): Code for the class (e.g. "WWCR").
+- alt_code (str, optional): Alternate code
 
 Returns:
 
@@ -1654,11 +1632,10 @@ TrainingDatabase.insert_recording(self, source_id: int, filename: str, path: str
 Insert a Recording record.
 
 Args:
-
-- `source_id` *(int, required)* — Record ID of the source (e.g. ID of "Xeno-Canto" in the Source table).
-- `filename` *(str, required)* — Name of the recording (e.g. "XC12345.mp3").
-- `path` *(str, required)* — Full path to the recording.
-- `seconds` *(float, optional)* — Duration of the recording in seconds.
+- source_id (int, required): Record ID of the source (e.g. ID of "Xeno-Canto" in the Source table).
+- filename (str, required): Name of the recording (e.g. "XC12345.mp3").
+- path (str, required): Full path to the recording.
+- seconds (float, optional): Duration of the recording in seconds.
 
 Returns:
 
@@ -1673,10 +1650,9 @@ TrainingDatabase.insert_segment(self, recording_id: int, offset: float)
 Insert a Segment record.
 
 Args:
-
-- `recording_id` *(int, required)* — Record ID of the recording.
-- `offset` *(float, required)* — offset in seconds from start of the recording.
-- `audio` *(blob, optional)* — corresponding raw audio.
+- recording_id (int, required): Record ID of the recording.
+- offset (float, required): offset in seconds from start of the recording.
+- audio (blob, optional): corresponding raw audio.
 
 Returns:
 
@@ -1693,9 +1669,8 @@ Spectrograms can contain sounds of multiple classes, represented by multiple Seg
 records.
 
 Args:
-
-- `segment_id` *(int, required)* — Segment ID.
-- `class_id` *(int, required)* — Class ID.
+- segment_id (int, required): Segment ID.
+- class_id (int, required): Class ID.
 
 Returns:
 
@@ -1710,8 +1685,7 @@ TrainingDatabase.insert_soundtype(self, name: str)
 Insert a SoundType record.
 
 Args:
-
-- `name` *(str, required)* — Name of the sound type.
+- name (str, required): Name of the sound type.
 
 Returns:
 
@@ -1726,8 +1700,7 @@ TrainingDatabase.insert_source(self, name: str)
 Insert a Source record.
 
 Args:
-
-- `name` *(str)* — Name of the source (e.g. "Xeno-Canto").
+- name (str): Name of the source (e.g. "Xeno-Canto").
 
 Returns:
 
@@ -1742,8 +1715,7 @@ TrainingDatabase.insert_specgroup(self, name: str)
 Insert a SpecGroup record.
 
 Args:
-
-- `name` *(str)* — Name of the group (e.g. "logscale").
+- name (str): Name of the group (e.g. "logscale").
 
 Returns:
 
@@ -1758,11 +1730,10 @@ TrainingDatabase.insert_specvalue(self, value: bytes, spec_group_id: int, segmen
 Insert a SpecValue record.
 
 Args:
-
-- `value` *(blob, required)* — the actual compressed spectrogram
-- `spec_group_id` *(int, required)* — ID of spec group record
-- `segment_id` *(int, required)* — ID of segment record
-- `sampling_rate` *(int)* — sampling rate used to create it
+- value (blob, required): the actual compressed spectrogram
+- spec_group_id (int, required): ID of spec group record
+- segment_id (int, required): ID of segment record
+- sampling_rate (int): sampling rate used to create it
 
 Returns:
 
@@ -1777,12 +1748,9 @@ TrainingDatabase.update_recording(self, id: int, field: str, value)
 Update a record in the Recording table.
 
 Args:
-
-- `id` *(int)* — ID that identifies the record to update
-- `field` *(str)* — Name of column to update.
-- `value` — New value.
-
-
+- id (int): ID that identifies the record to update
+- field (str): Name of column to update.
+- value: New value.
 
 **update_segment**  
 ```python
@@ -1791,12 +1759,9 @@ TrainingDatabase.update_segment(self, id: int, field: str, value)
 Update a record in the Segment table.
 
 Args:
-
-- `id` *(int)* — ID that identifies the record to update
-- `field` *(str)* — Name of column to update.
-- `value` — New value.
-
-
+- id (int): ID that identifies the record to update
+- field (str): Name of column to update.
+- value: New value.
 
 **update_segment_class**  
 ```python
@@ -1805,12 +1770,9 @@ TrainingDatabase.update_segment_class(self, id: int, field: str, value)
 Update a record in the SegmentClass table.
 
 Args:
-
-- `id` *(int)* — ID that identifies the record to update
-- `field` *(str)* — Name of column to update.
-- `value` — New value.
-
-
+- id (int): ID that identifies the record to update
+- field (str): Name of column to update.
+- value: New value.
 
 **update_specvalue**  
 ```python
@@ -1819,12 +1781,9 @@ TrainingDatabase.update_specvalue(self, id: int, field: str, value)
 Update a record in the SpecValue table.
 
 Args:
-
-- `id` *(int)* — ID that identifies the record to update
-- `field` *(str)* — Name of column to update.
-- `value` — New value.
-
-
+- id (int): ID that identifies the record to update
+- field (str): Name of column to update.
+- value: New value.
 
 ### Tuner
 **Class**  

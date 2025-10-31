@@ -11,8 +11,8 @@ For example, you might have categories like "Birds", "Mammals", or "Insects"
 that contain multiple related species classes.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the category to add (e.g., "Birds", "Mammals").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the category to add (e.g., "Birds", "Mammals").
 
 ### add_class
 **Function**  
@@ -26,12 +26,12 @@ Each class must belong to a category and can have both primary and alternate nam
 This is typically used to add new species or sound types to the training database.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    category (str): Name of the category this class belongs to. Defaults to "default".
-    name (str): Primary name of the class (e.g., "Common Yellowthroat").
-    code (str): Primary code for the class (e.g., "COYE").
-    alt_name (str, optional): Alternate name for the class (e.g., scientific name).
-    alt_code (str, optional): Alternate code for the class (e.g., scientific code).
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- category (str): Name of the category this class belongs to. Defaults to "default".
+- name (str): Primary name of the class (e.g., "Common Yellowthroat").
+- code (str): Primary code for the class (e.g., "COYE").
+- alt_name (str, optional): Alternate name for the class (e.g., scientific name).
+- alt_code (str, optional): Alternate code for the class (e.g., scientific code).
 
 ### add_src
 **Function**  
@@ -45,8 +45,8 @@ Sources track where audio recordings originated from, such as "Xeno-Canto",
 maintain provenance and can be useful for data quality analysis.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the source to add (e.g., "Xeno-Canto", "Macaulay Library").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the source to add (e.g., "Xeno-Canto", "Macaulay Library").
 
 ### add_stype
 **Function**  
@@ -60,8 +60,8 @@ Sound types describe the nature of the audio content, such as "Song", "Call",
 or sounds produced by the same species.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the sound type to add (e.g., "Song", "Call", "Alarm").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the sound type to add (e.g., "Song", "Call", "Alarm").
 
 ### analyze
 **Function**  
@@ -75,15 +75,15 @@ using a trained model or ensemble. The output can be saved as Audacity labels,
 CSV files, or both.
 
 Args:
-    cfg_path (str): Path to YAML configuration file defining model and inference settings.
-    input_path (str): Path to input audio file or directory containing audio files.
-    output_path (str): Path to output directory where results will be saved.
-    rtype (str): Output format type. Options are "audacity", "csv", or "both".
-    min_score (float, optional): Confidence threshold. Predictions below this value are excluded.
-    num_threads (int, optional): Number of threads to use for processing. Default is 3.
-    overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
-    segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
-                                 fixed-length; otherwise they are variable-length.
+- cfg_path (str): Path to YAML configuration file defining model and inference settings.
+- input_path (str): Path to input audio file or directory containing audio files.
+- output_path (str): Path to output directory where results will be saved.
+- rtype (str): Output format type. Options are "audacity", "csv", or "both".
+- min_score (float, optional): Confidence threshold. Predictions below this value are excluded.
+- num_threads (int, optional): Number of threads to use for processing. Default is 3.
+- overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
+- segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
+    fixed-length; otherwise they are variable-length.
 
 ### audioset
 **Function**  
@@ -101,14 +101,14 @@ Most AudioSet clips contain multiple classes (e.g., "train", "wind", "speech"). 
 shows which other classes commonly co-occur with the specified class.
 
 Args:
-    class_name (str): Name of the audio class to download (e.g., "train", "speech", "music").
-    curated_csv_path (str): Path to CSV file containing a curated list of clips to download.
-    output_dir (str): Directory where downloaded recordings will be saved.
-    max_downloads (int): Maximum number of recordings to download. Default is 500.
-    sampling_rate (float): Output sampling rate in Hz. Default is 32000.
-    num_to_skip (int): Number of initial recordings to skip. Default is 0.
-    do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
-    root_dir (str): Directory that contains the data directory. Default is working directory.
+- class_name (str): Name of the audio class to download (e.g., "train", "speech", "music").
+- curated_csv_path (str): Path to CSV file containing a curated list of clips to download.
+- output_dir (str): Directory where downloaded recordings will be saved.
+- max_downloads (int): Maximum number of recordings to download. Default is 500.
+- sampling_rate (float): Output sampling rate in Hz. Default is 32000.
+- num_to_skip (int): Number of initial recordings to skip. Default is 0.
+- do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
+- root_dir (str): Directory that contains the data directory. Default is working directory.
 
 ### calibrate
 **Function**  
@@ -126,14 +126,14 @@ The calibration process helps improve model reliability by adjusting
 prediction scores to better reflect true probabilities.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    annotations_path (str): Path to CSV file containing ground truth annotations.
-    label_dir (str): Directory containing model prediction labels (Audacity format).
-    output_path (str): Directory where calibration reports will be saved.
-    recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-    cutoff (float): Ignore predictions below this threshold during calibration. Default is 0.4.
-    coef (float, optional): Use this coefficient for the calibration plot.
-    inter (float, optional): Use this intercept for the calibration plot.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- annotations_path (str): Path to CSV file containing ground truth annotations.
+- label_dir (str): Directory containing model prediction labels (Audacity format).
+- output_path (str): Directory where calibration reports will be saved.
+- recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+- cutoff (float): Ignore predictions below this threshold during calibration. Default is 0.4.
+- coef (float, optional): Use this coefficient for the calibration plot.
+- inter (float, optional): Use this intercept for the calibration plot.
 
 ### ckpt_avg
 **Function**  
@@ -146,9 +146,9 @@ This command loads multiple checkpoint files from a directory and creates a new 
 with averaged weights.
 
 Args:
-    input_path (str): Directory containing checkpoint files (*.ckpt) to average.
-    output_path (str, optional): Path for the output averaged checkpoint.
-                               Defaults to "average.ckpt" in the input directory.
+- input_path (str): Directory containing checkpoint files (*.ckpt) to average.
+- output_path (str, optional): Path for the output averaged checkpoint.
+    Defaults to "average.ckpt" in the input directory.
 
 ### ckpt_freeze
 **Function**  
@@ -166,7 +166,7 @@ version replaces the original file. Frozen checkpoints are optimized for deploym
 and inference rather than continued training.
 
 Args:
-    input_path (str): Path to the checkpoint file to freeze.
+- input_path (str): Path to the checkpoint file to freeze.
 
 ### ckpt_onnx
 **Function**  
@@ -183,8 +183,8 @@ The conversion process creates a new ONNX file with the same base name as the in
 checkpoint.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    input_path (str): Path to the PyTorch checkpoint file to convert.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- input_path (str): Path to the PyTorch checkpoint file to convert.
 
 ### del_cat
 **Function**  
@@ -198,8 +198,8 @@ all recordings belonging to those classes, and all spectrograms from those recor
 This is a destructive operation that cannot be undone.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the category to delete (e.g., "Birds", "Mammals").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the category to delete (e.g., "Birds", "Mammals").
 
 ### del_class
 **Function**  
@@ -213,8 +213,8 @@ spectrograms from those recordings. This is a destructive operation that cannot
 be undone and will affect any training data associated with this class.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the class to delete (e.g., "Common Yellowthroat").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the class to delete (e.g., "Common Yellowthroat").
 
 ### del_rec
 **Function**  
@@ -227,8 +227,8 @@ This command removes a specific audio recording and all spectrograms that were
 extracted from it.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
 
 ### del_seg
 **Function**  
@@ -245,9 +245,9 @@ This is useful for removal of segments based on visual inspection of plots,
 allowing you to remove low-quality or incorrectly labeled segments.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    class_name (str): Name of the class whose segments should be considered for deletion.
-    dir_path (str): Path to directory containing spectrogram image files.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- class_name (str): Name of the class whose segments should be considered for deletion.
+- dir_path (str): Path to directory containing spectrogram image files.
 
 ### del_sgroup
 **Function**  
@@ -260,8 +260,8 @@ Spectrogram groups organize spectrograms by processing parameters or extraction 
 This command removes the entire group and all spectrograms within it.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
 
 ### del_src
 **Function**  
@@ -275,8 +275,8 @@ from that source, and all spectrograms from those recordings. This is useful for
 removing entire datasets from a specific source (e.g., removing all Xeno-Canto data).
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
 
 ### del_stype
 **Function**  
@@ -290,8 +290,8 @@ labeled with this sound type. The spectrograms will have their soundtype_id fiel
 to null, effectively removing the sound type classification while keeping the audio data.
 
 Args:
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
 
 ### embed
 **Function**  
@@ -305,10 +305,10 @@ in the training database. These embeddings can be used for similarity search and
 downstream tasks. The embeddings are compressed and stored in the database.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    class_name (str, optional): Name of a specific class to process. If omitted, processes all classes.
-    spec_group (str): Spectrogram group name to process. Defaults to 'default'.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- class_name (str, optional): Name of a specific class to process. If omitted, processes all classes.
+- spec_group (str): Spectrogram group name to process. Defaults to 'default'.
 
 ### ensemble
 **Function**  
@@ -321,13 +321,13 @@ Given a directory containing checkpoints, and an ensemble size (default=3), sele
 ensembles of the given size and test each one to identify the best ensemble.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    ckpt_path (str): Path to directory containing checkpoints.
-    ensemble_size (int): Number of checkpoints in ensemble (default=3).
-    num_tries (int): Maximum number of ensembles to try (default=100).
-    metric (str): Metric to use to compare ensembles (default=micro_roc).
-    annotations_path (str): Path to CSV file containing ground truth annotations.
-    recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- ckpt_path (str): Path to directory containing checkpoints.
+- ensemble_size (int): Number of checkpoints in ensemble (default=3).
+- num_tries (int): Maximum number of ensembles to try (default=100).
+- metric (str): Metric to use to compare ensembles (default=micro_roc).
+- annotations_path (str): Path to CSV file containing ground truth annotations.
+- recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
 
 ### extract_all
 **Function**  
@@ -342,15 +342,15 @@ training database for use in model training. If the specified class doesn't exis
 it will be automatically created.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
-    class_code (str, optional): Class code for new class creation (e.g., "COYE").
-    class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
-    dir_path (str): Path to directory containing audio recordings to process.
-    overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
-    src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
-    spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
+- class_code (str, optional): Class code for new class creation (e.g., "COYE").
+- class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
+- dir_path (str): Path to directory containing audio recordings to process.
+- overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
+- src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
+- spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
 
 ### extract_by_image
 **Function**  
@@ -368,16 +368,16 @@ The images contain metadata in their filenames (recording name and time offset)
 that allows the command to locate and extract the corresponding audio segments.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
-    class_code (str, optional): Class code for new class creation (e.g., "COYE").
-    class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
-    rec_dir (str): Path to directory containing the original audio recordings.
-    spec_dir (str): Path to directory containing spectrogram image files.
-    dest_dir (str, optional): If specified, copy used recordings to this directory.
-    src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
-    spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
+- class_code (str, optional): Class code for new class creation (e.g., "COYE").
+- class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
+- rec_dir (str): Path to directory containing the original audio recordings.
+- spec_dir (str): Path to directory containing spectrogram image files.
+- dest_dir (str, optional): If specified, copy used recordings to this directory.
+- src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
+- spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
 
 ### find_dup
 **Function**  
@@ -395,11 +395,11 @@ Duplicates are identified by comparing the first 3 spectrogram embeddings from e
 using cosine distance.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
-    delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
-    spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
+- delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
+- spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
 
 ### find_lr
 **Function**  
@@ -417,10 +417,10 @@ The suggested learning rate helps ensure stable and efficient training by
 avoiding rates that are too high (causing instability) or too low (slow convergence).
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-                             If not specified, uses default configuration.
-    num_batches (int): Number of training batches to analyze for learning rate finding.
-                      Default is 100. Higher values provide more accurate results but take longer.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    If not specified, uses default configuration.
+- num_batches (int): Number of training batches to analyze for learning rate finding.
+    Default is 100. Higher values provide more accurate results but take longer.
 
 ### inat
 **Function**  
@@ -437,10 +437,10 @@ Only observations with "research grade" quality are downloaded (excluding "needs
 The command respects the maximum download limit and can optionally add filename prefixes.
 
 Args:
-    output_dir (str): Directory where downloaded recordings will be saved.
-    max_downloads (int): Maximum number of recordings to download. Default is 500.
-    name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
-    no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
+- output_dir (str): Directory where downloaded recordings will be saved.
+- max_downloads (int): Maximum number of recordings to download. Default is 500.
+- name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
+- no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
 
 ### pickle
 **Function**  
@@ -454,13 +454,13 @@ that can be efficiently loaded during model training. It can process all classes
 or specific classes specified by a CSV file.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    classes_path (str, optional): Path to CSV file containing class names to include.
-                                 If omitted, includes all classes in the database.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
-    max_per_class (int, optional): Maximum number of spectrograms to include per class.
-    spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- classes_path (str, optional): Path to CSV file containing class names to include.
+    If omitted, includes all classes in the database.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+- max_per_class (int, optional): Maximum number of spectrograms to include per class.
+- spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
 
 ### plot_db
 **Function**  
@@ -474,15 +474,15 @@ saves them as JPEG images. It can filter recordings by filename prefix and limit
 number of spectrograms plotted.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    class_name (str): Name of the class to plot spectrograms for (e.g., "Common Yellowthroat").
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
-    max_count (int, optional): Maximum number of spectrograms to plot. If omitted, plots all available.
-    output_path (str): Directory where spectrogram images will be saved.
-    prefix (str, optional): Only include recordings that start with this filename prefix.
-    power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
-    spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- class_name (str): Name of the class to plot spectrograms for (e.g., "Common Yellowthroat").
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+- max_count (int, optional): Maximum number of spectrograms to plot. If omitted, plots all available.
+- output_path (str): Directory where spectrogram images will be saved.
+- prefix (str, optional): Only include recordings that start with this filename prefix.
+- power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
+- spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
 
 ### plot_dir
 **Function**  
@@ -496,13 +496,13 @@ It can either plot each recording as a single spectrogram or break recordings in
 overlapping segments.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
-    input_path (str): Directory containing audio recordings to process.
-    output_path (str): Directory where spectrogram images will be saved.
-    all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
-    overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
-    power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+- input_path (str): Directory containing audio recordings to process.
+- output_path (str): Directory where spectrogram images will be saved.
+- all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
+- overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
+- power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
 
 ### reextract
 **Function**  
@@ -519,12 +519,12 @@ In check mode, it only verifies that all required audio files are accessible wit
 updating the database.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
-    class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
-    classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
-    check (bool): If True, only check that all recording paths are accessible without updating database.
-    spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
+- class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
+- classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
+- check (bool): If True, only check that all recording paths are accessible without updating database.
+- spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
 
 ### rpt_ann
 **Function**  
@@ -538,8 +538,8 @@ showing the total duration of each class across all recordings and per-recording
 breakdowns.
 
 Args:
-    annotations_path (str): Path to CSV file containing per-segment annotations.
-    output_path (str): Directory where summary reports will be saved.
+- annotations_path (str): Path to CSV file containing per-segment annotations.
+- output_path (str): Directory where summary reports will be saved.
 
 ### rpt_db
 **Function**  
@@ -554,9 +554,9 @@ The reports help understand the composition and quality of training data
 and can be used for data management and quality control.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    output_path (str): Directory where database reports will be saved.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- output_path (str): Directory where database reports will be saved.
 
 ### rpt_epochs
 **Function**  
@@ -568,10 +568,10 @@ and measure the macro-averaged ROC and AP scores, and then plot them.
 This is useful to determine the number of training epochs needed.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    input_path (str): Checkpoint directory generated by training.
-    annotations_path (str): Path to CSV file containing ground truth annotations.
-    output_path (str): Directory where the graph image will be saved.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- input_path (str): Checkpoint directory generated by training.
+- annotations_path (str): Path to CSV file containing ground truth annotations.
+- output_path (str): Directory where the graph image will be saved.
 
 ### rpt_labels
 **Function**  
@@ -589,9 +589,9 @@ The reports help understand model performance and detection patterns
 across different recordings and classes.
 
 Args:
-    label_dir (str): Directory containing inference output (CSV or Audacity labels).
-    output_path (str): Directory where summary reports will be saved.
-    min_score (float, optional): Ignore detections below this confidence threshold.
+- label_dir (str): Directory containing inference output (CSV or Audacity labels).
+- output_path (str): Directory where summary reports will be saved.
+- min_score (float, optional): Ignore detections below this confidence threshold.
 
 ### rpt_test
 **Function**  
@@ -610,15 +610,15 @@ The command generates detailed performance metrics including precision, recall,
 F1 scores, and various visualization plots to help understand model behavior.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    granularity (str): Evaluation granularity ("recording", "block", or "segment"). Default is "segment".
-    annotations_path (str): Path to CSV file containing ground truth annotations.
-    label_dir (str): Directory containing model prediction labels (Audacity format).
-    output_path (str): Directory where test reports will be saved.
-    recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-    min_score (float, optional): Provide detailed reports for this confidence threshold.
-    block_size (int, optional): block_size in seconds (default=60).
-    precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- granularity (str): Evaluation granularity ("recording", "block", or "segment"). Default is "segment".
+- annotations_path (str): Path to CSV file containing ground truth annotations.
+- label_dir (str): Directory containing model prediction labels (Audacity format).
+- output_path (str): Directory where test reports will be saved.
+- recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+- min_score (float, optional): Provide detailed reports for this confidence threshold.
+- block_size (int, optional): block_size in seconds (default=60).
+- precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
 
 ### search
 **Function**  
@@ -632,18 +632,18 @@ then searches through a database of spectrograms to find the most similar ones
 based on embedding similarity. Results are plotted and saved to the output directory.
 
 Args:
-    cfg_path (str): Path to YAML configuration file defining model settings.
-    db_path (str): Path to the training database containing spectrograms to search.
-    class_name (str): Name of the class/species to search within the database.
-    max_dist (float): Maximum distance threshold. Results with distance greater than this are excluded.
-    exp (float): Exponent to raise spectrograms to for visualization (shows background sounds).
-    num_to_plot (int): Maximum number of similar spectrograms to plot and save.
-    output_path (str): Directory where search results and plots will be saved.
-    input_path (str): Path to the audio file containing the target spectrogram.
-    offset (float): Time offset in seconds where the target spectrogram is extracted.
-    exclude_db (str, optional): Path to an exclusion database. Spectrograms in this database are excluded from results.
-    class_name2 (str, optional): Class name in the exclusion database. Defaults to the search class name.
-    spec_group (str): Spectrogram group name in the database. Defaults to 'default'.
+- cfg_path (str): Path to YAML configuration file defining model settings.
+- db_path (str): Path to the training database containing spectrograms to search.
+- class_name (str): Name of the class/species to search within the database.
+- max_dist (float): Maximum distance threshold. Results with distance greater than this are excluded.
+- exp (float): Exponent to raise spectrograms to for visualization (shows background sounds).
+- num_to_plot (int): Maximum number of similar spectrograms to plot and save.
+- output_path (str): Directory where search results and plots will be saved.
+- input_path (str): Path to the audio file containing the target spectrogram.
+- offset (float): Time offset in seconds where the target spectrogram is extracted.
+- exclude_db (str, optional): Path to an exclusion database. Spectrograms in this database are excluded from results.
+- class_name2 (str, optional): Class name in the exclusion database. Defaults to the search class name.
+- spec_group (str): Spectrogram group name in the database. Defaults to 'default'.
 
 ### train
 **Function**  
@@ -661,8 +661,8 @@ Training progress is displayed in real-time, and model checkpoints are saved
 automatically. The final trained model can be used for inference and evaluation.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-                             If not specified, uses default configuration.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    If not specified, uses default configuration.
 
 ### tune
 **Function**  
@@ -682,18 +682,18 @@ that training will be skipped.
 The param_path specifies a YAML file that defines the parameters to be tuned, as described in the README.
 
 Args:
-    cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    param_path (str, optional): Path to YAML file defining hyperparameters to tune and their search space.
-    output_path (str): Directory where reports will be saved.
-    annotations_path (str): Path to CSV file containing ground truth annotations.
-    metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
-    recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-    train_log_path (str, optional): Training log directory. Defaults to "logs/fold-0".
-    num_trials (int): Number of random trials to run. If 0, performs exhaustive search.
-    num_runs (int): Number of runs to average for each parameter combination. Default is 1.
-    extract (bool): Extract new spectrograms before training, to tune spectrogram parameters.
-    skip_training (bool): Iterate on inference only, using checkpoints from the last training run.
-    classes_path (str, optional): Path to CSV containing class names for extract option. Default is all classes.
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- param_path (str, optional): Path to YAML file defining hyperparameters to tune and their search space.
+- output_path (str): Directory where reports will be saved.
+- annotations_path (str): Path to CSV file containing ground truth annotations.
+- metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
+- recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+- train_log_path (str, optional): Training log directory. Defaults to "logs/fold-0".
+- num_trials (int): Number of random trials to run. If 0, performs exhaustive search.
+- num_runs (int): Number of runs to average for each parameter combination. Default is 1.
+- extract (bool): Extract new spectrograms before training, to tune spectrogram parameters.
+- skip_training (bool): Iterate on inference only, using checkpoints from the last training run.
+- classes_path (str, optional): Path to CSV containing class names for extract option. Default is all classes.
 
 ### wav2mp3
 **Function**  
@@ -712,8 +712,8 @@ file sizes. This is useful for standardizing audio formats and reducing storage
 requirements for large audio datasets.
 
 Args:
-    dir (str): Path to directory containing audio files to convert.
-    sampling_rate (int): Output sampling rate in Hz. Default is 32000 Hz.
+- dir (str): Path to directory containing audio files to convert.
+- sampling_rate (int): Output sampling rate in Hz. Default is 32000 Hz.
 
 ### xeno
 **Function**  
@@ -730,13 +730,13 @@ To get an API key, register as a Xeno-Canto user and check your account page.
 Then specify the key in the --key argument, or set the environment variable XCKEY=<key>.
 
 Args:
-    key (str): Xeno-Canto API key for authentication. Can also be set via XCKEY environment variable.
-    output_dir (str): Directory where downloaded recordings will be saved.
-    max_downloads (int): Maximum number of recordings to download. Default is 500.
-    name (str): Species name to search for (common name or scientific name).
-    ignore_licence (bool): If True, ignore license restrictions. By default, excludes BY-NC-ND licensed recordings.
-    scientific_name (bool): If True, treat the name as a scientific name rather than common name.
-    seen_only (bool): If True, only download recordings where the animal was seen (animal-seen=yes).
+- key (str): Xeno-Canto API key for authentication. Can also be set via XCKEY environment variable.
+- output_dir (str): Directory where downloaded recordings will be saved.
+- max_downloads (int): Maximum number of recordings to download. Default is 500.
+- name (str): Species name to search for (common name or scientific name).
+- ignore_licence (bool): If True, ignore license restrictions. By default, excludes BY-NC-ND licensed recordings.
+- scientific_name (bool): If True, treat the name as a scientific name rather than common name.
+- seen_only (bool): If True, only download recordings where the animal was seen (animal-seen=yes).
 
 ### youtube
 **Function**  
@@ -746,6 +746,6 @@ youtube(id: str = '', output_dir: str = '', sampling_rate: int = 32000) -> None
 Download an audio recording from Youtube, given a Youtube ID.
 
 Args:
-    id (str): ID of the clip to download.
-    output_dir (str): Directory where downloaded recordings will be saved.
-    sampling_rate (float): Output sampling rate in Hz. Default is 32000.
+- id (str): ID of the clip to download.
+- output_dir (str): Directory where downloaded recordings will be saved.
+- sampling_rate (float): Output sampling rate in Hz. Default is 32000.
