@@ -114,8 +114,8 @@ class Extractor:
         Insert a spectrogram at each of the given offsets of the specified file.
 
         Args:
-            recording_path (str): Path to audio recording.
-            offsets (list[float]): List of offsets, where each represents number of seconds to start of spectrogram.
+        - recording_path (str): Path to audio recording.
+        - offsets (list[float]): List of offsets, where each represents number of seconds to start of spectrogram.
 
         Returns:
             Number of spectrograms inserted.
@@ -156,7 +156,7 @@ class Extractor:
         Extract spectrograms for all recordings in the given directory.
 
         Args:
-            dir_path (str): Directory containing recordings.
+        - dir_path (str): Directory containing recordings.
 
         Returns:
             Number of spectrograms inserted.
@@ -195,9 +195,9 @@ class Extractor:
         Typically the spectrograms were generated using the 'search' or 'plot-db' commands.
 
         Args:
-            rec_dir (str): Directory containing recordings.
-            spec_dir (str): Directory containing spectrogram images.
-            dest_dir (str, optional): Optionally copy used recordings to this directory.
+        - rec_dir (str): Directory containing recordings.
+        - spec_dir (str): Directory containing spectrogram images.
+        - dest_dir (str, optional): Optionally copy used recordings to this directory.
 
         Returns:
             Number of spectrograms inserted.

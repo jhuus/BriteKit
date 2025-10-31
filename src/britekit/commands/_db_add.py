@@ -18,8 +18,8 @@ def add_cat(db_path: Optional[str]=None, name: str="") -> None:
     that contain multiple related species classes.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the category to add (e.g., "Birds", "Mammals").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the category to add (e.g., "Birds", "Mammals").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -58,8 +58,8 @@ def add_stype(db_path: Optional[str]=None, name: str="") -> None:
     or sounds produced by the same species.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the sound type to add (e.g., "Song", "Call", "Alarm").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the sound type to add (e.g., "Song", "Call", "Alarm").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -98,8 +98,8 @@ def add_src(db_path: Optional[str]=None, name: str="") -> None:
     maintain provenance and can be useful for data quality analysis.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the source to add (e.g., "Xeno-Canto", "Macaulay Library").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the source to add (e.g., "Xeno-Canto", "Macaulay Library").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -145,12 +145,12 @@ def add_class(
     This is typically used to add new species or sound types to the training database.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        category (str): Name of the category this class belongs to. Defaults to "default".
-        name (str): Primary name of the class (e.g., "Common Yellowthroat").
-        code (str): Primary code for the class (e.g., "COYE").
-        alt_name (str, optional): Alternate name for the class (e.g., scientific name).
-        alt_code (str, optional): Alternate code for the class (e.g., scientific code).
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - category (str): Name of the category this class belongs to. Defaults to "default".
+    - name (str): Primary name of the class (e.g., "Common Yellowthroat").
+    - code (str): Primary code for the class (e.g., "COYE").
+    - alt_name (str, optional): Alternate name for the class (e.g., scientific name).
+    - alt_code (str, optional): Alternate code for the class (e.g., scientific code).
     """
     from britekit.training_db.training_db import TrainingDatabase
 

@@ -20,8 +20,8 @@ def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     This is a destructive operation that cannot be undone.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the category to delete (e.g., "Birds", "Mammals").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the category to delete (e.g., "Birds", "Mammals").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -73,8 +73,8 @@ def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     be undone and will affect any training data associated with this class.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the class to delete (e.g., "Common Yellowthroat").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the class to delete (e.g., "Common Yellowthroat").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -123,8 +123,8 @@ def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
     extracted from it.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - file_name (str): Name of the recording file to delete (e.g., "XC123456.mp3").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -167,8 +167,8 @@ def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     This command removes the entire group and all spectrograms within it.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the spectrogram group to delete (e.g., "default", "augmented").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -212,8 +212,8 @@ def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     to null, effectively removing the sound type classification while keeping the audio data.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the sound type to delete (e.g., "Song", "Call", "Alarm").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -257,8 +257,8 @@ def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
     removing entire datasets from a specific source (e.g., removing all Xeno-Canto data).
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - name (str): Name of the source to delete (e.g., "Xeno-Canto", "Macaulay Library").
     """
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -305,9 +305,9 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
     allowing you to remove low-quality or incorrectly labeled segments.
 
     Args:
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        class_name (str): Name of the class whose segments should be considered for deletion.
-        dir_path (str): Path to directory containing spectrogram image files.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - class_name (str): Name of the class whose segments should be considered for deletion.
+    - dir_path (str): Path to directory containing spectrogram image files.
     """
     from britekit.training_db.training_db import TrainingDatabase
 

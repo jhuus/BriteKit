@@ -19,9 +19,9 @@ def ckpt_avg(input_path: str="", output_path: Optional[str]=None):
     with averaged weights.
 
     Args:
-        input_path (str): Directory containing checkpoint files (*.ckpt) to average.
-        output_path (str, optional): Path for the output averaged checkpoint.
-                                   Defaults to "average.ckpt" in the input directory.
+    - input_path (str): Directory containing checkpoint files (*.ckpt) to average.
+    - output_path (str, optional): Path for the output averaged checkpoint.
+        Defaults to "average.ckpt" in the input directory.
     """
     import torch
 
@@ -88,7 +88,7 @@ def ckpt_freeze(input_path: str=""):
     and inference rather than continued training.
 
     Args:
-        input_path (str): Path to the checkpoint file to freeze.
+    - input_path (str): Path to the checkpoint file to freeze.
     """
     import pytorch_lightning as pl
     from britekit.models.model_loader import load_from_checkpoint
@@ -136,8 +136,8 @@ def ckpt_onnx(
     checkpoint.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        input_path (str): Path to the PyTorch checkpoint file to convert.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - input_path (str): Path to the PyTorch checkpoint file to convert.
     """
     import torch
     from britekit.models.model_loader import load_from_checkpoint

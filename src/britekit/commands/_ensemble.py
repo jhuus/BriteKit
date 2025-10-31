@@ -65,13 +65,13 @@ def ensemble(
     ensembles of the given size and test each one to identify the best ensemble.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        ckpt_path (str): Path to directory containing checkpoints.
-        ensemble_size (int): Number of checkpoints in ensemble (default=3).
-        num_tries (int): Maximum number of ensembles to try (default=100).
-        metric (str): Metric to use to compare ensembles (default=micro_roc).
-        annotations_path (str): Path to CSV file containing ground truth annotations.
-        recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - ckpt_path (str): Path to directory containing checkpoints.
+    - ensemble_size (int): Number of checkpoints in ensemble (default=3).
+    - num_tries (int): Maximum number of ensembles to try (default=100).
+    - metric (str): Metric to use to compare ensembles (default=micro_roc).
+    - annotations_path (str): Path to CSV file containing ground truth annotations.
+    - recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
     """
     import glob
     import itertools

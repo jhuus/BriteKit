@@ -8,7 +8,7 @@ class TrainingDataProvider:
     Data access layer on top of TrainingDatabase.
 
     Args:
-        db (TrainingDatabase): The database object.
+    - db (TrainingDatabase): The database object.
     """
 
     def __init__(self, db: TrainingDatabase):

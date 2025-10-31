@@ -10,7 +10,7 @@ class OccurrenceDataProvider:
     you must call the refresh method.
 
     Args:
-        db (OccurrenceDatabase): The database object.
+    - db (OccurrenceDatabase): The database object.
     """
 
     def __init__(self, db: OccurrenceDatabase):
@@ -31,8 +31,8 @@ class OccurrenceDataProvider:
         Return county info for a given latitude/longitude, or None if not found.
 
         Args:
-            latitude (float): Latitude.
-            longitude (float): Longitude.
+        - latitude (float): Latitude.
+        - longitude (float): Longitude.
 
         Returns:
             County object, or None if not found.
@@ -54,8 +54,8 @@ class OccurrenceDataProvider:
         For each week, return the maximum of it and the adjacent weeks.
 
         Args:
-            county_code (str): County code
-            class_name (str): Class name
+        - county_code (str): County code
+        - class_name (str): Class name
 
         Returns:
             List of smoothed occurrence values.
@@ -75,8 +75,8 @@ class OccurrenceDataProvider:
         Return list of occurrence values for given county code and class name.
 
         Args:
-            county_code (str): County code
-            class_name (str): Class name
+        - county_code (str): County code
+        - class_name (str): Class name
 
         Returns:
             List of occurrence values.
@@ -97,9 +97,9 @@ class OccurrenceDataProvider:
         If area_weight = True, weight each county by its area.
 
         Args:
-            county_prefix (str): County code prefix
-            class_name (str): Class name
-            area_weight (bool, Optional): If true, weight by county area (default = False)
+        - county_prefix (str): County code prefix
+        - class_name (str): Class name
+        - area_weight (bool, Optional): If true, weight by county area (default = False)
 
         Returns:
             Numpy array of 48 average occurrence values (one per week, using 4-week months).
@@ -139,9 +139,9 @@ class OccurrenceDataProvider:
         county don't occur in the same week.
 
         Args:
-            county_prefix (str): County code prefix
-            class_name (str): Class name
-            area_weight (bool, Optional): If true, weight by county area (default = False)
+        - county_prefix (str): County code prefix
+        - class_name (str): Class name
+        - area_weight (bool, Optional): If true, weight by county area (default = False)
 
         Returns:
             Numpy average maximum occurrence value.

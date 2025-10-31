@@ -30,10 +30,10 @@ class Predictor:
         Initialize the Predictor with a model or ensemble of models.
 
         Args:
-            model_path (str): Path to a checkpoint (.ckpt) or ONNX (.onnx) file,
-                or a directory containing multiple checkpoint/ONNX files for an ensemble.
-            device (str, optional): Device to use for inference ('cuda', 'cpu', or 'mps').
-                If None, automatically selects the best available device.
+        - model_path (str): Path to a checkpoint (.ckpt) or ONNX (.onnx) file,
+            or a directory containing multiple checkpoint/ONNX files for an ensemble.
+        - device (str, optional): Device to use for inference ('cuda', 'cpu', or 'mps').
+            If None, automatically selects the best available device.
         """
         from britekit.core.audio import Audio
 
@@ -67,7 +67,7 @@ class Predictor:
         Get scores in array format from the loaded models for the given recording.
 
         Args:
-            recording_path (str): Path to the audio recording file.
+        - recording_path (str): Path to the audio recording file.
 
         Returns:
             tuple: A tuple containing:
@@ -139,8 +139,8 @@ class Predictor:
         Given an array of raw segment-level scores, return dict of labels.
 
         Args:
-            scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
-            start_times (list[float]): Start time in seconds for each spectrogram.
+        - scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
+        - start_times (list[float]): Start time in seconds for each spectrogram.
 
         Returns:
             dict[str, list]: Dictionary mapping species names to lists of Label objects.
@@ -187,7 +187,7 @@ class Predictor:
         Given a frame map, return dict of labels.
 
         Args:
-            frame_map (np.ndarray): Array of scores of shape (num_frames, num_species).
+        - frame_map (np.ndarray): Array of scores of shape (num_frames, num_species).
 
         Returns:
             dict[str, list]: Dictionary mapping species names to lists of Label objects.
@@ -283,11 +283,11 @@ class Predictor:
         Given an array of raw scores, return as a pandas dataframe.
 
         Args:
-            score_array (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
-            frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
-                If provided, uses frame-level labels; otherwise uses segment-level labels.
-            start_times (list[float]): Start time in seconds for each spectrogram.
-            recording_name (str): Name of the recording for the dataframe.
+        - score_array (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
+        - frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
+            If provided, uses frame-level labels; otherwise uses segment-level labels.
+        - start_times (list[float]): Start time in seconds for each spectrogram.
+        - recording_name (str): Name of the recording for the dataframe.
 
         Returns:
             pd.DataFrame: DataFrame with columns ['recording', 'name', 'start_time', 'end_time', 'score']
@@ -332,11 +332,11 @@ class Predictor:
         Given an array of raw scores, convert to Audacity labels and save in the given file.
 
         Args:
-            scores (np.ndarray): Segment-level scores of shape (num_spectrograms, num_species).
-            frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
-                If provided, uses frame-level labels; otherwise uses segment-level labels.
-            start_times (list[float]): Start time in seconds for each spectrogram.
-            file_path (str): Output path for the Audacity label file.
+        - scores (np.ndarray): Segment-level scores of shape (num_spectrograms, num_species).
+        - frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
+            If provided, uses frame-level labels; otherwise uses segment-level labels.
+        - start_times (list[float]): Start time in seconds for each spectrogram.
+        - file_path (str): Output path for the Audacity label file.
 
         Returns:
             None: Writes the labels directly to the specified file.
@@ -369,9 +369,9 @@ class Predictor:
         Use mean rather than max or weighted values.
 
         Args:
-            frame_scores: (num_specs, num_classes, T_spec) scores in [0, 1].
-            offsets_sec: start time (s) for each spectrogram within the recording.
-            recording_duration_sec: total recording length in seconds.
+        - frame_scores: (num_specs, num_classes, T_spec) scores in [0, 1].
+        - offsets_sec: start time (s) for each spectrogram within the recording.
+        - recording_duration_sec: total recording length in seconds.
 
         Returns:
             global_frames: (num_classes, T_global) tensor of scores in [0, 1].

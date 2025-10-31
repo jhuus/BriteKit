@@ -46,7 +46,7 @@ class Audio:
         so we downsample rather than upsampling.
 
         Args:
-            cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
+        - cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
         """
         import torchaudio as ta
 
@@ -113,7 +113,7 @@ class Audio:
         if choose_channel is enabled in the configuration.
 
         Args:
-            path (str): Path to the audio recording file.
+        - path (str): Path to the audio recording file.
 
         Returns:
             tuple: (signal, sampling_rate) where:
@@ -168,18 +168,18 @@ class Audio:
         Returns both normalized (0-1 range) and unnormalized versions of the spectrograms.
 
         Args:
-            start_times (list[float]): List of start times in seconds from the beginning
-                of the recording for each spectrogram.
-            spec_duration (Optional[float]): Length of each spectrogram in seconds.
-                Defaults to cfg.audio.spec_duration.
-            freq_scale (Optional[str]): Frequency scale to use ('linear', 'log', 'mel').
-                Defaults to cfg.audio.freq_scale.
-            decibels (Optional[float]): Whether to convert to decibels.
-                Defaults to cfg.audio.decibels.
-            top_db (Optional[int]): Maximum decibel value for normalization.
-                Defaults to cfg.audio.top_db.
-            db_power (Optional[int]): Power to apply after decibel conversion.
-                Defaults to cfg.audio.db_power.
+        - start_times (list[float]): List of start times in seconds from the beginning
+            of the recording for each spectrogram.
+        - spec_duration (Optional[float]): Length of each spectrogram in seconds.
+            Defaults to cfg.audio.spec_duration.
+        - freq_scale (Optional[str]): Frequency scale to use ('linear', 'log', 'mel').
+            Defaults to cfg.audio.freq_scale.
+        - decibels (Optional[float]): Whether to convert to decibels.
+            Defaults to cfg.audio.decibels.
+        - top_db (Optional[int]): Maximum decibel value for normalization.
+            Defaults to cfg.audio.top_db.
+        - db_power (Optional[int]): Power to apply after decibel conversion.
+            Defaults to cfg.audio.db_power.
 
         Returns:
             tuple: (normalized_specs, unnormalized_specs) where:

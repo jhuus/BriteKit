@@ -23,10 +23,10 @@ def embed(
     downstream tasks. The embeddings are compressed and stored in the database.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        class_name (str, optional): Name of a specific class to process. If omitted, processes all classes.
-        spec_group (str): Spectrogram group name to process. Defaults to 'default'.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - class_name (str, optional): Name of a specific class to process. If omitted, processes all classes.
+    - spec_group (str): Spectrogram group name to process. Defaults to 'default'.
     """
 
     def embed_block(

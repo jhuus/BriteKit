@@ -30,12 +30,12 @@ def reextract(
     updating the database.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
-        class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
-        classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
-        check (bool): If True, only check that all recording paths are accessible without updating database.
-        spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
+    - class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
+    - classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
+    - check (bool): If True, only check that all recording paths are accessible without updating database.
+    - spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
     """
     from britekit.core.reextractor import Reextractor
     cfg = get_config(cfg_path)

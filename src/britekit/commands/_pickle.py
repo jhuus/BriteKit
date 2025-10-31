@@ -27,13 +27,13 @@ def pickle(
     or specific classes specified by a CSV file.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        classes_path (str, optional): Path to CSV file containing class names to include.
-                                     If omitted, includes all classes in the database.
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
-        max_per_class (int, optional): Maximum number of spectrograms to include per class.
-        spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - classes_path (str, optional): Path to CSV file containing class names to include.
+        If omitted, includes all classes in the database.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+    - max_per_class (int, optional): Maximum number of spectrograms to include per class.
+    - spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
     """
     from britekit.core.pickler import Pickler
 

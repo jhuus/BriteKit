@@ -31,11 +31,11 @@ def find_dup(
     using cosine distance.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
-        delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
-        spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
+    - delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
+    - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
     """
 
     class Recording:

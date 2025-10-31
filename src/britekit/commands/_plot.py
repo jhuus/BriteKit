@@ -76,15 +76,15 @@ def plot_db(
     number of spectrograms plotted.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        class_name (str): Name of the class to plot spectrograms for (e.g., "Common Yellowthroat").
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
-        max_count (int, optional): Maximum number of spectrograms to plot. If omitted, plots all available.
-        output_path (str): Directory where spectrogram images will be saved.
-        prefix (str, optional): Only include recordings that start with this filename prefix.
-        power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
-        spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - class_name (str): Name of the class to plot spectrograms for (e.g., "Common Yellowthroat").
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+    - max_count (int, optional): Maximum number of spectrograms to plot. If omitted, plots all available.
+    - output_path (str): Directory where spectrogram images will be saved.
+    - prefix (str, optional): Only include recordings that start with this filename prefix.
+    - power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
+    - spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
     """
     from britekit.core.plot import plot_spec
     from britekit.training_db.training_db import TrainingDatabase
@@ -237,13 +237,13 @@ def plot_dir(
     overlapping segments.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
-        input_path (str): Directory containing audio recordings to process.
-        output_path (str): Directory where spectrogram images will be saved.
-        all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
-        overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
-        power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+    - input_path (str): Directory containing audio recordings to process.
+    - output_path (str): Directory where spectrogram images will be saved.
+    - all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
+    - overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
+    - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
     """
     from britekit.core.audio import Audio
 
@@ -353,13 +353,13 @@ def plot_rec(
     overlapping segments.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
-        input_path (str): Path to the audio recording file to process.
-        output_path (str): Directory where spectrogram images will be saved.
-        all (bool): If True, plot the entire recording as one spectrogram. If False, break into segments.
-        overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
-        power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+    - input_path (str): Path to the audio recording file to process.
+    - output_path (str): Directory where spectrogram images will be saved.
+    - all (bool): If True, plot the entire recording as one spectrogram. If False, break into segments.
+    - overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
+    - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
     """
     from britekit.core.audio import Audio
 

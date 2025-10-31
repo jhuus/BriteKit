@@ -30,15 +30,15 @@ def analyze(
     CSV files, or both.
 
     Args:
-        cfg_path (str): Path to YAML configuration file defining model and inference settings.
-        input_path (str): Path to input audio file or directory containing audio files.
-        output_path (str): Path to output directory where results will be saved.
-        rtype (str): Output format type. Options are "audacity", "csv", or "both".
-        min_score (float, optional): Confidence threshold. Predictions below this value are excluded.
-        num_threads (int, optional): Number of threads to use for processing. Default is 3.
-        overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
-        segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
-                                     fixed-length; otherwise they are variable-length.
+    - cfg_path (str): Path to YAML configuration file defining model and inference settings.
+    - input_path (str): Path to input audio file or directory containing audio files.
+    - output_path (str): Path to output directory where results will be saved.
+    - rtype (str): Output format type. Options are "audacity", "csv", or "both".
+    - min_score (float, optional): Confidence threshold. Predictions below this value are excluded.
+    - num_threads (int, optional): Number of threads to use for processing. Default is 3.
+    - overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
+    - segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
+        fixed-length; otherwise they are variable-length.
     """
 
     # defer slow imports to improve --help performance

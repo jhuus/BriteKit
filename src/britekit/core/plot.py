@@ -16,14 +16,14 @@ def plot_spec(
     Plot and save a spectrogram image.
 
     Args:
-        spec (np.ndarray): Spectrogram of shape (height, width)
-        output_path (str): Path to save the image (e.g., "output.png")
-        show_dims (bool): Whether to show frequency and time scales
-        spec_duration (float, optional): Number of seconds represented.
-        height (int, optional): Output image height in pixels. If not specified,
-            the existing square behavior is preserved.
-        width (int, optional): Output image width in pixels. If not specified,
-            the existing square behavior is preserved.
+    - spec (np.ndarray): Spectrogram of shape (height, width)
+    - output_path (str): Path to save the image (e.g., "output.png")
+    - show_dims (bool): Whether to show frequency and time scales
+    - spec_duration (float, optional): Number of seconds represented.
+    - height (int, optional): Output image height in pixels. If not specified,
+        the existing square behavior is preserved.
+    - width (int, optional): Output image width in pixels. If not specified,
+        the existing square behavior is preserved.
     """
     import matplotlib.pyplot as plt
     import numpy as np

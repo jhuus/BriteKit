@@ -166,7 +166,7 @@ def cfg_to_pure(obj: Any) -> JSONValue:
     str, int, float, bool) that can be safely serialized.
 
     Args:
-        obj: Any object to convert to JSON-serializable format
+    - obj: Any object to convert to JSON-serializable format
 
     Returns:
         JSON-serializable representation of the input object
@@ -284,8 +284,8 @@ def get_audio_files(path: str, short_names: bool = False) -> List[str]:
     Return list of audio files in the given directory.
 
     Args:
-        path (str): Directory path
-        short_names (bool): If true, return file names, else return full paths
+    - path (str): Directory path
+    - short_names (bool): If true, return file names, else return full paths
 
     Returns:
         List of audio files in the given directory
@@ -325,8 +325,8 @@ def get_file_lines(path: str, encoding: str = "utf-8") -> List[str]:
     and lines that start with #.
 
     Args:
-        path: Path to text file
-        encoding: File encoding (default: utf-8)
+    - path: Path to text file
+    - encoding: File encoding (default: utf-8)
 
     Returns:
         List of lines
@@ -354,7 +354,7 @@ def get_source_name(filename: str) -> str:
     Return a source name given a recording file name.
 
     Args:
-        filename: Recording file name
+    - filename: Recording file name
 
     Returns:
         Source name
@@ -390,7 +390,7 @@ def compress_spectrogram(spec) -> bytes:
     Compress a spectrogram in preparation for inserting into database.
 
     Args:
-        spec: Uncompressed spectrogram
+    - spec: Uncompressed spectrogram
 
     Returns:
         Compressed spectrogram
@@ -421,7 +421,7 @@ def expand_spectrogram(spec: bytes):
     Decompress a spectrogram, then convert from bytes to floats and reshape it.
 
     Args:
-        spec: Compressed spectrogram
+    - spec: Compressed spectrogram
 
     Returns:
         Uncompressed spectrogram

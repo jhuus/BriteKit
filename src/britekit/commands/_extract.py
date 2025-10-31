@@ -29,15 +29,15 @@ def extract_all(
     it will be automatically created.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
-        class_code (str, optional): Class code for new class creation (e.g., "COYE").
-        class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
-        dir_path (str): Path to directory containing audio recordings to process.
-        overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
-        src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
-        spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
+    - class_code (str, optional): Class code for new class creation (e.g., "COYE").
+    - class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
+    - dir_path (str): Path to directory containing audio recordings to process.
+    - overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
+    - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
+    - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
     """
     from britekit.training_db.extractor import Extractor
     from britekit.training_db.training_db import TrainingDatabase
@@ -158,16 +158,16 @@ def extract_by_image(
     that allows the command to locate and extract the corresponding audio segments.
 
     Args:
-        cfg_path (str, optional): Path to YAML file defining configuration overrides.
-        db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-        cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
-        class_code (str, optional): Class code for new class creation (e.g., "COYE").
-        class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
-        rec_dir (str): Path to directory containing the original audio recordings.
-        spec_dir (str): Path to directory containing spectrogram image files.
-        dest_dir (str, optional): If specified, copy used recordings to this directory.
-        src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
-        spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+    - cat_name (str, optional): Category name for new class creation (e.g., "bird"). Defaults to "default".
+    - class_code (str, optional): Class code for new class creation (e.g., "COYE").
+    - class_name (str): Name of the class for the recordings (e.g., "Common Yellowthroat").
+    - rec_dir (str): Path to directory containing the original audio recordings.
+    - spec_dir (str): Path to directory containing spectrogram image files.
+    - dest_dir (str, optional): If specified, copy used recordings to this directory.
+    - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
+    - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
     """
     from britekit.training_db.extractor import Extractor
     from britekit.training_db.training_db import TrainingDatabase

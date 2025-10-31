@@ -33,18 +33,18 @@ def search(
     based on embedding similarity. Results are plotted and saved to the output directory.
 
     Args:
-        cfg_path (str): Path to YAML configuration file defining model settings.
-        db_path (str): Path to the training database containing spectrograms to search.
-        class_name (str): Name of the class/species to search within the database.
-        max_dist (float): Maximum distance threshold. Results with distance greater than this are excluded.
-        exp (float): Exponent to raise spectrograms to for visualization (shows background sounds).
-        num_to_plot (int): Maximum number of similar spectrograms to plot and save.
-        output_path (str): Directory where search results and plots will be saved.
-        input_path (str): Path to the audio file containing the target spectrogram.
-        offset (float): Time offset in seconds where the target spectrogram is extracted.
-        exclude_db (str, optional): Path to an exclusion database. Spectrograms in this database are excluded from results.
-        class_name2 (str, optional): Class name in the exclusion database. Defaults to the search class name.
-        spec_group (str): Spectrogram group name in the database. Defaults to 'default'.
+    - cfg_path (str): Path to YAML configuration file defining model settings.
+    - db_path (str): Path to the training database containing spectrograms to search.
+    - class_name (str): Name of the class/species to search within the database.
+    - max_dist (float): Maximum distance threshold. Results with distance greater than this are excluded.
+    - exp (float): Exponent to raise spectrograms to for visualization (shows background sounds).
+    - num_to_plot (int): Maximum number of similar spectrograms to plot and save.
+    - output_path (str): Directory where search results and plots will be saved.
+    - input_path (str): Path to the audio file containing the target spectrogram.
+    - offset (float): Time offset in seconds where the target spectrogram is extracted.
+    - exclude_db (str, optional): Path to an exclusion database. Spectrograms in this database are excluded from results.
+    - class_name2 (str, optional): Class name in the exclusion database. Defaults to the search class name.
+    - spec_group (str): Spectrogram group name in the database. Defaults to 'default'.
     """
 
     class SpecInfo:

@@ -75,13 +75,13 @@ def xeno(
     Then specify the key in the --key argument, or set the environment variable XCKEY=<key>.
 
     Args:
-        key (str): Xeno-Canto API key for authentication. Can also be set via XCKEY environment variable.
-        output_dir (str): Directory where downloaded recordings will be saved.
-        max_downloads (int): Maximum number of recordings to download. Default is 500.
-        name (str): Species name to search for (common name or scientific name).
-        ignore_licence (bool): If True, ignore license restrictions. By default, excludes BY-NC-ND licensed recordings.
-        scientific_name (bool): If True, treat the name as a scientific name rather than common name.
-        seen_only (bool): If True, only download recordings where the animal was seen (animal-seen=yes).
+    - key (str): Xeno-Canto API key for authentication. Can also be set via XCKEY environment variable.
+    - output_dir (str): Directory where downloaded recordings will be saved.
+    - max_downloads (int): Maximum number of recordings to download. Default is 500.
+    - name (str): Species name to search for (common name or scientific name).
+    - ignore_licence (bool): If True, ignore license restrictions. By default, excludes BY-NC-ND licensed recordings.
+    - scientific_name (bool): If True, treat the name as a scientific name rather than common name.
+    - seen_only (bool): If True, only download recordings where the animal was seen (animal-seen=yes).
     """
     import requests
 

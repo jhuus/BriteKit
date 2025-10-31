@@ -61,9 +61,9 @@ class Analyzer:
         This runs on its own thread and processes all recordings in the given list.
 
         Args:
-            recording_paths (list): Individual recording paths.
-            output_path (str): Where to write the output.
-            rtype (str): Output format: "audacity", "csv" or "both".
+        - recording_paths (list): Individual recording paths.
+        - output_path (str): Where to write the output.
+        - rtype (str): Output format: "audacity", "csv" or "both".
         """
         from britekit.core.predictor import Predictor
 
@@ -91,8 +91,8 @@ class Analyzer:
         Split the input list into `n` lists based on index modulo `n`.
 
         Args:
-            input_list (list): The input list to split.
-            n (int): Number of resulting groups.
+        - input_list (list): The input list to split.
+        - n (int): Number of resulting groups.
 
         Returns:
             List[List]: A list of `n` lists, where each sublist contains elements
@@ -108,9 +108,9 @@ class Analyzer:
         Run inference.
 
         Args:
-            input_path (str): Recording or directory containing recordings.
-            output_path (str): Output directory.
-            rtype (str): Output format: "audacity", "csv" or "both".
+        - input_path (str): Recording or directory containing recordings.
+        - output_path (str): Output directory.
+        - rtype (str): Output format: "audacity", "csv" or "both".
         """
         import pandas as pd
 

@@ -54,10 +54,10 @@ def inat(
     The command respects the maximum download limit and can optionally add filename prefixes.
 
     Args:
-        output_dir (str): Directory where downloaded recordings will be saved.
-        max_downloads (int): Maximum number of recordings to download. Default is 500.
-        name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
-        no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
+    - output_dir (str): Directory where downloaded recordings will be saved.
+    - max_downloads (int): Maximum number of recordings to download. Default is 500.
+    - name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
+    - no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
     """
     import pyinaturalist
 

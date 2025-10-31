@@ -124,7 +124,7 @@ class DataModule(LightningDataModule):
         Load data from a pickle file with error handling.
 
         Args:
-            path (str): Path to the pickle file
+        - path (str): Path to the pickle file
 
         Returns:
             Tuple containing (class_names, class_codes, alt_names, alt_codes, specs, labels)
@@ -175,7 +175,7 @@ class DataModule(LightningDataModule):
         Prepare train/validation split for a specific fold.
 
         Args:
-            fold_index (int): Index of the fold to prepare
+        - fold_index (int): Index of the fold to prepare
 
         Raises:
             ValueError: If fold_index is invalid or val_portion is invalid

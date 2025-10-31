@@ -201,14 +201,14 @@ def audioset(
     shows which other classes commonly co-occur with the specified class.
 
     Args:
-        class_name (str): Name of the audio class to download (e.g., "train", "speech", "music").
-        curated_csv_path (str): Path to CSV file containing a curated list of clips to download.
-        output_dir (str): Directory where downloaded recordings will be saved.
-        max_downloads (int): Maximum number of recordings to download. Default is 500.
-        sampling_rate (float): Output sampling rate in Hz. Default is 32000.
-        num_to_skip (int): Number of initial recordings to skip. Default is 0.
-        do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
-        root_dir (str): Directory that contains the data directory. Default is working directory.
+    - class_name (str): Name of the audio class to download (e.g., "train", "speech", "music").
+    - curated_csv_path (str): Path to CSV file containing a curated list of clips to download.
+    - output_dir (str): Directory where downloaded recordings will be saved.
+    - max_downloads (int): Maximum number of recordings to download. Default is 500.
+    - sampling_rate (float): Output sampling rate in Hz. Default is 32000.
+    - num_to_skip (int): Number of initial recordings to skip. Default is 0.
+    - do_report (bool): If True, generate a report on associated secondary classes instead of downloading.
+    - root_dir (str): Directory that contains the data directory. Default is working directory.
     """
 
     if class_name is None and curated_csv_path is None:

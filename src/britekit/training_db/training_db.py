@@ -542,7 +542,7 @@ class TrainingDatabase:
         Insert a Source record.
 
         Args:
-            name (str): Name of the source (e.g. "Xeno-Canto").
+        - name (str): Name of the source (e.g. "Xeno-Canto").
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -560,10 +560,10 @@ class TrainingDatabase:
         Delete one or more Source records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Source table are:
-                - ID (int): record ID
-                - Name (str): source name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Source table are:
+            - ID (int): record ID
+            - Name (str): source name
 
         Returns:
             Number of records deleted.
@@ -578,10 +578,10 @@ class TrainingDatabase:
         Query the Source table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Source table are:
-                - ID (int): record ID
-                - Name (str): source name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Source table are:
+            - ID (int): record ID
+            - Name (str): source name
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -617,10 +617,10 @@ class TrainingDatabase:
         Get the number of records in the Source table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Source table are:
-                - ID (int): record ID
-                - Name (str): source name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Source table are:
+            - ID (int): record ID
+            - Name (str): source name
 
         Returns:
             Number of records that match the criteria.
@@ -639,7 +639,7 @@ class TrainingDatabase:
         Insert a Category record.
 
         Args:
-            name (str): Name of the category (e.g. "bird").
+        - name (str): Name of the category (e.g. "bird").
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -657,10 +657,10 @@ class TrainingDatabase:
         Delete one or more Category records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Category table are:
-                - ID (int): record ID
-                - Name (str): source name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Category table are:
+            - ID (int): record ID
+            - Name (str): source name
 
         Returns:
             Number of records deleted.
@@ -675,10 +675,10 @@ class TrainingDatabase:
         Query the Category table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Category table are:
-                - ID (int): record ID
-                - Name (str): category name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Category table are:
+            - ID (int): record ID
+            - Name (str): category name
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -714,10 +714,10 @@ class TrainingDatabase:
         Get the number of records in the Category table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Category table are:
-                - ID (int): record ID
-                - Name (str): category name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Category table are:
+            - ID (int): record ID
+            - Name (str): category name
 
         Returns:
             Number of records that match the criteria.
@@ -743,11 +743,11 @@ class TrainingDatabase:
         Insert a Class record.
 
         Args:
-            category_id (int, required): Record ID of the category (e.g. ID of "bird" in the Category table).
-            name (str, required): Name of the class (e.g. "White-winged Crossbill").
-            alt_name (str, optional): Alternate name of the class (e.g. "Two-barred Crossbill").
-            code (str, optional): Code for the class (e.g. "WWCR").
-            alt_code (str, optional): Alternate code
+        - category_id (int, required): Record ID of the category (e.g. ID of "bird" in the Category table).
+        - name (str, required): Name of the class (e.g. "White-winged Crossbill").
+        - alt_name (str, optional): Alternate name of the class (e.g. "Two-barred Crossbill").
+        - code (str, optional): Code for the class (e.g. "WWCR").
+        - alt_code (str, optional): Alternate code
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -769,7 +769,7 @@ class TrainingDatabase:
         Delete one ore more Class records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records deleted.
@@ -784,7 +784,7 @@ class TrainingDatabase:
         Query the Class table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -836,7 +836,7 @@ class TrainingDatabase:
         Get the number of records in the Class table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records that match the criteria.
@@ -855,7 +855,7 @@ class TrainingDatabase:
         Insert a SoundType record.
 
         Args:
-            name (str, required): Name of the sound type.
+        - name (str, required): Name of the sound type.
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -873,7 +873,7 @@ class TrainingDatabase:
         Delete one or more SoundType records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records deleted.
@@ -888,7 +888,7 @@ class TrainingDatabase:
         Query the SoundType table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -928,7 +928,7 @@ class TrainingDatabase:
         Get the number of records in the SoundType table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records that match the criteria.
@@ -953,10 +953,10 @@ class TrainingDatabase:
         Insert a Recording record.
 
         Args:
-            source_id (int, required): Record ID of the source (e.g. ID of "Xeno-Canto" in the Source table).
-            filename (str, required): Name of the recording (e.g. "XC12345.mp3").
-            path (str, required): Full path to the recording.
-            seconds (float, optional): Duration of the recording in seconds.
+        - source_id (int, required): Record ID of the source (e.g. ID of "Xeno-Canto" in the Source table).
+        - filename (str, required): Name of the recording (e.g. "XC12345.mp3").
+        - path (str, required): Full path to the recording.
+        - seconds (float, optional): Duration of the recording in seconds.
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -977,7 +977,7 @@ class TrainingDatabase:
         Delete one or more Recording records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records deleted.
@@ -994,7 +994,7 @@ class TrainingDatabase:
         Query the Recording table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1049,7 +1049,7 @@ class TrainingDatabase:
         Return all recordings that have segments with the given class.
 
         Args:
-            class_name (str): name of the class.
+        - class_name (str): name of the class.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1099,9 +1099,9 @@ class TrainingDatabase:
         Update a record in the Recording table.
 
         Args:
-            id (int): ID that identifies the record to update
-            field (str): Name of column to update.
-            value: New value.
+        - id (int): ID that identifies the record to update
+        - field (str): Name of column to update.
+        - value: New value.
         """
         try:
             sql = f"""
@@ -1117,7 +1117,7 @@ class TrainingDatabase:
         Get the number of records in the Recording table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records that match the criteria.
@@ -1140,9 +1140,9 @@ class TrainingDatabase:
         Insert a Segment record.
 
         Args:
-            recording_id (int, required): Record ID of the recording.
-            offset (float, required): offset in seconds from start of the recording.
-            audio (blob, optional): corresponding raw audio.
+        - recording_id (int, required): Record ID of the recording.
+        - offset (float, required): offset in seconds from start of the recording.
+        - audio (blob, optional): corresponding raw audio.
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -1160,7 +1160,7 @@ class TrainingDatabase:
         Delete one or more Segment records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
         """
         try:
             self._delete_records("Segment", filters, self.segment_relationships)
@@ -1176,8 +1176,8 @@ class TrainingDatabase:
         Query the Segment table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
-            include_audio (bool, optional): if True, include audio in the returned objects. Default = False.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - include_audio (bool, optional): if True, include audio in the returned objects. Default = False.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1244,8 +1244,8 @@ class TrainingDatabase:
         Get segment info for the given class.
 
         Args:
-            class_name (str): class name.
-            include_audio (bool, optional): if True, include audio in the returned objects. Default = False.
+        - class_name (str): class name.
+        - include_audio (bool, optional): if True, include audio in the returned objects. Default = False.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1298,7 +1298,7 @@ class TrainingDatabase:
         Get the number of records in the Segment table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records that match the criteria.
@@ -1311,9 +1311,6 @@ class TrainingDatabase:
     def get_all_segment_counts(self):
         """
         Get the class name and segment count for all classes.
-
-        Args:
-            None
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1350,9 +1347,9 @@ class TrainingDatabase:
         Update a record in the Segment table.
 
         Args:
-            id (int): ID that identifies the record to update
-            field (str): Name of column to update.
-            value: New value.
+        - id (int): ID that identifies the record to update
+        - field (str): Name of column to update.
+        - value: New value.
         """
         try:
             sql = f"""
@@ -1408,7 +1405,7 @@ class TrainingDatabase:
         Get the number of records in the SegmentClass table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records that match the criteria.
@@ -1429,8 +1426,8 @@ class TrainingDatabase:
         records.
 
         Args:
-            segment_id (int, required): Segment ID.
-            class_id (int, required): Class ID.
+        - segment_id (int, required): Segment ID.
+        - class_id (int, required): Class ID.
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -1448,9 +1445,9 @@ class TrainingDatabase:
         Update a record in the SegmentClass table.
 
         Args:
-            id (int): ID that identifies the record to update
-            field (str): Name of column to update.
-            value: New value.
+        - id (int): ID that identifies the record to update
+        - field (str): Name of column to update.
+        - value: New value.
         """
         try:
             sql = f"""
@@ -1470,7 +1467,7 @@ class TrainingDatabase:
         Insert a SpecGroup record.
 
         Args:
-            name (str): Name of the group (e.g. "logscale").
+        - name (str): Name of the group (e.g. "logscale").
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -1488,10 +1485,10 @@ class TrainingDatabase:
         Query the SpecGroup table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the SpecGroup table are:
-                - ID (int): record ID
-                - Name (str): specgroup name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the SpecGroup table are:
+            - ID (int): record ID
+            - Name (str): specgroup name
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1527,10 +1524,10 @@ class TrainingDatabase:
         Delete one or more SpecGroup records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Category table are:
-                - ID (int): record ID
-                - Name (str): specgroup name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Category table are:
+            - ID (int): record ID
+            - Name (str): specgroup name
 
         Returns:
             Number of records deleted.
@@ -1545,10 +1542,10 @@ class TrainingDatabase:
         Get the number of records in the SpecGroup table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the Source table are:
-                - ID (int): record ID
-                - Name (str): spec group name
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the Source table are:
+            - ID (int): record ID
+            - Name (str): spec group name
 
         Returns:
             Number of records that match the criteria.
@@ -1572,10 +1569,10 @@ class TrainingDatabase:
         Insert a SpecValue record.
 
         Args:
-            value (blob, required): the actual compressed spectrogram
-            spec_group_id (int, required): ID of spec group record
-            segment_id (int, required): ID of segment record
-            sampling_rate (int): sampling rate used to create it
+        - value (blob, required): the actual compressed spectrogram
+        - spec_group_id (int, required): ID of spec group record
+        - segment_id (int, required): ID of segment record
+        - sampling_rate (int): sampling rate used to create it
 
         Returns:
             row_id (int): ID of the inserted record.
@@ -1595,7 +1592,7 @@ class TrainingDatabase:
         Query the SpecValue table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
@@ -1649,9 +1646,9 @@ class TrainingDatabase:
         Delete one or more SpecValue records.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
-            column names for the SpecValue table are:
-                - ID (int): record ID
+        - filters (dict, optional): a dict of column_name/value pairs that define filters. Valid
+        column names for the SpecValue table are:
+            - ID (int): record ID
 
         Returns:
             Number of records deleted.
@@ -1666,9 +1663,9 @@ class TrainingDatabase:
         Update a record in the SpecValue table.
 
         Args:
-            id (int): ID that identifies the record to update
-            field (str): Name of column to update.
-            value: New value.
+        - id (int): ID that identifies the record to update
+        - field (str): Name of column to update.
+        - value: New value.
         """
         try:
             sql = f"""
@@ -1684,7 +1681,7 @@ class TrainingDatabase:
         Get the number of records in the SpecValue table.
 
         Args:
-            filters (dict, optional): a dict of column_name/value pairs that define filters.
+        - filters (dict, optional): a dict of column_name/value pairs that define filters.
 
         Returns:
             Number of records that match the criteria.
@@ -1710,11 +1707,11 @@ class TrainingDatabase:
         Fetch joined spectrogram records for the given class.
 
         Args:
-            class_name (str): class name.
-            include_value (bool, optional): If True, include the compressed spectrogram. Default = True.
-            include_embedding (bool, optional): If True, include embeddings in the returned objects. Default = False.
-            spec_group (str): Name of spectrogram group. Default = "default".
-            limit (int, optional): If specified, only return up to this many records.
+        - class_name (str): class name.
+        - include_value (bool, optional): If True, include the compressed spectrogram. Default = True.
+        - include_embedding (bool, optional): If True, include embeddings in the returned objects. Default = False.
+        - spec_group (str): Name of spectrogram group. Default = "default".
+        - limit (int, optional): If specified, only return up to this many records.
 
         Returns:
             A list of entries, each as a SimpleNamespace object with the following attributes:
