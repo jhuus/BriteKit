@@ -329,10 +329,10 @@ class PerRecordingTester(BaseTester):
         rpt.append(
             f"   Recall (recording) = {100 * self.details_dict['recall_annotated']:.2f}%\n"
         )
-        print()
+        logging.info("")
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
             for rpt_line in rpt:
-                print(rpt_line[:-1])
+                logging.info(rpt_line[:-1])
                 summary.write(rpt_line)
 
         # write recording details (row per segment)
