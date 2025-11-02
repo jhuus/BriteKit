@@ -252,7 +252,6 @@ class BaseModel(pl.LightningModule):
         }
 
     def on_save_checkpoint(self, checkpoint):
-        print("on_save_checkpoint")
         """Save model metadata to checkpoint."""
         if not hasattr(self, "identifier"):
             self.identifier = str(uuid.uuid4()).upper()
