@@ -1,6 +1,7 @@
 # File name starts with _ to keep it out of typeahead for API users.
 # Defer some imports to improve --help performance.
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -40,6 +41,11 @@ def pickle(
     cfg = get_config(cfg_path)
     if db_path is None:
         db_path = cfg.train.train_db
+
+    if classes_path is not None:
+        if not os.path.exists(classes_path):
+            logging.error(f"Error: file {classes_path} not found.")
+            return
 
     if output_path is None:
         output_path = str(Path(root_dir) / "data" / "training.pkl")
