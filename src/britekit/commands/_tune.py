@@ -47,7 +47,7 @@ def tune(
     - annotations_path (str): Path to CSV file containing ground truth annotations.
     - metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
     - recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-    - train_log_path (str, optional): Training log directory. Defaults to "logs/fold-0".
+    - train_log_path (str, optional): Training log directory. Defaults to "logs".
     - num_trials (int): Number of random trials to run. If 0, performs exhaustive search.
     - num_runs (int): Number of runs to average for each parameter combination. Default is 1.
     - extract (bool): Extract new spectrograms before training, to tune spectrogram parameters.
@@ -72,7 +72,7 @@ def tune(
             recordings_path = str(Path(annotations_path).parent)
 
         if not train_log_path:
-            train_log_path = str(Path("logs") / "fold-0")
+            train_log_path = "logs"
 
         if param_path is not None:
             with open(param_path) as input_file:
