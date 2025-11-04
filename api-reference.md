@@ -26,7 +26,7 @@ Basic inference logic using Predictor class, with multi-threading and multi-reco
 
 **run**  
 ```python
-Analyzer.run(self, input_path: str, output_path: str, rtype: str = 'audacity')
+Analyzer.run(self, input_path: str, output_path: str, rtype: str = 'audacity', start_seconds: float = 0, debug_mode: bool = False)
 ```
 Run inference.
 
@@ -34,6 +34,9 @@ Args:
 - input_path (str): Recording or directory containing recordings.
 - output_path (str): Output directory.
 - rtype (str): Output format: "audacity", "csv" or "both".
+- start_seconds (float): Where to start processing each recording, in seconds.
+- debug_mode (bool): If true, log scores for the first spectrogram, then stop.
+For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.
 
 ### Audio
 **Class**  
@@ -898,12 +901,13 @@ Returns:
 
 **get_raw_scores**  
 ```python
-Predictor.get_raw_scores(self, recording_path: str)
+Predictor.get_raw_scores(self, recording_path: str, start_seconds: float = 0)
 ```
 Get scores in array format from the loaded models for the given recording.
 
 Args:
 - recording_path (str): Path to the audio recording file.
+- start_seconds (float): Where to start processing the recording, in seconds from the start.
 
 Returns:
 
@@ -927,6 +931,15 @@ Returns:
 - Each Label contains (score, start_time, end_time) for detected segments.
 
 
+
+**log_scores**  
+```python
+Predictor.log_scores(self, scores)
+```
+Given an array of raw segment-level scores, log them by descending score.
+
+Args:
+- scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
 
 **save_audacity_labels**  
 ```python

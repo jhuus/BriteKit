@@ -126,13 +126,19 @@ Options:
                           directory).
   -r, --rtype TEXT        Output format type. Options are "audacity", "csv", or
                           "both". Default="both".
+  --start TEXT            Where to start processing each recording, in seconds.
+                          For example, '71' and '1:11' have the same meaning,
+                          and cause the first 71 seconds to be ignored. Default
+                          = 0.
   -m, --min_score FLOAT   Threshold, so predictions lower than this value are
                           excluded.
   --threads INTEGER       Number of threads (optional, default = 3)
-  --overlap FLOAT         Number of threads (optional, default = 3)
+  --overlap FLOAT         Amount of segment overlap in seconds.
   --seg FLOAT             Optional segment length in seconds. If specified,
                           labels are fixed-length. Otherwise they are variable-
                           length.
+  --debug                 If specified, log the top scores for the first
+                          spectrogram, then stop.
   --help                  Show this message and exit.
 ```
 ### britekit audioset

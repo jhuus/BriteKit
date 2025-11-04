@@ -66,7 +66,7 @@ Args:
 ### analyze
 **Function**  
 ```python
-analyze(cfg_path: Optional[str] = None, input_path: str = '', output_path: str = '', rtype: str = 'both', min_score: Optional[float] = None, num_threads: Optional[int] = None, overlap: Optional[float] = None, segment_len: Optional[float] = None)
+analyze(cfg_path: Optional[str] = None, input_path: str = '', output_path: str = '', rtype: str = 'both', start_seconds: float = 0, min_score: Optional[float] = None, num_threads: Optional[int] = None, overlap: Optional[float] = None, segment_len: Optional[float] = None, debug_mode: bool = False)
 ```
 Run inference on audio recordings to detect and classify sounds.
 
@@ -79,11 +79,14 @@ Args:
 - input_path (str): Path to input audio file or directory containing audio files.
 - output_path (str): Path to output directory where results will be saved.
 - rtype (str): Output format type. Options are "audacity", "csv", or "both".
+- start_seconds (float): Where to start processing each recording, in seconds.
+  For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.
 - min_score (float, optional): Confidence threshold. Predictions below this value are excluded.
 - num_threads (int, optional): Number of threads to use for processing. Default is 3.
 - overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
 - segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
     fixed-length; otherwise they are variable-length.
+- debug_mode (bool): If specified, log the top scores for the first spectrogram, then stop.
 
 ### audioset
 **Function**  
@@ -715,7 +718,7 @@ Args:
 - annotations_path (str): Path to CSV file containing ground truth annotations.
 - metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
 - recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
-- train_log_path (str, optional): Training log directory. Defaults to "logs/fold-0".
+- train_log_path (str, optional): Training log directory. Defaults to "logs".
 - num_trials (int): Number of random trials to run. If 0, performs exhaustive search.
 - num_runs (int): Number of runs to average for each parameter combination. Default is 1.
 - extract (bool): Extract new spectrograms before training, to tune spectrogram parameters.
