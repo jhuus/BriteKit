@@ -135,6 +135,42 @@ def get_range(min_val: float, max_val: float, incr: float) -> List[float]:
     return [float(v) for v in values]
 
 
+def _get_seconds_from_time_string(time_str: str) -> int:
+    """
+    Convert a time string into an integer number of seconds.
+
+    Supports the following formats:
+    - "71" → 71 seconds
+    - "1:11" → 71 seconds
+    - "0:01:11" → 71 seconds
+    - "1:02:03" → 3723 seconds (1 hour, 2 minutes, 3 seconds)
+
+    Args:
+        time_str (str): Time string in seconds or colon-separated format.
+
+    Returns:
+        int: Total number of seconds.
+    """
+    parts = time_str.strip().split(":")
+
+    # Only seconds provided
+    if len(parts) == 1:
+        return int(float(parts[0]))
+
+    # Minutes and seconds
+    elif len(parts) == 2:
+        minutes, seconds = map(float, parts)
+        return int(minutes * 60 + seconds)
+
+    # Hours, minutes, and seconds
+    elif len(parts) == 3:
+        hours, minutes, seconds = map(float, parts)
+        return int(hours * 3600 + minutes * 60 + seconds)
+
+    else:
+        raise ValueError(f"Unrecognized time format: '{time_str}'")
+
+
 def set_logging(level=logging.INFO, timestamp=False):
     """Initialize logging."""
     if timestamp:
