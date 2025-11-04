@@ -1,10 +1,14 @@
 # Defer some imports to improve initialization performance.
+import ctypes
 from functools import partial
+import logging
+from multiprocessing import Value
 import random
 
 from britekit.core.base_config import BaseConfig
 
 AUGMENTATION_REGISTRY = {}
+_have_real_noise = Value(ctypes.c_bool, True)
 
 
 def register_augmentation(name):
@@ -60,7 +64,23 @@ class AugmentationPipeline:
         """
         Add an actual noise spectrogram but, unlike mixup, do not update the label.
         """
+        global _have_real_noise
+        if not _have_real_noise.value:
+            return spec
+
         noise_spec = self.dataset.get_random_noise()
+        if noise_spec is None:
+            # with multiple workers, only do this once
+            with _have_real_noise.get_lock():
+                if _have_real_noise.value:
+                    _have_real_noise.value = False
+                    logging.error("")
+                    logging.error("*** WARNING:")
+                    logging.error("No noise class is defined, but add_real_noise is enabled.")
+                    logging.error("In most cases it is best to provide noise data.")
+                    logging.error("The add_real_noise augmentation will be disabled in this run.")
+                    logging.error("")
+            return spec
 
         # Validate shapes match
         if noise_spec.shape != spec.shape:
