@@ -5,7 +5,6 @@ from torch.utils.data import Dataset
 from typing import Any, Callable, List, Optional
 
 from britekit.core.augmentation import AugmentationPipeline
-from britekit.core.exceptions import TrainingError
 from britekit.core.config_loader import get_config
 from britekit.core.util import expand_spectrogram
 
@@ -115,9 +114,7 @@ class SpectrogramDataset(Dataset):
         Return a random noise spec from the training data
         """
         if not self.noise_indexes:
-            raise TrainingError(
-                "Attempt to use noise during augmentation when none defined"
-            )
+            return None
 
         idx = random.randint(0, len(self.noise_indexes) - 1)
         return self._get_spec(self.noise_indexes[idx])
