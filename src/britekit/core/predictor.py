@@ -1,9 +1,12 @@
 # Defer some imports to improve initialization performance.
+from copy import deepcopy
 import importlib.util
 import logging
 import math
 import os
 from typing import Sequence, Optional, List
+
+import numpy as np
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
@@ -321,6 +324,30 @@ class Predictor:
         df["end_time"] = end_times
         df["score"] = score_list
         return df
+
+    def log_scores(self, scores):
+        """
+        Given an array of raw segment-level scores, log them by descending score.
+
+        Args:
+        - scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
+        """
+        assert self.class_names is not None
+
+        labels: dict[str, list] = {}  # name -> [(score, start_time, end_time)]
+        if scores is None or len(scores) == 0:
+            return labels
+
+        names = self._get_names()
+
+        # ensure labels are sorted by name/code before start_time,
+        # which is useful when inspecting label files during testing
+        num_classes = scores.shape[1]
+        scores = deepcopy(scores[0])
+        for i in range(min(num_classes, 10)):
+            j = np.argmax(scores)
+            logging.info(f"{names[j]}: {scores[j]:.4f}")
+            scores[j] = 0
 
     def save_audacity_labels(
         self,

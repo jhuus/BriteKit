@@ -22,6 +22,7 @@ def analyze(
     num_threads: Optional[int] = None,
     overlap: Optional[float] = None,
     segment_len: Optional[float] = None,
+    debug_mode: bool = False,
 ):
     """
     Run inference on audio recordings to detect and classify sounds.
@@ -42,6 +43,7 @@ def analyze(
     - overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
     - segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
         fixed-length; otherwise they are variable-length.
+    - debug_mode (bool): If specified, log the top scores for the first spectrogram, then stop.
     """
 
     # defer slow imports to improve --help performance
@@ -81,7 +83,7 @@ def analyze(
 
         start_time = time.time()
         analyzer = Analyzer()
-        analyzer.run(input_path, output_path, rtype, start_seconds)
+        analyzer.run(input_path, output_path, rtype, start_seconds, debug_mode)
         elapsed_time = util.format_elapsed_time(start_time, time.time())
         logging.info(f"Elapsed time = {elapsed_time}")
     except InferenceError as e:
@@ -153,6 +155,12 @@ def analyze(
     type=float,
     help="Optional segment length in seconds. If specified, labels are fixed-length. Otherwise they are variable-length.",
 )
+@click.option(
+    "--debug",
+    "debug_mode",
+    is_flag=True,
+    help="If specified, log the top scores for the first spectrogram, then stop.",
+)
 def _analyze_cmd(
     cfg_path: str,
     input_path: str,
@@ -163,6 +171,7 @@ def _analyze_cmd(
     num_threads: Optional[int] = None,
     overlap: Optional[float] = None,
     segment_len: Optional[float] = None,
+    debug_mode: bool = False,
 ):
     from britekit.core import util
 
@@ -182,4 +191,5 @@ def _analyze_cmd(
         num_threads,
         overlap,
         segment_len,
+        debug_mode,
     )
