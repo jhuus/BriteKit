@@ -76,9 +76,13 @@ class AugmentationPipeline:
                     _have_real_noise.value = False
                     logging.error("")
                     logging.error("*** WARNING:")
-                    logging.error("No noise class is defined, but add_real_noise is enabled.")
+                    logging.error(
+                        "No noise class is defined, but add_real_noise is enabled."
+                    )
                     logging.error("In most cases it is best to provide noise data.")
-                    logging.error("The add_real_noise augmentation will be disabled in this run.")
+                    logging.error(
+                        "The add_real_noise augmentation will be disabled in this run."
+                    )
                     logging.error("")
             return spec
 
