@@ -17,6 +17,7 @@ def analyze(
     input_path: str = "",
     output_path: str = "",
     rtype: str = "both",
+    start_seconds: float = 0,
     min_score: Optional[float] = None,
     num_threads: Optional[int] = None,
     overlap: Optional[float] = None,
@@ -34,6 +35,8 @@ def analyze(
     - input_path (str): Path to input audio file or directory containing audio files.
     - output_path (str): Path to output directory where results will be saved.
     - rtype (str): Output format type. Options are "audacity", "csv", or "both".
+    - start_seconds (float): Where to start processing each recording, in seconds.
+      For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.
     - min_score (float, optional): Confidence threshold. Predictions below this value are excluded.
     - num_threads (int, optional): Number of threads to use for processing. Default is 3.
     - overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
@@ -78,7 +81,7 @@ def analyze(
 
         start_time = time.time()
         analyzer = Analyzer()
-        analyzer.run(input_path, output_path, rtype)
+        analyzer.run(input_path, output_path, rtype, start_seconds)
         elapsed_time = util.format_elapsed_time(start_time, time.time())
         logging.info(f"Elapsed time = {elapsed_time}")
     except InferenceError as e:
@@ -120,6 +123,12 @@ def analyze(
     help='Output format type. Options are "audacity", "csv", or "both". Default="both".',
 )
 @click.option(
+    "--start",
+    "start_seconds_str",
+    type=str,
+    help="Where to start processing each recording, in seconds. For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.",
+)
+@click.option(
     "-m",
     "--min_score",
     "min_score",
@@ -136,7 +145,7 @@ def analyze(
     "--overlap",
     "overlap",
     type=float,
-    help="Number of threads (optional, default = 3)",
+    help="Amount of segment overlap in seconds.",
 )
 @click.option(
     "--seg",
@@ -149,6 +158,7 @@ def _analyze_cmd(
     input_path: str,
     output_path: str,
     rtype: str,
+    start_seconds_str: Optional[str] = None,
     min_score: Optional[float] = None,
     num_threads: Optional[int] = None,
     overlap: Optional[float] = None,
@@ -157,11 +167,17 @@ def _analyze_cmd(
     from britekit.core import util
 
     util.set_logging()
+    if start_seconds_str:
+        start_seconds = util._get_seconds_from_time_string(start_seconds_str)
+    else:
+        start_seconds = 0
+
     analyze(
         cfg_path,
         input_path,
         output_path,
         rtype,
+        start_seconds,
         min_score,
         num_threads,
         overlap,

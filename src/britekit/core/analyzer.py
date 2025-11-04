@@ -56,7 +56,7 @@ class Analyzer:
         with open(Path(output_path) / "manifest.yaml", "w") as out_file:
             out_file.write(info_str)
 
-    def _process_recordings(self, recording_paths, output_path, rtype, thread_num):
+    def _process_recordings(self, recording_paths, output_path, rtype, start_seconds, thread_num):
         """
         This runs on its own thread and processes all recordings in the given list.
 
@@ -64,13 +64,14 @@ class Analyzer:
         - recording_paths (list): Individual recording paths.
         - output_path (str): Where to write the output.
         - rtype (str): Output format: "audacity", "csv" or "both".
+        - start_seconds (float): Where to start processing each recording, in seconds from start.
         """
         from britekit.core.predictor import Predictor
 
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
             logging.info(f"[Thread {thread_num}] Processing {recording_path}")
-            scores, frame_map, offsets = predictor.get_raw_scores(recording_path)
+            scores, frame_map, offsets = predictor.get_raw_scores(recording_path, start_seconds)
             recording_name = Path(recording_path).stem
             if rtype in {"audacity", "both"}:
                 file_path = str(Path(output_path) / f"{recording_name}_scores.txt")
@@ -103,7 +104,7 @@ class Analyzer:
             result[i % n].append(item)
         return result
 
-    def run(self, input_path: str, output_path: str, rtype: str = "audacity"):
+    def run(self, input_path: str, output_path: str, rtype: str = "audacity", start_seconds: float = 0):
         """
         Run inference.
 
@@ -111,6 +112,8 @@ class Analyzer:
         - input_path (str): Recording or directory containing recordings.
         - output_path (str): Output directory.
         - rtype (str): Output format: "audacity", "csv" or "both".
+        - start_seconds (float): Where to start processing each recording, in seconds.
+        For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.
         """
         import pandas as pd
 
@@ -127,14 +130,14 @@ class Analyzer:
         self.dataframes = []
         num_threads = min(self.cfg.infer.num_threads, len(recording_paths))
         if num_threads == 1:
-            self._process_recordings(recording_paths, output_path, rtype, 1)
+            self._process_recordings(recording_paths, output_path, rtype, start_seconds, 1)
         else:
             recordings_per_thread = self._split_list(recording_paths, num_threads)
             threads = []
             for i in range(num_threads):
                 thread = threading.Thread(
                     target=self._process_recordings,
-                    args=(recordings_per_thread[i], output_path, rtype, i + 1),
+                    args=(recordings_per_thread[i], output_path, rtype, start_seconds, i + 1),
                 )
                 thread.start()
                 threads.append(thread)

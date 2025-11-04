@@ -62,12 +62,13 @@ class Predictor:
 
         self._load_models(model_path)
 
-    def get_raw_scores(self, recording_path: str):
+    def get_raw_scores(self, recording_path: str, start_seconds: float = 0):
         """
         Get scores in array format from the loaded models for the given recording.
 
         Args:
         - recording_path (str): Path to the audio recording file.
+        - start_seconds (float): Where to start processing the recording, in seconds from the start.
 
         Returns:
             tuple: A tuple containing:
@@ -94,7 +95,7 @@ class Predictor:
 
         increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
         end_offset = max(increment, audio_duration - increment)
-        start_times = util.get_range(0, end_offset, increment)
+        start_times = util.get_range(start_seconds, end_offset, increment)
         specs, _ = self.audio.get_spectrograms(start_times)
         if specs is None or len(specs) == 0:
             return None, None, []
