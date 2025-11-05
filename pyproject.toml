@@ -64,13 +64,19 @@ dependencies = [
   "twine>=6.1.0",
 ]
 
+post-install-commands = [
+  "pip install -e .",
+]
+
 [tool.hatch.envs.britekit.scripts]
 test = "pytest {args:tests}"
 check = "mypy --install-types --non-interactive {args:src/britekit tests}"
 
-scripts.postinstall = [
-  "pip install -e .",
-]
+[tool.hatch.envs.types]
+dependencies = ["mypy>=1.0.0"]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/britekit tests}"
 
 [tool.hatch.build]
 include = ["src"]
@@ -91,9 +97,6 @@ only-include = [
 
 [tool.hatch.build.targets.sdist.force-include]
 "install" = "britekit/install"
-
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/britekit tests}"
 
 [tool.coverage.run]
 source_pkgs = ["britekit", "tests"]
