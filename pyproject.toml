@@ -55,7 +55,7 @@ Source = "https://github.com/jhuus/BriteKit"
 [tool.hatch.version]
 path = "src/britekit/__about__.py"
 
-[tool.hatch.envs.dev]
+[tool.hatch.envs.britekit]
 dependencies = [
   "pytest>=8.3.5",
   "black>=25.0.0",
@@ -64,7 +64,7 @@ dependencies = [
   "twine>=6.1.0",
 ]
 
-[tool.hatch.envs.dev.scripts]
+[tool.hatch.envs.britekit.scripts]
 test = "pytest {args:tests}"
 check = "mypy --install-types --non-interactive {args:src/britekit tests}"
 
