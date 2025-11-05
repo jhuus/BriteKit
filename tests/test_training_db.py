@@ -1,11 +1,12 @@
 import os
+from pathlib import Path
 import pytest
 from britekit import TrainingDatabase
 
 
 @pytest.fixture(scope="module")
 def db():
-    db_path = os.path.join("data", "_test.db")
+    db_path = str(Path("tests") / "db" / "_test.db")
     if os.path.exists(db_path):
         os.remove(db_path)
 
