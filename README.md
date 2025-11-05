@@ -257,4 +257,22 @@ TBD
 ## Data Augmentation
 TBD
 ## Development Environment
-TBD
+These instructions have been tested in Linux only. To create a BriteKit development environment, install hatch at the user level (not in a virtual environment), and verify it's installed:
+```
+pip install --user hatch
+hatch --version
+```
+Then clone the BriteKit repo and type the following inside the BriteKit directory:
+```
+hatch env create britekit
+hatch shell
+```
+That will take some time to run. After that, the britekit package will be installed and you will be able to modify code and test without re-installing it. To confirm the package is available, type:
+```
+python -c "import britekit; print(britekit.__version__)"
+```
+To run the unit tests, type:
+```
+pytest
+```
+To activate the environment in future, just type `hatch shell`, which should run almost instantly.
