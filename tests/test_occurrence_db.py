@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import pytest
 
 import numpy as np
@@ -8,7 +9,7 @@ from britekit import OccurrenceDatabase, OccurrenceDataProvider
 
 @pytest.fixture(scope="module")
 def db():
-    db_path = os.path.join("data", "_test_occur.db")
+    db_path = str(Path("tests") / "db" / "_test_occur.db")
     if os.path.exists(db_path):
         os.remove(db_path)
 
