@@ -1,8 +1,9 @@
 import os
+from pathlib import Path
 import pytest
 from britekit import Extractor, TrainingDatabase
 
-db_path = os.path.join("data", "_test.db")
+db_path = str(Path("tests") / "db" / "_test.db")
 
 
 @pytest.fixture(scope="module")
@@ -25,7 +26,7 @@ def finalize_at_end():
 def test_extract_all(db: TrainingDatabase):
     class_name = "Test Class"
     class_code = "ABCD"
-    dir_path = os.path.join("tests", "recordings")
+    dir_path = str(Path("tests") / "recordings")
     extractor = Extractor(db, class_name, class_code, overlap=0)
     extractor.extract_all(dir_path)
 
