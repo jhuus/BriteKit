@@ -68,6 +68,10 @@ dependencies = [
 test = "pytest {args:tests}"
 check = "mypy --install-types --non-interactive {args:src/britekit tests}"
 
+scripts.postinstall = [
+  "pip install -e .",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/britekit"]
 
