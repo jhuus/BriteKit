@@ -259,7 +259,9 @@ TBD
 ## Development Environment
 These instructions have been tested in Linux only. To create a BriteKit development environment, install hatch at the user level (not in a virtual environment), and verify it's installed:
 ```
-pip install --user hatch
+sudo apt install pipx -y
+pipx ensurepath
+pipx install hatch
 hatch --version
 ```
 Then clone the BriteKit repo and type the following inside the BriteKit directory:
