@@ -268,6 +268,7 @@ Then clone the BriteKit repo and type the following inside the BriteKit director
 ```
 hatch env create britekit
 hatch shell
+hatch run types:check
 ```
 That will take some time to run. After that, the britekit package will be installed and you will be able to modify code and test without re-installing it. To confirm the package is available, type:
 ```
@@ -277,4 +278,9 @@ To run the unit tests, type:
 ```
 pytest
 ```
-To activate the environment in future, just type `hatch shell`, which should run almost instantly.
+To activate the environment in future, just type `hatch shell`, which should run almost instantly. The virtual environment is managed by hatch and defined by the pyproject.toml file. If that file changes and you want to update your environment, you first need to type `exit` to leave the hatch shell if you are in it. Then type:
+```
+hatch env remove britekit
+hatch env create britekit
+hatch shell
+```
