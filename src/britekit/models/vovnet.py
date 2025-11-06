@@ -1,5 +1,5 @@
 import copy
-from typing import List, Optional
+from typing import Any, cast, List, Optional
 
 from timm.models import vovnet
 from torch import nn
@@ -61,7 +61,7 @@ class VovNetModel(BaseModel):
                 drop_rate=kwargs.pop("drop_rate", 0.0),
             )
 
-        self.backbone.head = nn.Identity()
+        self.backbone.head = cast(Any, nn.Identity())
 
 
 # Model size is most affected by number of classes for smaller models
