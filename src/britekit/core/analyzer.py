@@ -57,7 +57,13 @@ class Analyzer:
             out_file.write(info_str)
 
     def _process_recordings(
-        self, recording_paths, output_path, rtype, start_seconds, thread_num, debug_mode=False
+        self,
+        recording_paths,
+        output_path,
+        rtype,
+        start_seconds,
+        thread_num,
+        debug_mode=False,
     ):
         """
         This runs on its own thread and processes all recordings in the given list.
@@ -120,7 +126,7 @@ class Analyzer:
         output_path: str,
         rtype: str = "audacity",
         start_seconds: float = 0,
-        debug_mode: bool = False
+        debug_mode: bool = False,
     ):
         """
         Run inference.
@@ -149,7 +155,12 @@ class Analyzer:
         num_threads = min(self.cfg.infer.num_threads, len(recording_paths))
         if num_threads == 1:
             self._process_recordings(
-                recording_paths, output_path, rtype, start_seconds, 1, debug_mode,
+                recording_paths,
+                output_path,
+                rtype,
+                start_seconds,
+                1,
+                debug_mode,
             )
         else:
             recordings_per_thread = self._split_list(recording_paths, num_threads)
