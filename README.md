@@ -284,3 +284,4 @@ hatch env remove britekit
 hatch env create britekit
 hatch shell
 ```
+The .gitignore file includes rules to ignore the data and yaml directories. If you have other inputs, outputs or scripts you'd like to keep under BriteKit but hide from git, create a _local directory and put them there.
