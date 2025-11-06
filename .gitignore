@@ -91,10 +91,11 @@ _tmp_*
 _temp_*
 
 # Other
-data/*.db
-data/*.pkl
+data/
 logs/
+yaml/
 *.ckpt
 *.onnx
 *.jpeg
 .*/
+.Rhistory
