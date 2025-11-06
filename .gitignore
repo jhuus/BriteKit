@@ -84,8 +84,11 @@ hatch.lock
 Thumbs.db
 desktop.ini
 
-# Ignore any name that starts with an underscore
-_*
+# Ignore any directory (at any depth) that starts with an underscore
+# and any file that starts with _tmp_ or _temp_
+**/_*/
+_tmp_*
+_temp_*
 
 # Other
 data/*.db
