@@ -15,4 +15,16 @@ from . import trainer
 from . import tuner
 from . import util
 
-__all__ = ["analyzer", "audio", "base_config", "config_loader", "pickler", "plot", "predictor", "reextractor", "trainer", "tuner", "util"]
+__all__ = [
+    "analyzer",
+    "audio",
+    "base_config",
+    "config_loader",
+    "pickler",
+    "plot",
+    "predictor",
+    "reextractor",
+    "trainer",
+    "tuner",
+    "util",
+]

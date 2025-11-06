@@ -1,7 +1,6 @@
 # File name starts with _ to keep it out of typeahead for API users.
 # Defer some imports to improve --help performance.
 import logging
-import os
 from pathlib import Path
 import tempfile
 from typing import Optional
@@ -11,21 +10,26 @@ import click
 from britekit.core.config_loader import get_config
 from britekit.core import util
 
-def _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir):
+
+def _eval_ensemble(
+    ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir
+):
     import pandas as pd
     from britekit.testing.per_segment_tester import PerSegmentTester
 
     # create a dataframe with the average scores for the ensemble
     avg_df: pd.DataFrame = dataframe_dict[ensemble[0]].copy()
-    avg_df["score"] = sum(dataframe_dict[ckpt_path]["score"] for ckpt_path in ensemble) / len(ensemble)
+    avg_df["score"] = sum(
+        dataframe_dict[ckpt_path]["score"] for ckpt_path in ensemble
+    ) / len(ensemble)
 
     # save the dataframe to the usual inference output location
-    scores_csv_path = str(Path(inference_output_dir) / 'scores.csv')
+    scores_csv_path = str(Path(inference_output_dir) / "scores.csv")
     avg_df.to_csv(scores_csv_path, index=False)
 
     with tempfile.TemporaryDirectory() as output_dir:
-        util.set_logging(level=logging.ERROR) # suppress logging during test reporting
-        min_score = 0.8 # arbitrary threshold
+        util.set_logging(level=logging.ERROR)  # suppress logging during test reporting
+        min_score = 0.8  # arbitrary threshold
         tester = PerSegmentTester(
             annotations_path,
             recordings_path,
@@ -37,23 +41,23 @@ def _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, 
 
         pr_stats = tester.get_pr_auc_stats()
         roc_stats = tester.get_roc_auc_stats()
-        util.set_logging() # restore logging
+        util.set_logging()  # restore logging
 
         scores = {
             "macro_pr": pr_stats["macro_pr_auc"],
             "micro_pr": pr_stats["micro_pr_auc_trained"],
             "macro_roc": roc_stats["macro_roc_auc"],
-            "micro_roc": roc_stats["micro_roc_auc_trained"]
+            "micro_roc": roc_stats["micro_roc_auc_trained"],
         }
 
     return scores
 
 
 def ensemble(
-    cfg_path: Optional[str]=None,
-    ckpt_path: str="",
-    ensemble_size: int=3,
-    num_tries: int=100,
+    cfg_path: Optional[str] = None,
+    ckpt_path: str = "",
+    ensemble_size: int = 3,
+    num_tries: int = 100,
     metric: str = "micro_roc",
     annotations_path: str = "",
     recordings_path: Optional[str] = None,
@@ -95,7 +99,9 @@ def ensemble(
         logging.error(f"Error: no checkpoints found in {ckpt_path}")
         return
     elif num_ckpts < ensemble_size:
-        logging.error(f"Error: number of checkpoints ({num_ckpts}) is less than requested ensemble size ({ensemble_size})")
+        logging.error(
+            f"Error: number of checkpoints ({num_ckpts}) is less than requested ensemble size ({ensemble_size})"
+        )
         return
 
     if not recordings_path:
@@ -108,7 +114,7 @@ def ensemble(
         # get a dataframe of predictions per checkpoint
         label_dir = "ensemble_evaluation_labels"
         inference_output_dir = str(Path(recordings_path) / label_dir)
-        scores_csv_path = str(Path(inference_output_dir) / 'scores.csv')
+        scores_csv_path = str(Path(inference_output_dir) / "scores.csv")
         dataframe_dict = {}
         for ckpt_path in ckpt_paths:
             ckpt_name = Path(ckpt_path).name
@@ -116,8 +122,8 @@ def ensemble(
             dest_path = str(Path(ensemble_dir) / ckpt_name)
             shutil.copyfile(ckpt_path, dest_path)
 
-            util.set_logging(level=logging.ERROR) # suppress logging during inference
-            Analyzer().run(recordings_path, inference_output_dir, rtype='csv')
+            util.set_logging(level=logging.ERROR)  # suppress logging during inference
+            Analyzer().run(recordings_path, inference_output_dir, rtype="csv")
             util.set_logging()
 
             df = pd.read_csv(scores_csv_path)
@@ -132,8 +138,16 @@ def ensemble(
             # Exhaustive search
             logging.info("Doing exhaustive search")
             for ensemble in itertools.combinations(ckpt_paths, ensemble_size):
-                scores = _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir)
-                logging.info(f"For ensemble {count} of {total_combinations}, score = {scores[metric]:.4f}")
+                scores = _eval_ensemble(
+                    ensemble,
+                    dataframe_dict,
+                    annotations_path,
+                    recordings_path,
+                    inference_output_dir,
+                )
+                logging.info(
+                    f"For ensemble {count} of {total_combinations}, score = {scores[metric]:.4f}"
+                )
                 if scores[metric] > best_score:
                     best_score = scores[metric]
                     best_ensemble = ensemble
@@ -147,8 +161,16 @@ def ensemble(
                 ensemble = tuple(sorted(random.sample(ckpt_paths, ensemble_size)))
                 if ensemble not in seen:
                     seen.add(ensemble)
-                    scores = _eval_ensemble(ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir)
-                    logging.info(f"For ensemble {count} of {num_tries}, score = {scores[metric]:.4f}")
+                    scores = _eval_ensemble(
+                        ensemble,
+                        dataframe_dict,
+                        annotations_path,
+                        recordings_path,
+                        inference_output_dir,
+                    )
+                    logging.info(
+                        f"For ensemble {count} of {num_tries}, score = {scores[metric]:.4f}"
+                    )
                     if scores[metric] > best_score:
                         best_score = scores[metric]
                         best_ensemble = ensemble
@@ -162,6 +184,7 @@ def ensemble(
     assert best_ensemble is not None
     best_names = [Path(ckpt_path).name for ckpt_path in best_ensemble]
     logging.info(f"Best ensemble = {best_names}")
+
 
 @click.command(
     name="ensemble",
@@ -181,7 +204,7 @@ def ensemble(
     "ckpt_path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     required=True,
-    help="Directory containing checkpoints."
+    help="Directory containing checkpoints.",
 )
 @click.option(
     "-e",
@@ -189,7 +212,7 @@ def ensemble(
     "ensemble_size",
     type=int,
     default=3,
-    help="Number of checkpoints in ensemble (default=3)."
+    help="Number of checkpoints in ensemble (default=3).",
 )
 @click.option(
     "-n",
@@ -197,7 +220,7 @@ def ensemble(
     "num_tries",
     type=int,
     default=100,
-    help="Maximum number of ensembles to try (default=100)."
+    help="Maximum number of ensembles to try (default=100).",
 )
 @click.option(
     "-m",
@@ -240,4 +263,12 @@ def _ensemble_cmd(
     recordings_path: Optional[str],
 ) -> None:
     util.set_logging()
-    ensemble(cfg_path, ckpt_path, ensemble_size, num_tries, metric, annotations_path, recordings_path)
+    ensemble(
+        cfg_path,
+        ckpt_path,
+        ensemble_size,
+        num_tries,
+        metric,
+        annotations_path,
+        recordings_path,
+    )

@@ -12,7 +12,7 @@ from britekit.core import util
 
 
 def train(
-    cfg_path: Optional[str]=None,
+    cfg_path: Optional[str] = None,
 ):
     """
     Train a bioacoustic recognition model using the specified configuration.
@@ -31,7 +31,7 @@ def train(
     """
     from britekit.core.trainer import Trainer
 
-    cfg = get_config(cfg_path)
+    get_config(cfg_path)  # apply any YAML cfg updates
     try:
         start_time = time.time()
         Trainer().run()
@@ -57,7 +57,9 @@ def _train_cmd(
 ):
     util.set_logging()
 
-    import platform, torch
+    import platform
+    import torch
+
     if platform.system() == "Windows" and not torch.cuda.is_available():
         logging.warning(
             "CUDA is not available. On Windows, reinstall a CUDA-enabled PyTorch build like this:\n"
@@ -89,7 +91,7 @@ def find_lr(cfg_path: str, num_batches: int):
     """
     from britekit.core.trainer import Trainer
 
-    cfg = get_config(cfg_path)
+    get_config(cfg_path)  # apply any YAML cfg updates
     try:
         suggested_lr, fig = Trainer().find_lr(num_batches)
         fig.savefig("learning_rates.jpeg")

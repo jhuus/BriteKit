@@ -12,13 +12,13 @@ from britekit.core import util
 
 
 def pickle(
-    cfg_path: Optional[str]=None,
-    classes_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    output_path: Optional[str]=None,
-    root_dir: str="",
-    max_per_class: Optional[int]=None,
-    spec_group: Optional[str]=None,
+    cfg_path: Optional[str] = None,
+    classes_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    output_path: Optional[str] = None,
+    root_dir: str = "",
+    max_per_class: Optional[int] = None,
+    spec_group: Optional[str] = None,
 ) -> None:
     """
     Convert database spectrograms to a pickle file for use in training.

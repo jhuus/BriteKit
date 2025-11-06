@@ -56,13 +56,13 @@ def process_response(
 
 
 def xeno(
-    key: Optional[str]=None,
-    name: str="",
-    output_dir: str="",
-    max_downloads: int=500,
-    ignore_licence: bool=False,
-    scientific_name: bool=False,
-    seen_only: bool=False,
+    key: Optional[str] = None,
+    name: str = "",
+    output_dir: str = "",
+    max_downloads: int = 500,
+    ignore_licence: bool = False,
+    scientific_name: bool = False,
+    seen_only: bool = False,
 ):
     """
     Download bird song recordings from Xeno-Canto database.

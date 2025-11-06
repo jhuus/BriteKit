@@ -10,15 +10,15 @@ from britekit.core import util
 
 
 def extract_all(
-    cfg_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    cat_name: Optional[str]=None,
-    class_code: Optional[str]=None,
-    class_name: str="",
-    dir_path: str="",
-    overlap: Optional[float]=None,
-    src_name: Optional[str]=None,
-    spec_group: Optional[str]=None,
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    cat_name: Optional[str] = None,
+    class_code: Optional[str] = None,
+    class_name: str = "",
+    dir_path: str = "",
+    overlap: Optional[float] = None,
+    src_name: Optional[str] = None,
+    spec_group: Optional[str] = None,
 ) -> None:
     """
     Extract all spectrograms from audio recordings and insert them into the training database.
@@ -135,16 +135,16 @@ def _extract_all_cmd(
 
 
 def extract_by_csv(
-    cfg_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    cat_name: Optional[str]=None,
-    class_code: Optional[str]=None,
-    class_name: str="",
-    rec_dir: str="",
-    csv_path: str="",
-    dest_dir: Optional[str]=None,
-    src_name: Optional[str]=None,
-    spec_group: Optional[str]=None,
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    cat_name: Optional[str] = None,
+    class_code: Optional[str] = None,
+    class_name: str = "",
+    rec_dir: str = "",
+    csv_path: str = "",
+    dest_dir: Optional[str] = None,
+    src_name: Optional[str] = None,
+    spec_group: Optional[str] = None,
 ) -> None:
     """
     Extract spectrograms that correspond to rows in a CSV file.
@@ -274,16 +274,16 @@ def _extract_by_csv_cmd(
 
 
 def extract_by_image(
-    cfg_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    cat_name: Optional[str]=None,
-    class_code: Optional[str]=None,
-    class_name: str="",
-    rec_dir: str="",
-    spec_dir: str="",
-    dest_dir: Optional[str]=None,
-    src_name: Optional[str]=None,
-    spec_group: Optional[str]=None,
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    cat_name: Optional[str] = None,
+    class_code: Optional[str] = None,
+    class_name: str = "",
+    rec_dir: str = "",
+    spec_dir: str = "",
+    dest_dir: Optional[str] = None,
+    src_name: Optional[str] = None,
+    spec_group: Optional[str] = None,
 ) -> None:
     """
     Extract spectrograms that correspond to existing spectrogram images.

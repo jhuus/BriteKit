@@ -11,7 +11,7 @@ from britekit.core.config_loader import get_config
 from britekit.core import util
 
 
-def ckpt_avg(input_path: str="", output_path: Optional[str]=None):
+def ckpt_avg(input_path: str = "", output_path: Optional[str] = None):
     """
     Average the weights of multiple model checkpoints to create an ensemble checkpoint.
 
@@ -75,7 +75,7 @@ def _ckpt_avg_cmd(input_path: str, output_path: str):
     ckpt_avg(input_path, output_path)
 
 
-def ckpt_freeze(input_path: str=""):
+def ckpt_freeze(input_path: str = ""):
     """
     Freeze the backbone weights of a checkpoint to reduce file size and improve inference speed.
 
@@ -122,8 +122,8 @@ def _ckpt_freeze_cmd(input_path: str):
 
 
 def ckpt_onnx(
-    cfg_path: Optional[str]=None,
-    input_path: str="",
+    cfg_path: Optional[str] = None,
+    input_path: str = "",
 ):
     """
     Convert a PyTorch checkpoint to ONNX format for deployment with OpenVINO.

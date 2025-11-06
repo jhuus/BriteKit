@@ -23,7 +23,7 @@ def _iter_traversable_files(
             yield (prefix + (child.name,)), child
 
 
-def init(dest: Optional[Path]=None) -> None:
+def init(dest: Optional[Path] = None) -> None:
     """
     Setup default BriteKit directory structure and copy packaged sample files.
 
@@ -56,7 +56,7 @@ def init(dest: Optional[Path]=None) -> None:
 
     # Copy
     if dest is None:
-        dest = Path('.')
+        dest = Path(".")
 
     dest.mkdir(parents=True, exist_ok=True)
     copied = 0

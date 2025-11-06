@@ -9,9 +9,9 @@ from britekit.core import util
 
 
 def youtube(
-    id: str="",
-    output_dir: str="",
-    sampling_rate: int=32000,
+    id: str = "",
+    output_dir: str = "",
+    sampling_rate: int = 32000,
 ) -> None:
     """
     Download an audio recording from Youtube, given a Youtube ID.

@@ -8,8 +8,8 @@ from britekit.core import util
 
 
 def wav2mp3(
-    dir: str="",
-    sampling_rate: int=32000,
+    dir: str = "",
+    sampling_rate: int = 32000,
 ):
     """
     Convert uncompressed audio files to MP3 format and replace the originals.

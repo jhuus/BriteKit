@@ -9,7 +9,7 @@ from britekit.core.config_loader import get_config
 from britekit.core import util
 
 
-def add_cat(db_path: Optional[str]=None, name: str="") -> None:
+def add_cat(db_path: Optional[str] = None, name: str = "") -> None:
     """
     Add a category (class group) record to the training database.
 
@@ -49,7 +49,7 @@ def _add_cat_cmd(db_path: Optional[str], name: str) -> None:
     add_cat(db_path, name)
 
 
-def add_stype(db_path: Optional[str]=None, name: str="") -> None:
+def add_stype(db_path: Optional[str] = None, name: str = "") -> None:
     """
     Add a sound type record to the training database.
 
@@ -89,7 +89,7 @@ def _add_stype_cmd(db_path: Optional[str], name: str) -> None:
     add_stype(db_path, name)
 
 
-def add_src(db_path: Optional[str]=None, name: str="") -> None:
+def add_src(db_path: Optional[str] = None, name: str = "") -> None:
     """
     Add a source record to the training database.
 
@@ -130,12 +130,12 @@ def _add_src_cmd(db_path: Optional[str], name: str) -> None:
 
 
 def add_class(
-    db_path: Optional[str]=None,
-    category: str="default",
-    name: Optional[str]=None,
-    code: Optional[str]=None,
-    alt_name: Optional[str]=None,
-    alt_code: Optional[str]=None,
+    db_path: Optional[str] = None,
+    category: str = "default",
+    name: Optional[str] = None,
+    code: Optional[str] = None,
+    alt_name: Optional[str] = None,
+    alt_code: Optional[str] = None,
 ) -> None:
     """
     Add a class record to the training database.
@@ -159,7 +159,7 @@ def add_class(
         db_path = cfg.train.train_db
 
     if name is None:
-        logging.error(f"Error: class name is missing but required.")
+        logging.error("Error: class name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:

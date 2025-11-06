@@ -9,11 +9,12 @@ import click
 from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core import util
 
+
 def embed(
-    cfg_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    class_name: Optional[str]=None,
-    spec_group: str="default",
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    class_name: Optional[str] = None,
+    spec_group: str = "default",
 ) -> None:
     """
     Generate embeddings for spectrograms and insert them into the database.
@@ -38,7 +39,6 @@ def embed(
     ) -> None:
         """Process embeddings for a block of spectrograms."""
         import numpy as np
-
 
         spec_array = np.zeros(
             (len(specs), 1, cfg.audio.spec_height, cfg.audio.spec_width)

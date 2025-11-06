@@ -38,10 +38,10 @@ def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[
 
 
 def inat(
-    name: str="",
-    output_dir: str="",
-    max_downloads: int=500,
-    no_prefix: bool=False,
+    name: str = "",
+    output_dir: str = "",
+    max_downloads: int = 500,
+    no_prefix: bool = False,
 ) -> None:
     """
     Download audio recordings from iNaturalist observations.

@@ -58,7 +58,7 @@ def tune(
     from britekit.core.tuner import Tuner
 
     try:
-        cfg = get_config(cfg_path)
+        get_config(cfg_path)  # apply any YAML cfg updates
         if extract and skip_training:
             logging.error(
                 "Performing spectrogram extract is incompatible with skipping training."

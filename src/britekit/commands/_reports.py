@@ -124,9 +124,9 @@ def _rpt_ann_cmd(
     rpt_ann(annotations_path, output_path)
 
 
-def rpt_db(cfg_path: Optional[str] = None,
-           db_path: Optional[str] = None,
-           output_path: str = ""):
+def rpt_db(
+    cfg_path: Optional[str] = None, db_path: Optional[str] = None, output_path: str = ""
+):
     """
     Generate a comprehensive summary report of the training database.
 
@@ -248,7 +248,7 @@ def rpt_epochs(
         cfg.misc.ckpt_folder = temp_dir
 
         for epoch_num in epoch_nums:
-            util.set_logging() # restore console output
+            util.set_logging()  # restore console output
             logging.info(f"Processing epoch {epoch_num}")
             # suppress output from Analyzer and PerSegmentTester
             util.set_logging(level=logging.ERROR)
@@ -323,8 +323,12 @@ def rpt_epochs(
     plot_path = str(Path(output_path) / "training_scores.jpeg")
     plt.savefig(plot_path, dpi=300, bbox_inches="tight")
 
-    logging.info(f"Maximum micro-averaged PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}")
-    logging.info(f"Maximum micro-averaged ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}")
+    logging.info(
+        f"Maximum micro-averaged PR-AUC score = {max_pr_score:.3f} at epoch {max_pr_epoch}"
+    )
+    logging.info(
+        f"Maximum micro-averaged ROC-AUC score = {max_roc_score:.3f} at epoch {max_roc_epoch}"
+    )
     logging.info(f"See plot at {plot_path}")
 
 

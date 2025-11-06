@@ -12,18 +12,18 @@ from britekit.core import util
 
 
 def search(
-    cfg_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    class_name: str="",
-    max_dist: float=0.5,
-    exp: float=0.5,
-    num_to_plot: int=200,
-    output_path: str="",
-    input_path: str="",
-    offset: float=0.0,
-    exclude_db: Optional[str]=None,
-    class_name2: Optional[str]=None,
-    spec_group: str="default",
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    class_name: str = "",
+    max_dist: float = 0.5,
+    exp: float = 0.5,
+    num_to_plot: int = 200,
+    output_path: str = "",
+    input_path: str = "",
+    offset: float = 0.0,
+    exclude_db: Optional[str] = None,
+    class_name2: Optional[str] = None,
+    spec_group: str = "default",
 ):
     """
     Search a database for spectrograms similar to a specified one.

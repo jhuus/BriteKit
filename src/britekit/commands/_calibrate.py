@@ -7,7 +7,6 @@ from typing import Optional
 
 import click
 
-from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
 from britekit.core import util
 

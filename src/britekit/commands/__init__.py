@@ -21,13 +21,7 @@ from ._init import init
 from ._pickle import pickle
 from ._plot import plot_db, plot_dir, plot_rec
 from ._reextract import reextract
-from ._reports import (
-    rpt_ann,
-    rpt_db,
-    rpt_epochs,
-    rpt_labels,
-    rpt_test
-)
+from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_labels, rpt_test
 from ._search import search
 from ._train import train, find_lr
 from ._tune import tune
@@ -62,10 +56,11 @@ __all__ = [
     "find_dup",
     "find_lr",
     "inat",
+    "init",
     "pickle",
     "plot_db",
     "plot_dir",
-    "plot_file",
+    "plot_rec",
     "reextract",
     "rpt_ann",
     "rpt_cal",

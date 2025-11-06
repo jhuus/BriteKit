@@ -180,14 +180,14 @@ def _download_curated(
 
 
 def audioset(
-    class_name: Optional[str]=None,
-    curated_csv_path: Optional[str]=None,
-    output_dir: str="",
-    max_downloads: int=500,
-    sampling_rate: int=32000,
-    num_to_skip: int=0,
-    do_report: bool=False,
-    root_dir: str=".",
+    class_name: Optional[str] = None,
+    curated_csv_path: Optional[str] = None,
+    output_dir: str = "",
+    max_downloads: int = 500,
+    sampling_rate: int = 32000,
+    num_to_skip: int = 0,
+    do_report: bool = False,
+    root_dir: str = ".",
 ) -> None:
     """
     Download audio recordings from Google AudioSet.

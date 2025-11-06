@@ -13,11 +13,11 @@ from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
 def find_dup(
-    cfg_path: Optional[str]=None,
-    db_path: Optional[str]=None,
-    class_name: str="",
-    delete: bool=False,
-    spec_group: str="default",
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    class_name: str = "",
+    delete: bool = False,
+    spec_group: str = "default",
 ) -> None:
     """
     Find and optionally delete duplicate recordings in the training database.

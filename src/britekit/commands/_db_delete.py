@@ -11,7 +11,7 @@ from britekit.core.config_loader import get_config
 from britekit.core import util
 
 
-def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
+def del_cat(db_path: Optional[str] = None, name: Optional[str] = None) -> None:
     """
     Delete a category and all its associated data from the training database.
 
@@ -30,7 +30,7 @@ def del_cat(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path = cfg.train.train_db
 
     if name is None:
-        logging.error(f"Error: category name is missing but required.")
+        logging.error("Error: category name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
@@ -64,7 +64,7 @@ def _del_cat_cmd(db_path: Optional[str], name: str) -> None:
     del_cat(db_path, name)
 
 
-def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
+def del_class(db_path: Optional[str] = None, name: Optional[str] = None) -> None:
     """
     Delete a class and all its associated data from the training database.
 
@@ -83,7 +83,7 @@ def del_class(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path = cfg.train.train_db
 
     if name is None:
-        logging.error(f"Error: class name is missing but required.")
+        logging.error("Error: class name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
@@ -115,7 +115,7 @@ def _del_class_cmd(db_path: Optional[str], class_name: str) -> None:
     del_class(db_path, class_name)
 
 
-def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
+def del_rec(db_path: Optional[str] = None, file_name: Optional[str] = None) -> None:
     """
     Delete a recording and all its spectrograms from the training database.
 
@@ -133,7 +133,7 @@ def del_rec(db_path: Optional[str]=None, file_name: Optional[str]=None) -> None:
         db_path = cfg.train.train_db
 
     if file_name is None:
-        logging.error(f"Error: file name is missing but required.")
+        logging.error("Error: file name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
@@ -159,7 +159,7 @@ def _del_rec_cmd(db_path: Optional[str], file_name: str) -> None:
     del_rec(db_path, file_name)
 
 
-def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
+def del_sgroup(db_path: Optional[str] = None, name: Optional[str] = None) -> None:
     """
     Delete a spectrogram group and all its spectrogram values from the training database.
 
@@ -177,7 +177,7 @@ def del_sgroup(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path = cfg.train.train_db
 
     if name is None:
-        logging.error(f"Error: name is missing but required.")
+        logging.error("Error: name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
@@ -203,7 +203,7 @@ def _del_sgroup_cmd(db_path: Optional[str], name: str) -> None:
     del_sgroup(db_path, name)
 
 
-def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
+def del_stype(db_path: Optional[str] = None, name: Optional[str] = None) -> None:
     """
     Delete a sound type from the training database.
 
@@ -222,7 +222,7 @@ def del_stype(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path = cfg.train.train_db
 
     if name is None:
-        logging.error(f"Error: name is missing but required.")
+        logging.error("Error: name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
@@ -248,7 +248,7 @@ def _del_stype_cmd(db_path: Optional[str], name: str) -> None:
     del_stype(db_path, name)
 
 
-def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
+def del_src(db_path: Optional[str] = None, name: Optional[str] = None) -> None:
     """
     Delete a recording source and all its associated data from the training database.
 
@@ -267,7 +267,7 @@ def del_src(db_path: Optional[str]=None, name: Optional[str]=None) -> None:
         db_path = cfg.train.train_db
 
     if name is None:
-        logging.error(f"Error: name is missing but required.")
+        logging.error("Error: name is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
@@ -293,7 +293,11 @@ def _del_src_cmd(db_path: Optional[str], name: str) -> None:
     del_src(db_path, name)
 
 
-def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_path: Optional[str]=None) -> None:
+def del_seg(
+    db_path: Optional[str] = None,
+    class_name: Optional[str] = None,
+    dir_path: Optional[str] = None,
+) -> None:
     """
     Delete segments that correspond to images in a given directory.
 
@@ -316,11 +320,11 @@ def del_seg(db_path: Optional[str]=None, class_name: Optional[str]=None, dir_pat
         db_path = cfg.train.train_db
 
     if class_name is None:
-        logging.error(f"Error: class name is missing but required.")
+        logging.error("Error: class name is missing but required.")
         quit()
 
     if dir_path is None:
-        logging.error(f"Error: directory path is missing but required.")
+        logging.error("Error: directory path is missing but required.")
         quit()
 
     with TrainingDatabase(db_path) as db:
