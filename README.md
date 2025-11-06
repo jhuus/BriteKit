@@ -284,3 +284,10 @@ hatch env create britekit
 hatch shell
 ```
 The .gitignore file includes rules to ignore the data and yaml directories. If you have other inputs, outputs or scripts you'd like to keep under BriteKit but hide from git, create a _local directory and put them there.
+
+You can run a code-check in either of the following two ways:
+```
+./scripts/check_code.sh
+hatch run britekit:check
+```
+In both cases, the only warnings you should get are: "By default the bodies of untyped functions are not checked, consider using --check-untyped-defs".
