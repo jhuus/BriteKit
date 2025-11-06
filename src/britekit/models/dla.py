@@ -46,7 +46,7 @@ class DlaModel(BaseModel):
         config = MODEL_REGISTRY[model_type]
 
         # the "type" comment below is an instruction to MyPy
-        self.backbone = dla.DLA(in_chans=1, num_classes=self.num_classes, **config, **kwargs) # type: ignore
+        self.backbone = dla.DLA(in_chans=1, num_classes=self.num_classes, **config, **kwargs)  # type: ignore
 
         if head_type is None:
             self.head = nn.Sequential(
