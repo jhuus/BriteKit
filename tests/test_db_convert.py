@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -43,3 +44,4 @@ def test_db_convert():
     assert hesp_segment_count == 102
 
     db.close()
+    os.remove(to_path)  # clean up
