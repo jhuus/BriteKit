@@ -72,13 +72,10 @@ post-install-commands = [
 
 [tool.hatch.envs.britekit.scripts]
 test = "pytest {args:tests}"
-check = "mypy --install-types --non-interactive {args:src/britekit tests}"
-
-[tool.hatch.envs.types]
-dependencies = ["mypy>=1.0.0"]
-
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/britekit tests}"
+format = "black src tests"
+lint = "ruff check src tests"
+typecheck = "mypy src tests"
+check = "black --check src tests && ruff check src tests && mypy src tests"
 
 [tool.hatch.build]
 include = ["src"]
