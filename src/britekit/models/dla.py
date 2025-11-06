@@ -44,9 +44,9 @@ class DlaModel(BaseModel):
             raise ValueError(f"Unknown model type: {model_type}")
 
         config = MODEL_REGISTRY[model_type]
-        self.backbone = dla.DLA(
-            in_chans=1, num_classes=self.num_classes, **config, **kwargs
-        )
+
+        # the "type" comment below is an instruction to MyPy
+        self.backbone = dla.DLA(in_chans=1, num_classes=self.num_classes, **config, **kwargs) # type: ignore
 
         if head_type is None:
             self.head = nn.Sequential(
