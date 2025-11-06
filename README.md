@@ -268,7 +268,6 @@ Then clone the BriteKit repo and type the following inside the BriteKit director
 ```
 hatch env create britekit
 hatch shell
-hatch run types:check
 ```
 That will take some time to run. After that, the britekit package will be installed and you will be able to modify code and test without re-installing it. To confirm the package is available, type:
 ```
