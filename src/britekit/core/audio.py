@@ -388,14 +388,14 @@ class Audio:
         Stereo recordings sometimes have one clean channel and one noisy one;
         so rather than just merge them, use heuristics to pick the cleaner one.
         """
-        import numpy as np
+        from . import audio_util
 
         recording_seconds = int(len(left_signal) / self.cfg.audio.sampling_rate)
         check_seconds = min(recording_seconds, self.cfg.audio.check_seconds)
         if check_seconds == 0:
             # make an arbitrary choice, unless a channel is null
-            left_sum = np.sum(left_signal)
-            right_sum = np.sum(right_signal)
+            left_sum = left_signal.sum().item()
+            right_sum = right_signal.sum().item()
             if left_sum == 0 and right_sum != 0:
                 return right_signal
             elif left_sum != 0 and right_sum == 0:
@@ -424,19 +424,53 @@ class Audio:
         )
         right_spec = right_specs[0]
 
-        left_sum = left_spec.sum()
-        right_sum = right_spec.sum()
+        # calculate sum and median per channel
+        left_sum = left_spec.sum().item()
+        right_sum = right_spec.sum().item()
 
-        if left_sum == 0 and right_sum > 0:
-            # left channel is null
-            return right_signal
-        elif right_sum == 0 and left_sum > 0:
-            # right channel is null
-            return left_signal
+        left_median = left_spec.median().item()
+        right_median = right_spec.median().item()
 
-        if left_sum > right_sum:
-            # more noise in the left channel
-            return right_signal
+        # calculate energy in defined band per channel
+        cfg = self.cfg.audio
+        band_min_freq = min(cfg.max_freq, max(cfg.min_freq, cfg.energy_min_freq))
+        band_max_freq = max(cfg.min_freq, min(cfg.max_freq, cfg.energy_max_freq))
+        left_energy = audio_util.band_limited_energy(
+            left_spec,
+            sr=cfg.sampling_rate,
+            freq_range=(band_min_freq, band_max_freq),
+            f_min=cfg.min_freq,
+            f_max=cfg.max_freq,
+        )
+        right_energy = audio_util.band_limited_energy(
+            left_spec,
+            sr=cfg.sampling_rate,
+            freq_range=(band_min_freq, band_max_freq),
+            f_min=cfg.min_freq,
+            f_max=cfg.max_freq,
+        )
+
+        # convert to ratios
+        sum_ratio = 1 if right_sum == 0 else left_sum / right_sum
+        median_ratio = 1 if right_median == 0 else left_median / right_median
+        energy_ratio = 1 if right_energy == 0 else left_energy / right_energy
+
+        # apply the heuristic, which was created by training a decision tree
+        # using ~50 stereo recordings and then converting the result to this code
+        if energy_ratio <= cfg.energy_threshold:
+            if median_ratio <= cfg.median_threshold1:
+                return right_signal
+            else:
+                return left_signal
+
         else:
-            # more noise in the right channel
-            return left_signal
+            if median_ratio <= cfg.median_threshold2:
+                if sum_ratio <= cfg.sum_threshold1:
+                    return right_signal
+                else:
+                    return left_signal
+            else:
+                if sum_ratio <= cfg.sum_threshold2:
+                    return left_signal
+                else:
+                    return right_signal

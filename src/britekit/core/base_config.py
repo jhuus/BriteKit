@@ -16,14 +16,23 @@ class Audio:
     max_freq: int = 8000  # Maximum frequency for spectrograms
     min_freq: int = 100  # Minimum frequency for spectrograms
     sampling_rate: int = 18000  # A little more than 2 * max_freq
-    choose_channel: bool = True  # Use heuristic to pick the cleanest audio channel
-    check_seconds: float = 3.0  # Use this many when picking cleanest channel
     freq_scale: str = "mel"  # "linear", "log" or "mel"
     power: float = 1.0  # Use 1.0 for magnitude and 2.0 for power spectrograms
     decibels: bool = False  # Use decibel amplitude scale?
     top_db: float = 80  # Parameter to decibel conversion
     db_power: float = 1.0  # Raise to this exponent after convert to decibels
     log_freq_gain: float = 0.6  # Boost loudness of higher frequencies with log scale
+
+    # parameters for the channel selection heuristic
+    choose_channel: bool = False  # Use heuristic to pick the cleanest audio channel
+    check_seconds: float = 6.0  # Check this many seconds to pick channel
+    energy_min_freq: int = 500  # energy band min for channel heuristic
+    energy_max_freq: int = 6000  # energy band max for channel heuristic
+    energy_threshold: float = 0.99 # see code in Audio::_choose_channel
+    median_threshold1: float = 0.78 # see code in Audio::_choose_channel
+    median_threshold2: float = 1.01 # see code in Audio::_choose_channel
+    sum_threshold1: float = 0.99 # see code in Audio::_choose_channel
+    sum_threshold2: float = 1.08 # see code in Audio::_choose_channel
 
 
 @dataclass
