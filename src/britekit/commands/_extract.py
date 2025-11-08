@@ -221,7 +221,7 @@ def extract_by_csv(
     help="Path to directory containing recordings.",
 )
 @click.option(
-    "--csv-path",
+    "--csv",
     "csv_path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
     required=True,

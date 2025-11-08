@@ -296,6 +296,7 @@ def _del_src_cmd(db_path: Optional[str], name: str) -> None:
 def del_seg(
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
+    csv_path: Optional[str] = None,
     dir_path: Optional[str] = None,
 ) -> None:
     """
@@ -307,13 +308,20 @@ def del_seg(
 
     This is useful for removal of segments based on visual inspection of plots,
     allowing you to remove low-quality or incorrectly labeled segments.
+    Exactly one of the csv_path and dir_path arguments must be specified.
 
     Args:
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
     - class_name (str): Name of the class whose segments should be considered for deletion.
+    - csv_path (str): Path to CSV file containing two columns (recording and offset) to identify segments to extract.
     - dir_path (str): Path to directory containing spectrogram image files.
     """
     from britekit.training_db.training_db import TrainingDatabase
+
+    assert csv_path or dir_path, "Either csv_path or dir_path must be specified."
+    assert not (
+        csv_path and dir_path
+    ), "Only one of csv_path and dir_path may be specified."
 
     cfg = get_config()
     if db_path is None:
@@ -321,11 +329,7 @@ def del_seg(
 
     if class_name is None:
         logging.error("Error: class name is missing but required.")
-        quit()
-
-    if dir_path is None:
-        logging.error("Error: directory path is missing but required.")
-        quit()
+        return
 
     with TrainingDatabase(db_path) as db:
         count = db.get_class_count({"Name": class_name})
@@ -343,43 +347,61 @@ def del_seg(
             tokens = r.filename.split(".")
             recording_dict[tokens[0]] = r.id
 
-        file_names: List[str] = os.listdir(dir_path)
-        spec_names: List[str] = []
-        for file_name in file_names:
-            if os.path.isfile(os.path.join(dir_path, file_name)):
-                base, ext = os.path.splitext(file_name)
-                if ext == ".jpeg":
-                    spec_names.append(base)
+        # collect the info
+        offsets_per_file: dict[str, list] = {}
+        if csv_path:
+            import pandas as pd
 
+            df = pd.read_csv(csv_path)
+            for i, row in df.iterrows():
+                recording = row["recording"]
+                if recording not in offsets_per_file:
+                    offsets_per_file[recording] = []
+
+                offsets_per_file[recording].append(row["offset"])
+        else:
+            assert dir_path is not None
+            file_names: List[str] = os.listdir(dir_path)
+            for file_name in file_names:
+                if os.path.isfile(os.path.join(dir_path, file_name)):
+                    base, ext = os.path.splitext(file_name)
+                    if ext == ".jpeg":
+                        if "~" in base:
+                            result = re.split("\\S+~(\\S+)-(\\S+)~.*", base)
+                        else:
+                            result = re.split("(.+)-(.+)", base)
+
+                        if len(result) != 4:
+                            logging.error(f"Error: unknown file name format: {base} (ignored)")
+                            continue
+                        else:
+                            recording = result[1]
+                            offset = float(result[2])
+                            if recording not in offsets_per_file:
+                                offsets_per_file[recording] = []
+
+                            offsets_per_file[recording].append(offset)
+
+        # delete the segments
         deleted = 0
-        for spec_name in spec_names:
-            if "~" in spec_name:
-                result = re.split("\\S+~(\\S+)-(\\S+)~.*", spec_name)
-            else:
-                result = re.split("(.+)-(.+)", spec_name)
-
-            if len(result) != 4:
-                logging.error(f"Error: unknown file name format: {spec_name}")
-                continue
-            else:
-                recording_name = result[1]
-                offset = float(result[2])
-
-            if recording_name in recording_dict.keys():
-                recording_id = recording_dict[recording_name]
-            else:
-                logging.error(f"recording not found: {recording_name}")
+        for recording in sorted(offsets_per_file):
+            if recording not in recording_dict.keys():
+                logging.error(f"Error: recording not found: {recording}")
                 return
 
-            result = db.get_segment({"RecordingID": recording_id, "Offset": offset})
-            if result is None:
-                logging.error(f"segment not found: {recording_name}-{offset}")
-            else:
-                # should only be one, but conceivably more
-                for r in result:
-                    logging.info(f"Deleting segment ID {r.id}")
-                    db.delete_segment({"ID": r.id})
-                    deleted += 1
+            recording_id = recording_dict[recording]
+            for offset in offsets_per_file[recording]:
+                result = db.get_segment(
+                    {"RecordingID": recording_id, "Offset": offset}
+                )
+                if result is None:
+                    logging.error(f"Error: segment not found: {recording}-{offset}")
+                else:
+                    # should only be one, but loop just in case
+                    for r in result:
+                        logging.info(f"Deleting segment ID {r.id}")
+                        db.delete_segment({"ID": r.id})
+                        deleted += 1
 
         logging.info(f"Deleted {deleted} segments")
 
@@ -394,8 +416,31 @@ def del_seg(
 )
 @click.option("--class", "class_name", required=True, help="Class name.")
 @click.option(
-    "--dir", "dir_path", required=True, help="Path to directory containing images."
+    "--csv",
+    "csv_path",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    required=False,
+    help="Path to CSV file containing two columns (recording and offset) to identify segments to delete. Exactly one of --csv and --dir must be specified.",
 )
-def _del_seg_cmd(db_path: Optional[str], class_name: str, dir_path: str) -> None:
+@click.option(
+    "--dir",
+    "dir_path",
+    required=False,
+    help="Path to directory containing images. Exactly one of --csv and --dir must be specified.",
+)
+def _del_seg_cmd(
+    db_path: Optional[str],
+    class_name: str,
+    csv_path: Optional[str],
+    dir_path: Optional[str],
+) -> None:
     util.set_logging()
-    del_seg(db_path, class_name, dir_path)
+    if not csv_path and not dir_path:
+        logging.error("Either --csv or --dir must be specified.")
+        return
+
+    if csv_path and dir_path:
+        logging.error("Only one of --csv or --dir may be specified.")
+        return
+
+    del_seg(db_path, class_name, csv_path, dir_path)
