@@ -236,7 +236,7 @@ Args:
 ### del_seg
 **Function**  
 ```python
-del_seg(db_path: Optional[str] = None, class_name: Optional[str] = None, dir_path: Optional[str] = None) -> None
+del_seg(db_path: Optional[str] = None, class_name: Optional[str] = None, csv_path: Optional[str] = None, dir_path: Optional[str] = None) -> None
 ```
 Delete segments that correspond to images in a given directory.
 
@@ -246,10 +246,12 @@ and their filenames contain the recording name and time offset.
 
 This is useful for removal of segments based on visual inspection of plots,
 allowing you to remove low-quality or incorrectly labeled segments.
+Exactly one of the csv_path and dir_path arguments must be specified.
 
 Args:
 - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
 - class_name (str): Name of the class whose segments should be considered for deletion.
+- csv_path (str): Path to CSV file containing two columns (recording and offset) to identify segments to extract.
 - dir_path (str): Path to directory containing spectrogram image files.
 
 ### del_sgroup
@@ -472,6 +474,23 @@ Args:
 - name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
 - no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
 
+### init
+**Function**  
+```python
+init(dest: Optional[pathlib.Path] = None) -> None
+```
+Setup default BriteKit directory structure and copy packaged sample files.
+
+This command copies files from the built-in `britekit.install` package
+(kept alongside the library code) into a folder you specify, and creates
+a default directory structure.
+
+Args:
+- dest (Path): Directory to copy files into. Subdirectories are created as needed.
+
+Examples:
+    britekit init --dest .
+
 ### pickle
 **Function**  
 ```python
@@ -532,6 +551,26 @@ Args:
 - output_path (str): Directory where spectrogram images will be saved.
 - all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
 - overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
+- power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+
+### plot_rec
+**Function**  
+```python
+plot_rec(cfg_path: Optional[str] = None, ndims: bool = False, input_path: str = '', output_path: str = '', all: bool = False, overlap: float = 0.0, power: float = 1.0)
+```
+Plot spectrograms for a specific audio recording.
+
+This command processes a single audio file and generates spectrogram images.
+It can either plot the entire recording as one spectrogram or break it into
+overlapping segments.
+
+Args:
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+- input_path (str): Path to the audio recording file to process.
+- output_path (str): Directory where spectrogram images will be saved.
+- all (bool): If True, plot the entire recording as one spectrogram. If False, break into segments.
+- overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
 - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
 
 ### reextract

@@ -310,12 +310,17 @@ Usage: britekit del-seg [OPTIONS]
   offset.
 
   This is useful for removal of segments based on visual inspection of plots,
-  allowing you to remove low-quality or incorrectly labeled segments.
+  allowing you to remove low-quality or incorrectly labeled segments. Exactly
+  one of the csv_path and dir_path arguments must be specified.
 
 Options:
   -d, --db TEXT  Path to the training database.
   --class TEXT   Class name.  [required]
-  --dir TEXT     Path to directory containing images.  [required]
+  --csv FILE     Path to CSV file containing two columns (recording and offset)
+                 to identify segments to delete. Exactly one of --csv and --dir
+                 must be specified.
+  --dir TEXT     Path to directory containing images. Exactly one of --csv and
+                 --dir must be specified.
   --help         Show this message and exit.
 ```
 ### britekit del-sgroup
@@ -460,7 +465,7 @@ Options:
   --code TEXT           Class code for when new class is added.
   --name TEXT           Class name.  [required]
   --rec-dir DIRECTORY   Path to directory containing recordings.  [required]
-  --csv-path FILE       Path to CSV file containing two columns (recording and
+  --csv FILE            Path to CSV file containing two columns (recording and
                         offset) to identify segments to extract.  [required]
   --dest-dir DIRECTORY  Copy used recordings to this directory if specified.
   --src TEXT            Source name for inserted recordings. Defaults to
