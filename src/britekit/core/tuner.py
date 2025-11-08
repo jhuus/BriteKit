@@ -284,10 +284,12 @@ class Tuner:
         from britekit.core.analyzer import Analyzer
         from britekit.testing.per_segment_tester import PerSegmentTester
 
-        train_dir = self._find_latest_version_dir(self.train_log_dir)
-        self.cfg.misc.ckpt_folder = str(
-            Path(self.train_log_dir) / train_dir / "checkpoints"
-        )
+        if not self.skip_training:
+            train_dir = self._find_latest_version_dir(self.train_log_dir)
+            self.cfg.misc.ckpt_folder = str(
+                Path(self.train_log_dir) / train_dir / "checkpoints"
+            )
+
         logging.info(f"Using checkpoints in {self.cfg.misc.ckpt_folder}")
         self.cfg.infer.min_score = 0
 
