@@ -372,7 +372,9 @@ def del_seg(
                             result = re.split("(.+)-(.+)", base)
 
                         if len(result) != 4:
-                            logging.error(f"Error: unknown file name format: {base} (ignored)")
+                            logging.error(
+                                f"Error: unknown file name format: {base} (ignored)"
+                            )
                             continue
                         else:
                             recording = result[1]
@@ -391,9 +393,7 @@ def del_seg(
 
             recording_id = recording_dict[recording]
             for offset in offsets_per_file[recording]:
-                result = db.get_segment(
-                    {"RecordingID": recording_id, "Offset": offset}
-                )
+                result = db.get_segment({"RecordingID": recording_id, "Offset": offset})
                 if result is None:
                     logging.error(f"Error: segment not found: {recording}-{offset}")
                 else:

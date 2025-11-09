@@ -28,11 +28,8 @@ class Audio:
     check_seconds: float = 6.0  # Check this many seconds to pick channel
     energy_min_freq: int = 500  # energy band min for channel heuristic
     energy_max_freq: int = 6000  # energy band max for channel heuristic
-    energy_threshold: float = 0.99  # see code in Audio::_choose_channel
-    median_threshold1: float = 0.78  # see code in Audio::_choose_channel
-    median_threshold2: float = 1.01  # see code in Audio::_choose_channel
-    sum_threshold1: float = 0.99  # see code in Audio::_choose_channel
-    sum_threshold2: float = 1.08  # see code in Audio::_choose_channel
+    median_threshold: float = 0.77  # see code in Audio::_choose_channel
+    sum_threshold: float = 1.08  # see code in Audio::_choose_channel
 
 
 @dataclass

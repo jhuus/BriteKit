@@ -387,21 +387,24 @@ class Audio:
         """
         Stereo recordings sometimes have one clean channel and one noisy one;
         so rather than just merge them, use heuristics to pick the cleaner one.
+        This heuristic was developed by training an sklearn DecisionTreeClassifier,
+        converting the tree to if/else statements, changing it to treat the left
+        and right channels symmetrically, and finally retuning the hyperparameters.
         """
         from . import audio_util
+
+        # if one channel is null, use the other
+        left_sum = left_signal.sum().item()
+        right_sum = right_signal.sum().item()
+        if left_sum == 0 and right_sum != 0:
+            return right_signal
+        elif left_sum != 0 and right_sum == 0:
+            return left_signal
 
         recording_seconds = int(len(left_signal) / self.cfg.audio.sampling_rate)
         check_seconds = min(recording_seconds, self.cfg.audio.check_seconds)
         if check_seconds == 0:
-            # make an arbitrary choice, unless a channel is null
-            left_sum = left_signal.sum().item()
-            right_sum = right_signal.sum().item()
-            if left_sum == 0 and right_sum != 0:
-                return right_signal
-            elif left_sum != 0 and right_sum == 0:
-                return left_signal
-            else:
-                return left_signal
+            return left_signal  # make an arbitrary choice
 
         self.signal = left_signal
         left_specs, _ = self.get_spectrograms(
@@ -450,27 +453,24 @@ class Audio:
             f_max=cfg.max_freq,
         )
 
-        # convert to ratios
-        sum_ratio = 1 if right_sum == 0 else left_sum / right_sum
-        median_ratio = 1 if right_median == 0 else left_median / right_median
-        energy_ratio = 1 if right_energy == 0 else left_energy / right_energy
-
-        # apply the heuristic, which was created by training a decision tree
-        # using ~50 stereo recordings and then converting the result to this code
-        if energy_ratio <= cfg.energy_threshold:
-            if median_ratio <= cfg.median_threshold1:
-                return right_signal
-            else:
-                return left_signal
-
+        # set parameters based on the low-energy channel
+        if left_energy <= right_energy:
+            low_energy, high_energy = left_signal, right_signal
+            sum_ratio = 1 if right_sum == 0 else left_sum / right_sum
+            median_ratio = 1 if right_median == 0 else left_median / right_median
         else:
-            if median_ratio <= cfg.median_threshold2:
-                if sum_ratio <= cfg.sum_threshold1:
-                    return right_signal
-                else:
-                    return left_signal
+            low_energy, high_energy = right_signal, left_signal
+            sum_ratio = 1 if left_sum == 0 else right_sum / left_sum
+            median_ratio = 1 if left_median == 0 else right_median / left_median
+
+        # apply the heuristic
+        if median_ratio <= cfg.median_threshold:
+            if sum_ratio <= 1 / cfg.sum_threshold:
+                return high_energy
             else:
-                if sum_ratio <= cfg.sum_threshold2:
-                    return left_signal
-                else:
-                    return right_signal
+                return low_energy
+        else:
+            if sum_ratio <= cfg.sum_threshold:
+                return low_energy
+            else:
+                return high_energy
