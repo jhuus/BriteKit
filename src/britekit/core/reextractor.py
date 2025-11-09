@@ -46,7 +46,7 @@ class Reextractor:
         self.spec_group = spec_group
 
     # Resample audio data
-    def _resample(waveform, original_sampling_rate, desired_sampling_rate):
+    def _resample(self, waveform, original_sampling_rate, desired_sampling_rate):
         import torch
         import torchaudio.transforms as T
 
