@@ -184,9 +184,14 @@ class AugmentationPipeline:
         """
         import numpy as np
 
+        num_augmentations = 0
         for prob, fn in self.augmentations:
+            if num_augmentations >= self.cfg.train.max_augmentations:
+                break
+
             if random.random() < prob:
                 spec = fn(spec)
+                num_augmentations += 1
 
         # set max value = 1
         max_val = spec.max()

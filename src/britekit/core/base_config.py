@@ -82,6 +82,7 @@ class Training:
 
     # data augmentation
     augment: bool = True  # Use data augmentation?
+    max_augmentations: int = 1  # Up to this many per spectrogram
     noise_class_name: str = "Noise"  # Augmentation treats noise specially
     prob_simple_merge: float = 0.32  # Prob of simple merge
     prob_fade1: float = 0.5  # Prob of fading after augmentation
