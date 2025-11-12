@@ -533,6 +533,14 @@ class TrainingDatabase:
 
         return len(ids)
 
+    def optimize(self):
+        """
+        Optimize database performance (important after extract or re-extract)
+        """
+        self.cursor.execute("ANALYZE")
+        self.cursor.execute("PRAGMA optimize")
+        self.conn.commit()
+
     # ------------------------------- #
     # Source
     # ------------------------------- #
