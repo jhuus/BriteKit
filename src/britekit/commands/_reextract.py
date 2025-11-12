@@ -38,6 +38,7 @@ def reextract(
     - spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
     """
     from britekit.core.reextractor import Reextractor
+    from britekit.training_db.training_db import TrainingDatabase
 
     cfg = get_config(cfg_path)
 
@@ -50,6 +51,10 @@ def reextract(
 
     start_time = time.time()
     Reextractor(db_path, class_name, classes_path, check, spec_group).run()
+
+    with TrainingDatabase(cfg.train.train_db) as db:
+        db.optimize()
+
     elapsed_time = util.format_elapsed_time(start_time, time.time())
     logging.info(f"Elapsed time = {elapsed_time}")
 
