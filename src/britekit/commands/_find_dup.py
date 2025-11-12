@@ -84,7 +84,7 @@ def find_dup(
         import scipy
 
         SECONDS_FUDGE = 0.1  # treat durations as equal if within this many seconds
-        DISTANCE_FUDGE = 0.02  # treat spectrograms as equal if within this distance
+        DISTANCE_FUDGE = 0.001  # treat spectrograms as equal if within this distance
 
         if (recording1.seconds > recording2.seconds - SECONDS_FUDGE) and (
             recording1.seconds < recording2.seconds + SECONDS_FUDGE
@@ -99,6 +99,7 @@ def find_dup(
                     )
                     if distance > DISTANCE_FUDGE:
                         return False
+
                 return True
             else:
                 return False
