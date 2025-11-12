@@ -51,6 +51,7 @@ def extract_all(
             db, class_name, class_code, cat_name, src_name, overlap, spec_group
         )
         count = extractor.extract_all(dir_path)
+        db.optimize()
         logging.info(f"Inserted {count} spectrograms")
 
 
@@ -181,6 +182,7 @@ def extract_by_csv(
             db, class_name, class_code, cat_name, src_name, spec_group=spec_group
         )
         count = extractor.extract_by_csv(rec_dir, csv_path, dest_dir)
+        db.optimize()
         logging.info(f"Inserted {count} spectrograms")
 
 
@@ -320,6 +322,7 @@ def extract_by_image(
             db, class_name, class_code, cat_name, src_name, spec_group=spec_group
         )
         count = extractor.extract_by_image(rec_dir, spec_dir, dest_dir)
+        db.optimize()
         logging.info(f"Inserted {count} spectrograms")
 
 
