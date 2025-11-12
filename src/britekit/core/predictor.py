@@ -68,6 +68,12 @@ class Predictor:
     def get_embeddings(self, spec_array):
         """
         Given an array of spectrograms, return the average embeddings using the loaded models.
+
+        Args:
+        - spec_array: Spectrograms (numpy array).
+
+        Returns:
+            Average embeddings (numpy array).
         """
         combined_embeddings = []
         for i, model in enumerate(self.models):
