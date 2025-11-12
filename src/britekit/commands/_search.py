@@ -59,7 +59,6 @@ def search(
 
     from britekit.core.audio import Audio
     from britekit.core.plot import plot_spec
-    from britekit.models.model_loader import load_from_checkpoint
     from britekit.training_db.training_db import TrainingDatabase
 
     cfg = get_config(cfg_path)
@@ -130,16 +129,16 @@ def search(
         logging.error("Invalid value for cfg.misc.search_ckpt_path")
         return
 
-    logging.info("Loading saved model")
-    device = util.get_device()
-    model = load_from_checkpoint(cfg.misc.search_ckpt_path)
-    model.eval()  # set inference mode
-    model.to(device)
+    logging.info("Loading saved models")
+    from britekit.core.predictor import Predictor
+
+    predictor = Predictor(cfg.misc.search_ckpt_path)
 
     # get the embedding for the target spectrogram
+    logging.info("Generating embeddings")
     input = np.zeros((1, 1, cfg.audio.spec_height, cfg.audio.spec_width))
     input[0] = target_spec
-    embeddings = model.get_embeddings(input, device)
+    embeddings = predictor.get_embeddings(input)
     target_embedding = embeddings[0]
 
     # compare embeddings and save the distances

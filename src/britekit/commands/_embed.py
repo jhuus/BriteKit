@@ -33,28 +33,29 @@ def embed(
     def embed_block(
         specs: List,
         cfg: BaseConfig,
-        model,
+        predictor,
         db,
-        device: str,
     ) -> None:
         """Process embeddings for a block of spectrograms."""
         import numpy as np
 
         spec_array = np.zeros(
-            (len(specs), 1, cfg.audio.spec_height, cfg.audio.spec_width)
+            (len(specs), 1, cfg.audio.spec_height, cfg.audio.spec_width),
+            dtype=np.float32,
         )
         value_ids: List[int] = []
+
         for i, spec in enumerate(specs):
             value_ids.append(spec.specvalue_id)
             spec = util.expand_spectrogram(spec.value)
             spec = spec.reshape((1, cfg.audio.spec_height, cfg.audio.spec_width))
             spec_array[i] = spec
 
-        embeddings = model.get_embeddings(spec_array, device)
+        embeddings = predictor.get_embeddings(spec_array)
+
         for i in range(len(embeddings)):
             db.update_specvalue(value_ids[i], "Embedding", zlib.compress(embeddings[i]))
 
-    from britekit.models.model_loader import load_from_checkpoint
     from britekit.training_db.training_db import TrainingDatabase
 
     cfg = get_config(cfg_path)
@@ -63,10 +64,11 @@ def embed(
 
     BATCH_SIZE = 512  # process this many spectrograms at a time
     assert cfg.misc.search_ckpt_path is not None
-    model = load_from_checkpoint(cfg.misc.search_ckpt_path)
-    device = util.get_device()
-    model.eval()  # set inference mode
-    model.to(device)
+
+    # use predictor to load models and get embeddings
+    from britekit.core.predictor import Predictor
+
+    predictor = Predictor(cfg.misc.search_ckpt_path)
 
     with TrainingDatabase(db_path) as db:
         if not class_name:
@@ -89,7 +91,7 @@ def embed(
             while start_idx < len(specs):
                 end_idx = min(start_idx + BATCH_SIZE, len(specs))
                 logging.info(f"Processing spectrograms {start_idx} to {end_idx - 1}")
-                embed_block(specs[start_idx:end_idx], cfg, model, db, device)
+                embed_block(specs[start_idx:end_idx], cfg, predictor, db)
                 start_idx += BATCH_SIZE
 
 

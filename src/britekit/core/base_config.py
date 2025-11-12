@@ -181,7 +181,7 @@ class Miscellaneous:
     force_cpu: bool = False  # If true, use CPU (for performance comparisons)
     # Use an ensemble of all checkpoints in this folder for inference
     ckpt_folder: str = "data/ckpt"
-    # Checkpoint used in searching and clustering
+    # Folder with one or more checkpoints for embeddings and search
     search_ckpt_path: Optional[str] = None
     # List of classes used to generate pickle files
     classes_file: str = "data/classes.txt"

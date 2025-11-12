@@ -65,6 +65,26 @@ class Predictor:
 
         self._load_models(model_path)
 
+    def get_embeddings(self, spec_array):
+        """
+        Given an array of spectrograms, return the average embeddings using the loaded models.
+        """
+        combined_embeddings = []
+        for i, model in enumerate(self.models):
+            embeddings = model.get_embeddings(spec_array, self.device)
+            embeddings = np.asarray(embeddings, dtype=np.float32)
+            combined_embeddings.append(embeddings)
+            if i > 0:
+                assert (
+                    embeddings.shape == combined_embeddings[0].shape
+                ), "Mismatched embedding shapes"
+
+        # Stack and average
+        combined_embeddings = np.stack(combined_embeddings, axis=0)
+        average_embeddings = np.mean(combined_embeddings, axis=0)
+
+        return average_embeddings
+
     def get_raw_scores(self, recording_path: str, start_seconds: float = 0):
         """
         Get scores in array format from the loaded models for the given recording.
