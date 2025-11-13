@@ -12,10 +12,11 @@ from ._db_delete import (
     del_src,
     del_stype,
 )
+from ._dedup import dedup_rec
 from ._embed import embed
 from ._ensemble import ensemble
 from ._extract import extract_all, extract_by_csv, extract_by_image
-from ._find_dup import find_dup
+
 from ._inat import inat
 from ._init import init
 from ._pickle import pickle
@@ -41,6 +42,7 @@ __all__ = [
     "ckpt_freeze",
     "ckpt_onnx",
     "copy_samples",
+    "dedup_rec",
     "del_cat",
     "del_class",
     "del_rec",
@@ -53,7 +55,6 @@ __all__ = [
     "extract_all",
     "extract_by_csv",
     "extract_by_image",
-    "find_dup",
     "find_lr",
     "inat",
     "init",

@@ -29,6 +29,7 @@ from .commands._db_delete import (
     _del_src_cmd,
     _del_stype_cmd,
 )
+from .commands._dedup import _dedup_rec_cmd
 from .commands._embed import _embed_cmd
 from .commands._ensemble import _ensemble_cmd
 from .commands._extract import (
@@ -36,7 +37,6 @@ from .commands._extract import (
     _extract_by_csv_cmd,
     _extract_by_image_cmd,
 )
-from .commands._find_dup import _find_dup_cmd
 from .commands._inat import _inat_cmd
 from .commands._init import _init_cmd
 from .commands._pickle import _pickle_cmd
@@ -76,6 +76,7 @@ cli.add_command(_ckpt_avg_cmd)
 cli.add_command(_ckpt_freeze_cmd)
 cli.add_command(_ckpt_onnx_cmd)
 
+cli.add_command(_dedup_rec_cmd)
 cli.add_command(_del_cat_cmd)
 cli.add_command(_del_class_cmd)
 cli.add_command(_del_rec_cmd)
@@ -90,7 +91,6 @@ cli.add_command(_extract_all_cmd)
 cli.add_command(_extract_by_csv_cmd)
 cli.add_command(_extract_by_image_cmd)
 
-cli.add_command(_find_dup_cmd)
 cli.add_command(_find_lr_cmd)
 
 cli.add_command(_inat_cmd)

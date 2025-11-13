@@ -12,7 +12,7 @@ from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
 
 
-def find_dup(
+def dedup_rec(
     cfg_path: Optional[str] = None,
     db_path: Optional[str] = None,
     class_name: str = "",
@@ -44,6 +44,7 @@ def find_dup(
             self.filename: str = filename
             self.seconds: float = seconds
             self.embeddings: List = []
+            self.num_segments: int = 0
 
     def get_spectrogram_embeddings(
         db: TrainingDatabase, recording: Recording, specgroup_id: int
@@ -57,6 +58,7 @@ def find_dup(
             logging.error(f"Error: no matching spectrograms for {recording.filename}.")
             quit()
 
+        recording.num_segments = len(results)
         for i in range(min(3, len(results))):  # just need the first few for comparison
             r = results[i]
             if r.embedding is None:
@@ -122,24 +124,28 @@ def find_dup(
     # sort recordings by length, then process in a loop
     recordings = sorted(recordings, key=lambda recording: recording.seconds)
     i = 0
+    num_found = 0
     while i < len(recordings) - 1:
         if match_recordings(recordings[i], recordings[i + 1]):
+            num_found += 1
             logging.info(
-                f"{recordings[i].filename} and {recordings[i + 1].filename} are possible duplicates"
+                f"{recordings[i].filename} ({recordings[i].num_segments} segments) and {recordings[i + 1].filename} "
+                f"({recordings[i].num_segments} segments) are possible duplicates"
             )
             if delete:
-                logging.info(f"Removing {recordings[i].filename} from database")
-                db.delete_recording({"ID": recordings[i].id})
+                logging.info(f"Removing {recordings[i + 1].filename} from database")
+                db.delete_recording({"ID": recordings[i + 1].id})
 
             i += 2
         else:
             i += 1
 
+    logging.info(f"Found {num_found} duplicate pairs")
 
 @click.command(
-    name="find-dup",
+    name="dedup-rec",
     short_help="Find and optionally delete duplicate recordings in a database.",
-    help=util.cli_help_from_doc(find_dup.__doc__),
+    help=util.cli_help_from_doc(dedup_rec.__doc__),
 )
 @click.option(
     "-c",
@@ -170,7 +176,7 @@ def find_dup(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def _find_dup_cmd(
+def _dedup_rec_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
     class_name: str,
@@ -178,4 +184,4 @@ def _find_dup_cmd(
     spec_group: str,
 ) -> None:
     util.set_logging()
-    find_dup(cfg_path, db_path, class_name, delete, spec_group)
+    dedup_rec(cfg_path, db_path, class_name, delete, spec_group)
