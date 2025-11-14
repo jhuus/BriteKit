@@ -160,8 +160,8 @@ def dedup_rec(
                 f"({recordings[i].num_segments} segments) are possible duplicates"
             )
             if delete:
-                logging.info(f"Removing {recordings[i + 1].filename} from database")
-                db.delete_recording({"ID": recordings[i + 1].id})
+                logging.info(f"Removing {recordings[i].filename} from database")
+                db.delete_recording({"ID": recordings[i].id})
 
             i += 2
         else:
