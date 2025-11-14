@@ -189,6 +189,46 @@ Args:
 - cfg_path (str, optional): Path to YAML file defining configuration overrides.
 - input_path (str): Path to the PyTorch checkpoint file to convert.
 
+### dedup_rec
+**Function**  
+```python
+dedup_rec(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: str = '', delete: bool = False, spec_group: str = 'default') -> None
+```
+Find and optionally delete duplicate recordings in the training database.
+
+This command scans the database for recordings of the same class that appear to be duplicates.
+It uses a two-stage detection approach:
+1. Compare recording durations (within 0.1 seconds tolerance)
+2. Compare spectrogram embeddings of the first few spectrograms (within 0.02 cosine distance)
+
+Duplicates are identified by comparing the first 3 spectrogram embeddings from each recording
+using cosine distance.
+
+Args:
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
+- delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
+- spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
+
+### dedup_seg
+**Function**  
+```python
+dedup_seg(cfg_path: Optional[str] = None, db_path: Optional[str] = None, output_path: str = '', class_name: str = '', delete: bool = False, spec_group: str = 'default', threshold: float = 0.99) -> None
+```
+Find and optionally delete duplicate segments in the training database.
+
+This command scans the database for segments of the same class that are very similar.
+
+Args:
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- output_path (str): Path to the output directory for reports and plots.
+- class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
+- delete (bool): If True, remove duplicate segments from the database. If False, only report them.
+- spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
+- threshold (float): Treat as duplicates if cosine similarity >= threshold (default = 0.99).
+
 ### del_cat
 **Function**  
 ```python
@@ -410,28 +450,6 @@ Args:
 - dest_dir (str, optional): If specified, copy used recordings to this directory.
 - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
 - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
-
-### find_dup
-**Function**  
-```python
-find_dup(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: str = '', delete: bool = False, spec_group: str = 'default') -> None
-```
-Find and optionally delete duplicate recordings in the training database.
-
-This command scans the database for recordings of the same class that appear to be duplicates.
-It uses a two-stage detection approach:
-1. Compare recording durations (within 0.1 seconds tolerance)
-2. Compare spectrogram embeddings of the first few spectrograms (within 0.02 cosine distance)
-
-Duplicates are identified by comparing the first 3 spectrogram embeddings from each recording
-using cosine distance.
-
-Args:
-- cfg_path (str, optional): Path to YAML file defining configuration overrides.
-- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-- class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
-- delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
-- spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
 
 ### find_lr
 **Function**  

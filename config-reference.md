@@ -27,11 +27,8 @@
 | `check_seconds` | `float` | 6.0 | Check this many seconds to pick channel |
 | `energy_min_freq` | `int` | 500 | energy band min for channel heuristic |
 | `energy_max_freq` | `int` | 6000 | energy band max for channel heuristic |
-| `energy_threshold` | `float` | 0.99 | see code in Audio::_choose_channel |
-| `median_threshold1` | `float` | 0.78 | see code in Audio::_choose_channel |
-| `median_threshold2` | `float` | 1.01 | see code in Audio::_choose_channel |
-| `sum_threshold1` | `float` | 0.99 | see code in Audio::_choose_channel |
-| `sum_threshold2` | `float` | 1.08 | see code in Audio::_choose_channel |
+| `median_threshold` | `float` | 0.77 | see code in Audio::_choose_channel |
+| `sum_threshold` | `float` | 1.08 | see code in Audio::_choose_channel |
 
 ### Training
 | Field | Type | Default | Description |
@@ -70,6 +67,7 @@
 | `sed_fps` | `int` | 4 | Frames per second from SED heads |
 | `frame_loss_weight` | `float` | 0.5 | Segment_loss_weight = 1 - frame_loss_weight |
 | `augment` | `bool` | True | Use data augmentation? |
+| `max_augmentations` | `int` | 1 | Up to this many per spectrogram |
 | `noise_class_name` | `str` | 'Noise' | Augmentation treats noise specially |
 | `prob_simple_merge` | `float` | 0.32 | Prob of simple merge |
 | `prob_fade1` | `float` | 0.5 | Prob of fading after augmentation |
@@ -103,7 +101,7 @@
 | --- | --- | --- | --- |
 | `force_cpu` | `bool` | False | If true, use CPU (for performance comparisons) |
 | `ckpt_folder` | `str` | 'data/ckpt' | Use an ensemble of all checkpoints in this folder for inference |
-| `search_ckpt_path` | `Union[str, NoneType]` | None | Checkpoint used in searching and clustering |
+| `search_ckpt_path` | `Union[str, NoneType]` | None | Folder with one or more checkpoints for embeddings and search |
 | `classes_file` | `str` | 'data/classes.txt' | List of classes used to generate pickle files |
 | `ignore_file` | `str` | 'data/ignore.txt' | Classes listed in this file are ignored in analysis |
 | `source_regexes` | `Union[list, NoneType]` | <factory <lambda>> | Sample regexes to map recording names to source names |

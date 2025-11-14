@@ -11,6 +11,8 @@
 | [britekit ckpt-avg](#britekit-ckpt-avg) | Average the weights of several checkpoints. |
 | [britekit ckpt-freeze](#britekit-ckpt-freeze) | Freeze the backbone weights of a checkpoint. |
 | [britekit ckpt-onnx](#britekit-ckpt-onnx) | Convert a checkpoint to onnx format for use with openvino. |
+| [britekit dedup-rec](#britekit-dedup-rec) | Find and optionally delete duplicate recordings in a database. |
+| [britekit dedup-seg](#britekit-dedup-seg) | Find and optionally delete duplicate segments in a database. |
 | [britekit del-cat](#britekit-del-cat) | Delete a category (class group) and its classes from a database. |
 | [britekit del-class](#britekit-del-class) | Delete a class and associated records from a database. |
 | [britekit del-rec](#britekit-del-rec) | Delete a recording and associated records from a database. |
@@ -23,7 +25,6 @@
 | [britekit extract-all](#britekit-extract-all) | Insert all spectrograms from recordings into database. |
 | [britekit extract-by-csv](#britekit-extract-by-csv) | Insert spectrograms that correspond to rows in a CSV file. |
 | [britekit extract-by-image](#britekit-extract-by-image) | Insert spectrograms that correspond to images. |
-| [britekit find-dup](#britekit-find-dup) | Find and optionally delete duplicate recordings in a database. |
 | [britekit find-lr](#britekit-find-lr) | Suggest a learning rate. |
 | [britekit inat](#britekit-inat) | Download recordings from iNaturalist. |
 | [britekit init](#britekit-init) | Create default directory structure including sample files. |
@@ -253,6 +254,51 @@ Options:
   -c, --cfg PATH    Path to YAML file defining config overrides.
   -i, --input FILE  Path to checkpoint to convert to ONNX format  [required]
   --help            Show this message and exit.
+```
+### britekit dedup-rec
+```
+Usage: britekit dedup-rec [OPTIONS]
+
+  Find and optionally delete duplicate recordings in the training database.
+
+  This command scans the database for recordings of the same class that appear
+  to be duplicates. It uses a two-stage detection approach: 1. Compare recording
+  durations (within 0.1 seconds tolerance) 2. Compare spectrogram embeddings of
+  the first few spectrograms (within 0.02 cosine distance)
+
+  Duplicates are identified by comparing the first 3 spectrogram embeddings from
+  each recording using cosine distance.
+
+Options:
+  -c, --cfg PATH  Path to YAML file defining config overrides.
+  -d, --db FILE   Path to the database. Defaults to value of
+                  cfg.train.training_db.
+  --name TEXT     Class name  [required]
+  --del           If specified, remove duplicate recordings from the database.
+  --sgroup TEXT   Spectrogram group name. Defaults to 'default'.
+  --help          Show this message and exit.
+```
+### britekit dedup-seg
+```
+Usage: britekit dedup-seg [OPTIONS]
+
+  Find and optionally delete duplicate segments in the training database.
+
+  This command scans the database for segments of the same class that are very
+  similar.
+
+Options:
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  -d, --db FILE           Path to the database. Defaults to value of
+                          cfg.train.training_db.
+  -o, --output DIRECTORY  Path to output directory.  [required]
+  --name TEXT             Class name  [required]
+  --del                   If specified, remove duplicate segments from the
+                          database.
+  --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
+  --threshold FLOAT       Treat as duplicates if cosine similarity >= threshold.
+                          Default = 0.99.
+  --help                  Show this message and exit.
 ```
 ### britekit del-cat
 ```
@@ -504,29 +550,6 @@ Options:
                         'default'.
   --sgroup TEXT         Spectrogram group name. Defaults to 'default'.
   --help                Show this message and exit.
-```
-### britekit find-dup
-```
-Usage: britekit find-dup [OPTIONS]
-
-  Find and optionally delete duplicate recordings in the training database.
-
-  This command scans the database for recordings of the same class that appear
-  to be duplicates. It uses a two-stage detection approach: 1. Compare recording
-  durations (within 0.1 seconds tolerance) 2. Compare spectrogram embeddings of
-  the first few spectrograms (within 0.02 cosine distance)
-
-  Duplicates are identified by comparing the first 3 spectrogram embeddings from
-  each recording using cosine distance.
-
-Options:
-  -c, --cfg PATH  Path to YAML file defining config overrides.
-  -d, --db FILE   Path to the database. Defaults to value of
-                  cfg.train.training_db.
-  --name TEXT     Class name  [required]
-  --del           If specified, remove duplicate recordings from the database.
-  --sgroup TEXT   Spectrogram group name. Defaults to 'default'.
-  --help          Show this message and exit.
 ```
 ### britekit find-lr
 ```

@@ -881,6 +881,21 @@ Returns:
 
 
 
+**get_embeddings**  
+```python
+Predictor.get_embeddings(self, spec_array)
+```
+Given an array of spectrograms, return the average embeddings using the loaded models.
+
+Args:
+- spec_array: Spectrograms (numpy array).
+
+Returns:
+
+- Average embeddings (numpy array).
+
+
+
 **get_frame_labels**  
 ```python
 Predictor.get_frame_labels(self, frame_map) -> dict[str, list[britekit.core.predictor.Label]]
@@ -1771,6 +1786,12 @@ Returns:
 - row_id (int): ID of the inserted record.
 
 
+
+**optimize**  
+```python
+TrainingDatabase.optimize(self)
+```
+Optimize database performance (important after extract or re-extract)
 
 **update_recording**  
 ```python
