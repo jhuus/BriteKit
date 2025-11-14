@@ -12,7 +12,7 @@ from ._db_delete import (
     del_src,
     del_stype,
 )
-from ._dedup import dedup_rec
+from ._dedup import dedup_rec, dedup_seg
 from ._embed import embed
 from ._ensemble import ensemble
 from ._extract import extract_all, extract_by_csv, extract_by_image
@@ -43,6 +43,7 @@ __all__ = [
     "ckpt_onnx",
     "copy_samples",
     "dedup_rec",
+    "dedup_seg",
     "del_cat",
     "del_class",
     "del_rec",

@@ -42,6 +42,7 @@ dependencies = [
   "tensorboard>=2.19,<3.0",
   "timm>=1.0.17,<2.0",
   "yt-dlp>=2025.6.25",
+  "faiss-cpu>=1.10",
 ]
 
 [project.scripts]

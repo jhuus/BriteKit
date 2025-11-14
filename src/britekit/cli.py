@@ -29,7 +29,7 @@ from .commands._db_delete import (
     _del_src_cmd,
     _del_stype_cmd,
 )
-from .commands._dedup import _dedup_rec_cmd
+from .commands._dedup import _dedup_rec_cmd, _dedup_seg_cmd
 from .commands._embed import _embed_cmd
 from .commands._ensemble import _ensemble_cmd
 from .commands._extract import (
@@ -77,6 +77,7 @@ cli.add_command(_ckpt_freeze_cmd)
 cli.add_command(_ckpt_onnx_cmd)
 
 cli.add_command(_dedup_rec_cmd)
+cli.add_command(_dedup_seg_cmd)
 cli.add_command(_del_cat_cmd)
 cli.add_command(_del_class_cmd)
 cli.add_command(_del_rec_cmd)
