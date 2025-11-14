@@ -87,6 +87,7 @@ def dedup_rec(
     class_name: str = "",
     delete: bool = False,
     spec_group: str = "default",
+
 ) -> None:
     """
     Find and optionally delete duplicate recordings in the training database.
@@ -223,6 +224,7 @@ def dedup_seg(
     delete: bool = False,
     spec_group: str = "default",
     threshold: float = 0.99,
+    no_plot: bool = False,
 ) -> None:
     """
     Find and optionally delete duplicate segments in the training database.
@@ -237,6 +239,7 @@ def dedup_seg(
     - delete (bool): If True, remove duplicate segments from the database. If False, only report them.
     - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
     - threshold (float): Treat as duplicates if cosine similarity >= threshold (default = 0.99).
+    - no_plot (bool): If specified, do not plot spectrograms.
     """
 
     def build_clusters(pairs, n):
@@ -332,31 +335,33 @@ def dedup_seg(
 
     logging.info(f"Found {len(pruned_duplicates)} pairs of duplicates")
 
-    # Plot the pairs
+    # Optionally plot and/or delete the duplicates
     for i, (index1, index2) in enumerate(pruned_duplicates):
         recording1, segment_id1 = metadata[index1]
-        offset1 = db.get_segment({"ID": segment_id1})[0].offset
-        spec1 = db.get_specvalue(
-            {"SegmentID": segment_id1, "SpecGroupID": specgroup_id}
-        )[0].value
-        spec1 = util.expand_spectrogram(spec1)
-        spec_path1 = os.path.join(
-            output_path, f"{i + 1}-{recording1.filename}-{offset1:.2f}.jpeg"
-        )
-        if not os.path.exists(spec_path1):
-            plot.plot_spec(spec1, spec_path1)
+        if not no_plot:
+            offset1 = db.get_segment({"ID": segment_id1})[0].offset
+            spec1 = db.get_specvalue(
+                {"SegmentID": segment_id1, "SpecGroupID": specgroup_id}
+            )[0].value
+            spec1 = util.expand_spectrogram(spec1)
+            spec_path1 = os.path.join(
+                output_path, f"{i + 1}-{recording1.filename}-{offset1:.2f}.jpeg"
+            )
+            if not os.path.exists(spec_path1):
+                plot.plot_spec(spec1, spec_path1)
 
         recording2, segment_id2 = metadata[index2]
-        offset2 = db.get_segment({"ID": segment_id2})[0].offset
-        spec2 = db.get_specvalue(
-            {"SegmentID": segment_id2, "SpecGroupID": specgroup_id}
-        )[0].value
-        spec2 = util.expand_spectrogram(spec2)
-        spec_path2 = os.path.join(
-            output_path, f"{i + 1}-{recording2.filename}-{offset2:.2f}.jpeg"
-        )
-        if not os.path.exists(spec_path2):
-            plot.plot_spec(spec2, spec_path2)
+        if not no_plot:
+            offset2 = db.get_segment({"ID": segment_id2})[0].offset
+            spec2 = db.get_specvalue(
+                {"SegmentID": segment_id2, "SpecGroupID": specgroup_id}
+            )[0].value
+            spec2 = util.expand_spectrogram(spec2)
+            spec_path2 = os.path.join(
+                output_path, f"{i + 1}-{recording2.filename}-{offset2:.2f}.jpeg"
+            )
+            if not os.path.exists(spec_path2):
+                plot.plot_spec(spec2, spec_path2)
 
         if delete:
             # delete the second segment of each pair
@@ -412,6 +417,13 @@ def dedup_seg(
     default=0.99,
     help="Treat as duplicates if cosine similarity >= threshold. Default = 0.99.",
 )
+@click.option("--name", "class_name", type=str, required=True, help="Class name")
+@click.option(
+    "--noplot",
+    "no_plot",
+    is_flag=True,
+    help="If specified, do not plot spectrograms.",
+)
 def _dedup_seg_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
@@ -420,6 +432,7 @@ def _dedup_seg_cmd(
     delete: bool,
     spec_group: str,
     threshold: float,
+    no_plot: bool,
 ) -> None:
     util.set_logging()
-    dedup_seg(cfg_path, db_path, output_path, class_name, delete, spec_group)
+    dedup_seg(cfg_path, db_path, output_path, class_name, delete, spec_group, threshold, no_plot)
