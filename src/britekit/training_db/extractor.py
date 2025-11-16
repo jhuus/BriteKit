@@ -165,6 +165,9 @@ class Extractor:
         specs, _ = self.audio.get_spectrograms(
             offsets, spec_duration=self.cfg.audio.spec_duration
         )
+        if specs is None:
+            return 0
+
         for i in range(len(specs)):
             # check for duplicate before inserting
             if recording_id not in self.segments:
