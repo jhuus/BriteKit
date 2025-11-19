@@ -389,7 +389,7 @@ def del_seg(
         for recording in sorted(offsets_per_file):
             if recording not in recording_dict.keys():
                 logging.error(f"Error: recording not found: {recording}")
-                return
+                continue
 
             recording_id = recording_dict[recording]
             for offset in offsets_per_file[recording]:
