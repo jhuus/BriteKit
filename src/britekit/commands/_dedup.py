@@ -87,7 +87,6 @@ def dedup_rec(
     class_name: str = "",
     delete: bool = False,
     spec_group: str = "default",
-
 ) -> None:
     """
     Find and optionally delete duplicate recordings in the training database.
@@ -435,4 +434,13 @@ def _dedup_seg_cmd(
     no_plot: bool,
 ) -> None:
     util.set_logging()
-    dedup_seg(cfg_path, db_path, output_path, class_name, delete, spec_group, threshold, no_plot)
+    dedup_seg(
+        cfg_path,
+        db_path,
+        output_path,
+        class_name,
+        delete,
+        spec_group,
+        threshold,
+        no_plot,
+    )
