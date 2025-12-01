@@ -153,11 +153,13 @@ class Reextractor:
                     audio_obj.load(recording.path)
                     offsets = [segment.offset for segment in segments]
                     spectrograms, _ = audio_obj.get_spectrograms(offsets)
-
-                    for i, spec in enumerate(spectrograms):
-                        compressed_spec = util.compress_spectrogram(spec)
-                        segment = segments[i]
-                        db.insert_specvalue(compressed_spec, specgroup_id, segment.id)
+                    if spectrograms is not None:
+                        for i, spec in enumerate(spectrograms):
+                            compressed_spec = util.compress_spectrogram(spec)
+                            segment = segments[i]
+                            db.insert_specvalue(
+                                compressed_spec, specgroup_id, segment.id
+                            )
                 else:
                     # Assume all segments for this recording have audio
                     for segment in segments:

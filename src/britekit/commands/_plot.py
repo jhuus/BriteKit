@@ -32,11 +32,11 @@ def _plot_recording(
     if all:
         # plot the whole recording in one spectrogram
         specs, _ = audio.get_spectrograms([0], spec_duration=recording_seconds)
-        specs = specs.cpu().numpy()
-        if specs[0] is None:
+        if specs is None:
             logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
             quit()
 
+        specs = specs.cpu().numpy()
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
         plot_spec(
             specs[0], image_path, show_dims=not ndims, spec_duration=recording_seconds
@@ -49,6 +49,10 @@ def _plot_recording(
         specs, _ = audio.get_spectrograms(
             offsets, spec_duration=cfg.audio.spec_duration
         )
+        if specs is None:
+            logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
+            quit()
+
         specs = specs.cpu().numpy()
         for i, spec in enumerate(specs):
             image_path = os.path.join(

@@ -647,8 +647,13 @@ def inference_output_to_dataframe(input_path: str):
     try:
         csv_files = glob.glob(os.path.join(input_path, "*.csv"))
         if len(csv_files) > 1:
+            for csv_file in csv_files:
+                if csv_file.endswith("_labels.csv"):
+                    df = pd.read_csv(csv_file)
+                    return df
+
             raise InputError(
-                f"Error: multiple CSV files found in directory {input_path}."
+                f"Error: multiple CSV files found in directory {input_path}, but none end with '_labels.csv'."
             )
         elif len(csv_files) == 1:
             try:
