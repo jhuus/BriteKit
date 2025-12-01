@@ -414,7 +414,7 @@ def del_seg(
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
 )
-@click.option("--class", "class_name", required=True, help="Class name.")
+@click.option("--name", "class_name", required=True, help="Class name.")
 @click.option(
     "--csv",
     "csv_path",
