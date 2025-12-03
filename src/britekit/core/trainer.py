@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from britekit.core.config_loader import get_config
+from britekit.models.model_inspector import ModelInspector
 
 
 class Trainer:
@@ -108,10 +109,27 @@ class Trainer:
             trainer.logger.experiment
             out_path = Path(trainer.logger.log_dir) / "backbone.txt"
             with open(out_path, "w") as out_file:
+                out_file.write(f"=== {self.cfg.train.model_type} ===\n\n")
                 out_file.writelines([str(model.backbone)])
+
+            inspector = ModelInspector(model.backbone)
+            inspector.register_hooks()
+            input_shape = (1, 1, self.cfg.audio.spec_height, self.cfg.audio.spec_width)
+            x = torch.randn(*input_shape).to(model.device)
+            _ = model.backbone(x)
+            inspector.remove()
+
+            out_path = Path(trainer.logger.log_dir) / "backbone-shapes.txt"
+            with open(out_path, "w") as out_file:
+                out_file.write(f"=== {self.cfg.train.model_type} ===\n\n")
+                inspector.print_report(file=out_file)
 
             out_path = Path(trainer.logger.log_dir) / "head.txt"
             with open(out_path, "w") as out_file:
+                if self.cfg.train.head_type is None:
+                    out_file.write("=== Default Head ===\n\n")
+                else:
+                    out_file.write(f"=== {self.cfg.train.head_type} ===\n\n")
                 out_file.writelines([str(model.head)])
 
             # run training and optionally test
