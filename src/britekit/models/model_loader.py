@@ -16,6 +16,7 @@ def load_new_model(
 ):
     # defer these imports to improve --help performance
     from britekit.models.timm_model import TimmModel
+    from britekit.models.bknet import BKNetModel
     from britekit.models.dla import DlaModel
     from britekit.models.effnet import EffNetModel
     from britekit.models.gernet import GerNetModel
@@ -49,6 +50,8 @@ def load_new_model(
             cfg.train.multi_label,
             **kwargs,
         ).to(device)
+    elif model_type.startswith("bk"):
+        model_class = BKNetModel
     elif model_type.startswith("dla"):
         model_class = DlaModel
     elif model_type.startswith("effnet"):
@@ -79,6 +82,7 @@ def load_new_model(
 def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = None):
     # defer these imports to improve --help performance
     from britekit.models.timm_model import TimmModel
+    from britekit.models.bknet import BKNetModel
     from britekit.models.dla import DlaModel
     from britekit.models.effnet import EffNetModel
     from britekit.models.gernet import GerNetModel
@@ -100,6 +104,8 @@ def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = Non
                 return TimmModel.load_from_checkpoint(
                     checkpoint_path, multi_label=multi_label, strict=False
                 ).to(device)
+        elif model_type.startswith("bk"):
+            model_class = BKNetModel
         elif model_type.startswith("dla"):
             model_class = DlaModel
         elif model_type.startswith("effnet"):
