@@ -33,6 +33,48 @@ class ChannelReducer(nn.Module):
         return self.block(x)
 
 
+class BiTemporalSEDHead(nn.Module):
+    def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
+        super().__init__()
+        self.pool = nn.AdaptiveAvgPool2d((1, None))
+
+        self.reduce = nn.Sequential(
+            nn.Conv1d(in_channels, hidden_channels, kernel_size=1, bias=False),
+            nn.BatchNorm1d(hidden_channels),
+            nn.ReLU(inplace=True),
+        )
+
+        # Causal + anti-causal convolutions for bidirectional context
+        self.conv_fwd = nn.Conv1d(
+            hidden_channels, hidden_channels // 2, kernel_size=3, padding=1, bias=False
+        )
+        self.conv_bwd = nn.Conv1d(
+            hidden_channels, hidden_channels // 2, kernel_size=3, padding=1, bias=False
+        )
+        self.bn = nn.BatchNorm1d(hidden_channels)
+        self.act = nn.ReLU(inplace=True)
+        self.drop = nn.Dropout(dropout)
+
+        self.temporal_attention = nn.Conv1d(hidden_channels, 1, kernel_size=1)
+        self.frame_head = nn.Conv1d(hidden_channels, num_classes, kernel_size=1)
+
+    def forward(self, x):
+        x = self.pool(x).squeeze(2)  # [B, C, T]
+        x = self.reduce(x)  # [B, H, T]
+
+        # Bidirectional
+        fwd = self.conv_fwd(x)
+        bwd = self.conv_bwd(x.flip(-1)).flip(-1)
+        x = self.bn(torch.cat([fwd, bwd], dim=1))
+        x = self.drop(self.act(x))
+
+        frame_logits = self.frame_head(x)  # [B, num_classes, T]
+        attn = torch.softmax(self.temporal_attention(x), dim=-1)  # [B, 1, T]
+        segment_logits = (attn * frame_logits).sum(dim=-1)
+
+        return segment_logits, frame_logits
+
+
 class ScalableSEDHead(nn.Module):
     """
     Scalable version of Basic SED head:
@@ -205,6 +247,12 @@ def build_basic_sed_head(
     return BasicSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
 
 
+def build_bitemporal_sed_head(
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+) -> nn.Module:
+    return BiTemporalSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
+
+
 def build_scalable_sed_head(
     in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
 ) -> nn.Module:
@@ -217,5 +265,6 @@ HEAD_REGISTRY = {
     "effnet": (build_effnet_head, False),
     "hgnet": (build_hgnet_head, False),
     "basic_sed": (build_basic_sed_head, True),
+    "bitemporal_sed": (build_bitemporal_sed_head, True),
     "scalable_sed": (build_scalable_sed_head, True),
 }
