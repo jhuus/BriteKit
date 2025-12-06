@@ -126,7 +126,7 @@ class OccurrenceDataProvider:
 
         return total_values / total_weight
 
-    def max_occurrence(
+    def max_occurrences(
         self, county_prefix: str, class_name: str, area_weight: bool = False
     ):
         """
