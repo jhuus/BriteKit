@@ -151,7 +151,14 @@ def get_seconds_from_time_string(time_str: str) -> int:
     Returns:
         int: Total number of seconds.
     """
-    parts = time_str.strip().split(":")
+    if time_str is None:
+        return 0
+
+    time_str = time_str.strip()
+    if len(time_str) == 0:
+        return 0
+
+    parts = time_str.split(":")
 
     # Only seconds provided
     if len(parts) == 1:
@@ -414,6 +421,18 @@ def get_source_name(filename: str) -> str:
             continue
 
     return "default"
+
+
+def is_audio_file(file_path):
+    """
+    Return True iff given path is an audio file
+    """
+    if os.path.isfile(file_path):
+        base, ext = os.path.splitext(file_path)
+        if ext != None and len(ext) > 0 and ext.lower() in AUDIO_EXTS:
+            return True
+
+    return False
 
 
 # =============================================================================
