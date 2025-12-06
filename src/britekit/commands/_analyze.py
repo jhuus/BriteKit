@@ -177,7 +177,7 @@ def _analyze_cmd(
 
     util.set_logging()
     if start_seconds_str:
-        start_seconds = util._get_seconds_from_time_string(start_seconds_str)
+        start_seconds = util.get_seconds_from_time_string(start_seconds_str)
     else:
         start_seconds = 0
 

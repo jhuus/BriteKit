@@ -135,7 +135,7 @@ def get_range(min_val: float, max_val: float, incr: float) -> List[float]:
     return [float(v) for v in values]
 
 
-def _get_seconds_from_time_string(time_str: str) -> int:
+def get_seconds_from_time_string(time_str: str) -> int:
     """
     Convert a time string into an integer number of seconds.
 
