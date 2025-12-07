@@ -410,9 +410,9 @@ class Predictor:
                 f"Failed to write Audacity labels to {file_path}: {str(e)}"
             )
 
-    def save_manifest(self, output_path: str):
+    def save_manifest(self, output_path: str, cfg = None):
         """
-        Save a text file summarizing the inference configuration.
+        Save a YAML file summarizing the inference configuration.
         """
         from pathlib import Path
         import yaml
@@ -431,8 +431,14 @@ class Predictor:
         info["classes"] = classes
 
         # Add current inference config
-        info["audio"] = util.cfg_to_pure(self.cfg.audio)
-        info["inference"] = util.cfg_to_pure(self.cfg.infer)
+        if cfg is None:
+            cfg = self.cfg
+
+        if hasattr(cfg, "audio"):
+            info["audio"] = util.cfg_to_pure(cfg.audio)
+
+        if hasattr(cfg, "infer"):
+            info["inference"] = util.cfg_to_pure(cfg.infer)
 
         # Add config per model
         for i, model in enumerate(self.models):
