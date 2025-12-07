@@ -122,9 +122,7 @@ class Predictor:
         if audio_duration <= 0:
             raise InferenceError(f"Invalid audio duration: {audio_duration} seconds")
 
-        increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
-        end_offset = max(increment, audio_duration - increment)
-        start_times = util.get_range(start_seconds, end_offset, increment)
+        start_times = self.get_start_times(audio_duration, start_seconds)
         specs, _ = self.audio.get_spectrograms(start_times)
         if specs is None or len(specs) == 0:
             return None, None, []
@@ -412,6 +410,45 @@ class Predictor:
                 f"Failed to write Audacity labels to {file_path}: {str(e)}"
             )
 
+    def save_manifest(self, output_path: str):
+        """
+        Save a text file summarizing the inference configuration.
+        """
+        from pathlib import Path
+        import yaml
+        from typing import Any, Dict
+        from britekit.models.base_model import BaseModel
+
+        # Add class list
+        model: BaseModel = self.models[0]
+        names = model.train_class_names
+        codes = model.train_class_codes
+
+        info: Dict[str, Any] = {}
+        classes = []
+        for i, name in enumerate(names):
+            classes.append({"name": name, "code": codes[i]})
+        info["classes"] = classes
+
+        # Add current inference config
+        info["audio"] = util.cfg_to_pure(self.cfg.audio)
+        info["inference"] = util.cfg_to_pure(self.cfg.infer)
+
+        # Add config per model
+        for i, model in enumerate(self.models):
+            key = f"model {i + 1}"
+            info[key] = {}
+            info[key]["identifier"] = model.identifier
+            info[key]["training_date"] = model.training_date
+            info[key]["audio"] = model.training_cfg["audio"]
+            info[key]["train"] = model.training_cfg["train"]
+
+        # Write the manifest
+        info_str = yaml.dump(info, sort_keys=False)
+        info_str = "# Summary of inference run in YAML format\n" + info_str
+        with open(Path(output_path) / "manifest.yaml", "w") as out_file:
+            out_file.write(info_str)
+
     def to_global_frames(
         self,
         frame_scores,
@@ -484,6 +521,25 @@ class Predictor:
     # =============================================================================
     # Private Helper Methods
     # =============================================================================
+
+    def get_start_times(self, audio_duration, start_seconds):
+        """
+        Return start offset per spectrogram.
+
+        spec_duration (float): spectrogram duration in seconds
+        overlap (float): spectrogram overlap in seconds
+        audio_duration (float): total audio duration in seconds
+        start_seconds (float): where to start processing the audio (offset in seconds)
+        """
+
+        increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
+        end_offset = max(start_seconds, audio_duration - increment)
+        start_times = util.get_range(start_seconds, end_offset, increment)
+
+        # Only keep start times that have at least 1 second of audio
+        min_useful_audio = 1.0
+        max_start = audio_duration - min_useful_audio
+        return [t for t in start_times if t <= max_start]
 
     def _load_models(self, model_path: str) -> None:
         """Given a checkpoint path or directory, load and return a list of models"""

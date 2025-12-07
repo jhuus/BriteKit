@@ -3,7 +3,6 @@ import logging
 import os
 from pathlib import Path
 import threading
-from typing import Dict, Any
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
@@ -18,43 +17,6 @@ class Analyzer:
     def __init__(self):
         self.cfg = get_config()
         self.dataframes = []
-
-    def _save_manifest(self, output_path: str, predictor):
-        """
-        Save a text file summarizing the inference configuration.
-        """
-        import yaml
-        from britekit.models.base_model import BaseModel
-
-        # Add class list
-        model: BaseModel = predictor.models[0]
-        names = model.train_class_names
-        codes = model.train_class_codes
-
-        info: Dict[str, Any] = {}
-        classes = []
-        for i, name in enumerate(names):
-            classes.append({"name": name, "code": codes[i]})
-        info["classes"] = classes
-
-        # Add current inference config
-        info["audio"] = util.cfg_to_pure(self.cfg.audio)
-        info["inference"] = util.cfg_to_pure(self.cfg.infer)
-
-        # Add config per model
-        for i, model in enumerate(predictor.models):
-            key = f"model {i + 1}"
-            info[key] = {}
-            info[key]["identifier"] = model.identifier
-            info[key]["training_date"] = model.training_date
-            info[key]["audio"] = model.training_cfg["audio"]
-            info[key]["train"] = model.training_cfg["train"]
-
-        # Write the manifest
-        info_str = yaml.dump(info, sort_keys=False)
-        info_str = "# Summary of inference run in YAML format\n" + info_str
-        with open(Path(output_path) / "manifest.yaml", "w") as out_file:
-            out_file.write(info_str)
 
     def _process_recordings(
         self,
@@ -100,7 +62,7 @@ class Analyzer:
                 break
 
         if thread_num == 1:
-            self._save_manifest(output_path, predictor)
+            predictor.save_manifest(output_path)
 
     @staticmethod
     def _split_list(input_list, n):
