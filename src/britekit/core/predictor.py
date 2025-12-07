@@ -410,7 +410,7 @@ class Predictor:
                 f"Failed to write Audacity labels to {file_path}: {str(e)}"
             )
 
-    def save_manifest(self, output_path: str, cfg = None):
+    def save_manifest(self, output_path: str, cfg=None):
         """
         Save a YAML file summarizing the inference configuration.
         """
