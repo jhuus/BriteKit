@@ -429,7 +429,7 @@ def is_audio_file(file_path):
     """
     if os.path.isfile(file_path):
         base, ext = os.path.splitext(file_path)
-        if ext != None and len(ext) > 0 and ext.lower() in AUDIO_EXTS:
+        if ext is not None and len(ext) > 0 and ext.lower() in AUDIO_EXTS:
             return True
 
     return False
