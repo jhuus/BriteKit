@@ -3,7 +3,7 @@ from typing import Callable, Optional
 
 
 @dataclass
-class Audio:
+class AudioConfig:
     spec_duration: float = 5.0  # Spectrogram duration in seconds
     spec_height: int = 128  # Spectrogram height
     spec_width: int = 480  # Spectrogram width (divisible by 32)
@@ -33,7 +33,7 @@ class Audio:
 
 
 @dataclass
-class Training:
+class TrainingConfig:
     # model selection parameters
     model_type: str = "effnet.2"  # Use timm.x for timm model "x"
     head_type: Optional[str] = None  # If None, use backbone's default
@@ -140,7 +140,7 @@ class Training:
 
 
 @dataclass
-class Inference:
+class InferenceConfig:
     # For models with SED heads, if segment_len is None, output tags of variable lengths
     # that match the sounds detected, otherwise output tags of length segment_len seconds.
     # For non-SED models, segment_len is defined by the model.
@@ -162,22 +162,9 @@ class Inference:
     openvino_block_size: int = 100
     seed: int = 99  # Reduce non-determinism during inference
 
-    # These parameters control a second pass during inference.
-    # If lower_min_if_confirmed is true, count the number of seconds for a class in a recording,
-    # where score >= min_score + raise_min_to_confirm * (1 - min_score).
-    # If seconds >= confirmed_if_seconds, the class is assumed to be present, so scan again,
-    # lowering the min_score by multiplying it by lower_min_factor.
-    lower_min_if_confirmed: bool = True
-    # To be confirmed, score must be >= min_score + this * (1 - min_score)
-    raise_min_to_confirm: float = 0.5
-    # Need at least this many confirmed seconds >= raised threshold
-    confirmed_if_seconds: float = 8.0
-    # If so, include all labels with score >= this * min_score
-    lower_min_factor: float = 0.6
-
 
 @dataclass
-class Miscellaneous:
+class MiscConfig:
     force_cpu: bool = False  # If true, use CPU (for performance comparisons)
     # Use an ensemble of all checkpoints in this folder for inference
     ckpt_folder: str = "data/ckpt"
@@ -205,10 +192,10 @@ class Miscellaneous:
 
 @dataclass
 class BaseConfig:
-    audio: Audio = field(default_factory=Audio)
-    train: Training = field(default_factory=Training)
-    infer: Inference = field(default_factory=Inference)
-    misc: Miscellaneous = field(default_factory=Miscellaneous)
+    audio: AudioConfig = field(default_factory=AudioConfig)
+    train: TrainingConfig = field(default_factory=TrainingConfig)
+    infer: InferenceConfig = field(default_factory=InferenceConfig)
+    misc: MiscConfig = field(default_factory=MiscConfig)
 
 
 @dataclass
