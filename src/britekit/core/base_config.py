@@ -160,7 +160,6 @@ class InferenceConfig:
     block_size: int = 200
     # Block size when OpenVINO is used (do not change after creating onnx files)
     openvino_block_size: int = 100
-    seed: int = 99  # Reduce non-determinism during inference
 
 
 @dataclass
@@ -185,9 +184,6 @@ class MiscConfig:
             (".*", "default"),
         ]
     )
-
-    map_names: Optional[dict] = None  # Map old class names to new names
-    map_codes: Optional[dict] = None  # Map old class codes to new codes
 
 
 @dataclass
