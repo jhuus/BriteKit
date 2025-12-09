@@ -1726,8 +1726,10 @@ class TrainingDatabase:
             - segment_id (int): ID of the Segment record.
             - specvalue_id (int): ID of the SpecValue record.
             - value (bytes): The spectrogram itself.
+            - embedding (bytes): The embedding, if include_embedding=True.
+            - recording_id (int): ID of the corresponding recording record.
+            - filename (str): Name of the audio file.
             - offset (float): Number of seconds from the start of the recording to the start of the segment.
-            - recording_id (int): ID of the corresponding Recording record.
         """
         try:
 
