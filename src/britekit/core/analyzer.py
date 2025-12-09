@@ -41,7 +41,7 @@ class Analyzer:
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
             logging.info(f"[Thread {thread_num}] Processing {recording_path}")
-            scores, frame_map, offsets = predictor.get_raw_scores(
+            scores, frame_map, offsets = predictor.get_recording_scores(
                 recording_path, start_seconds
             )
             if debug_mode:
