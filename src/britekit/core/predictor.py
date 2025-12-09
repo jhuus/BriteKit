@@ -91,7 +91,54 @@ class Predictor:
 
         return average_embeddings
 
-    def get_raw_scores(self, recording_path: str, start_seconds: float = 0):
+    def get_block_scores(self, specs, start_times=None):
+        """
+        Get scores in array format from the loaded models for the given block of spectrograms.
+
+        Args:
+        - specs: Spectrograms.
+        - start_times: Start time per spectrogram, in seconds from start of recording.
+          This is optional and usedwith SED models only.
+
+        Returns:
+            tuple: A tuple containing:
+                - avg_score (np.ndarray): Average scores across all models in the ensemble.
+                  Shape is (num_spectrograms, num_classes).
+                - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models.
+                  Shape is (num_frames, num_classes). None if not using SED models.
+        """
+        frame_maps = []
+        if self.ov:
+            scores = self._get_openvino_scores(specs.cpu().numpy())
+        else:
+            scores = []
+            for model in self.models:
+                segment_scores, frame_scores = model.predict(specs, self.device)
+                scores.append(segment_scores.cpu().detach().numpy())
+
+                if frame_scores is not None and start_times is not None:
+                    # SED model, so combine all frame scores into one array
+                    frame_map = self.to_global_frames(
+                        frame_scores,
+                        start_times,
+                        self.audio.seconds(),
+                    )
+                    frame_maps.append(frame_map.cpu().detach().numpy())
+
+        # return the average score across models in the ensemble,
+        # and the corresponding start_times (spectrogram start times) in the recording
+        if not scores:
+            raise InferenceError("No scores generated from models")
+
+        avg_score = np.mean(scores, axis=0)
+        if len(frame_maps) == 0:
+            avg_frame_map = None
+        else:
+            avg_frame_map = np.mean(frame_maps, axis=0)
+
+        return avg_score, avg_frame_map
+
+    def get_recording_scores(self, recording_path: str, start_seconds: float = 0):
         """
         Get scores in array format from the loaded models for the given recording.
 
@@ -107,8 +154,6 @@ class Predictor:
                   Shape is (num_frames, num_classes). None if not using SED models.
                 - start_times (list[float]): Start time in seconds for each spectrogram.
         """
-        import numpy as np
-
         if not os.path.exists(recording_path):
             raise InferenceError(f'Recording "{recording_path}" not found')
 
@@ -129,34 +174,7 @@ class Predictor:
 
         specs = specs**self.cfg.infer.audio_power
         specs = specs.unsqueeze(1)  # (N,H,W) -> (N,1,H,W)
-        frame_maps = []
-        if self.ov:
-            scores = self._get_openvino_scores(specs.cpu().numpy())
-        else:
-            scores = []
-            for model in self.models:
-                segment_scores, frame_scores = model.predict(specs, self.device)
-                scores.append(segment_scores.cpu().detach().numpy())
-
-                if frame_scores is not None:
-                    # SED model, so combine all frame scores into one array
-                    frame_map = self.to_global_frames(
-                        frame_scores,
-                        start_times,
-                        self.audio.seconds(),
-                    )
-                    frame_maps.append(frame_map.cpu().detach().numpy())
-
-        # return the average score across models in the ensemble,
-        # and the corresponding start_times (spectrogram start times) in the recording
-        if not scores:
-            raise InferenceError("No scores generated from models")
-
-        avg_score = np.mean(scores, axis=0)
-        if len(frame_maps) == 0:
-            avg_frame_map = None
-        else:
-            avg_frame_map = np.mean(frame_maps, axis=0)
+        avg_score, avg_frame_map = self.get_block_scores(specs)
 
         return avg_score, avg_frame_map, start_times
 
