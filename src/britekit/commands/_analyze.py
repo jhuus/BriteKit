@@ -92,7 +92,7 @@ def analyze(
 
 @click.command(
     name="analyze",
-    short_help="Run inference.",
+    short_help="Run inference on audio recordings.",
     help=cli_help_from_doc(analyze.__doc__),
 )
 @click.option(
