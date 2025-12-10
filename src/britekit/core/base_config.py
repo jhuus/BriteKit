@@ -187,6 +187,7 @@ class MiscConfig:
 
     map_codes: Optional[dict] = None  # Map old class codes to new codes
 
+
 @dataclass
 class BaseConfig:
     audio: AudioConfig = field(default_factory=AudioConfig)

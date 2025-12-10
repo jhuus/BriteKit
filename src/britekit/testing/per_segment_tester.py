@@ -208,7 +208,9 @@ class PerSegmentTester(BaseTester):
 
             if class_code not in self.trained_class_set:
                 if class_code not in unknown_classes:
-                    logging.error(f"Unknown class {class_code} will be skipped (is it in ignore list?).")
+                    logging.error(
+                        f"Unknown class {class_code} will be skipped (is it in ignore list?)."
+                    )
                     unknown_classes.add(class_code)  # so we don't report it again
 
                 continue  # exclude from saved annotations
