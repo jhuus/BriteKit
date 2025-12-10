@@ -612,7 +612,11 @@ class Predictor:
                     self.class_alt_names = model.train_class_alt_names
                     self.class_alt_codes = model.train_class_alt_codes
 
-                    # set defaults for missing alt names and codes
+                    # set defaults for missing values (assume name is defined)
+                    for i, code in enumerate(self.class_codes):
+                        if not code:
+                            self.class_codes[i] = self.class_names[i]
+
                     for i, name in enumerate(self.class_alt_names):
                         if not name:
                             self.class_alt_names[i] = self.class_names[i]
