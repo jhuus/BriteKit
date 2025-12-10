@@ -1,4 +1,5 @@
 from ._analyze import analyze
+from ._analyze_db import analyze_db
 from ._audioset import audioset
 from ._calibrate import calibrate
 from ._ckpt_ops import ckpt_avg, ckpt_freeze, ckpt_onnx
@@ -36,6 +37,7 @@ __all__ = [
     "add_src",
     "add_stype",
     "analyze",
+    "analyze_db",
     "audioset",
     "calibrate",
     "ckpt_avg",

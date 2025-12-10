@@ -11,6 +11,7 @@ except Exception:
         __version__ = "0.0.0"  # last-resort fallback
 
 from .commands._analyze import _analyze_cmd
+from .commands._analyze_db import _analyze_db_cmd
 from .commands._audioset import _audioset_cmd
 from .commands._calibrate import _calibrate_cmd
 from .commands._ckpt_ops import _ckpt_avg_cmd, _ckpt_freeze_cmd, _ckpt_onnx_cmd
@@ -69,6 +70,7 @@ cli.add_command(_add_stype_cmd)
 cli.add_command(_add_src_cmd)
 cli.add_command(_add_class_cmd)
 cli.add_command(_analyze_cmd)
+cli.add_command(_analyze_db_cmd)
 cli.add_command(_audioset_cmd)
 
 cli.add_command(_calibrate_cmd)
