@@ -173,7 +173,7 @@ class PerBlockTester(BaseTester):
                     elif len(class_code) > 0:
                         # the unknown_classes set is just so we only report each unknown class once
                         if class_code not in unknown_classes:
-                            logging.error(f"Unknown class {class_code} will be ignored")
+                            logging.error(f"Unknown class {class_code} will be skipped (is it in ignore list?).")
                             unknown_classes.add(class_code)
 
                         continue  # exclude from saved annotations
