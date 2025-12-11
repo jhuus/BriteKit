@@ -100,11 +100,12 @@ class AugmentationPipeline:
         return spec
 
     @register_augmentation("add_white_noise")
-    def add_white_noise(self, spec, std1=0.05):
+    def add_white_noise(self, spec, std1=0.01, max_val=2.5):
         """Add Gaussian white noise to the spectrogram."""
         import numpy as np
 
-        noise = np.random.normal(0, std1, size=spec.shape)
+        noise = np.abs(np.random.normal(0, std1, size=spec.shape))
+        noise = np.clip(noise / max_val, 0, 1)
         return np.clip(spec + noise, 0.0, 1.0)
 
     @register_augmentation("flip_horizontal")
