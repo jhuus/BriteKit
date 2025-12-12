@@ -499,7 +499,7 @@ def expand_spectrogram(spec: bytes):
                 f"Expected {expected_size} elements, got {spec_array.size}"
             )
 
-        spec_array = spec_array.reshape(cfg.audio.spec_height, cfg.audio.spec_width, 1)
+        spec_array = spec_array.reshape(1, cfg.audio.spec_height, cfg.audio.spec_width)
         return spec_array
     except zlib.error as e:
         raise RuntimeError(f"Failed to decompress spectrogram: {e}")
