@@ -80,7 +80,6 @@ def _train_cmd(
             "For example, use cu126 for CUDA 12.6."
         )
 
-    print(seed)
     train(cfg_path, seed)
 
 
