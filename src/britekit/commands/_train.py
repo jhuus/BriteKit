@@ -13,6 +13,7 @@ from britekit.core import util
 
 def train(
     cfg_path: Optional[str] = None,
+    seed: Optional[int] = None,
 ):
     """
     Train a bioacoustic recognition model using the specified configuration.
@@ -28,10 +29,13 @@ def train(
     Args:
     - cfg_path (str, optional): Path to YAML file defining configuration overrides.
         If not specified, uses default configuration.
+    - seed (int, optional): Integer seed.
     """
     from britekit.core.trainer import Trainer
 
-    get_config(cfg_path)  # apply any YAML cfg updates
+    cfg = get_config(cfg_path)  # apply any YAML cfg updates
+    if seed is not None:
+        cfg.train.seed = seed
     try:
         start_time = time.time()
         Trainer().run()
@@ -52,8 +56,16 @@ def train(
     required=False,
     help="Path to YAML file defining config overrides.",
 )
+@click.option(
+    "--seed",
+    "seed",
+    type=int,
+    required=False,
+    help="Integer seed.",
+)
 def _train_cmd(
     cfg_path: str,
+    seed: int,
 ):
     util.set_logging()
 
@@ -68,7 +80,8 @@ def _train_cmd(
             "For example, use cu126 for CUDA 12.6."
         )
 
-    train(cfg_path)
+    print(seed)
+    train(cfg_path, seed)
 
 
 def find_lr(cfg_path: str, num_batches: int):
