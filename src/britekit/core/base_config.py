@@ -103,17 +103,17 @@ class TrainingConfig:
             {
                 "name": "add_white_noise",
                 "prob": 0,
-                "params": {"std1": 0.08},
+                "params": {"min_std": 0.01, "max_std": 0.1},
+            },
+            {
+                "name": "blur",
+                "prob": 0,
+                "params": {"min_sigma": 0.5, "max_sigma": 1.0},
             },
             {
                 "name": "flip_horizontal",
                 "prob": 0,
                 "params": {},
-            },
-            {
-                "name": "freq_blur",
-                "prob": 0,
-                "params": {"sigma": 0.4},
             },
             {
                 "name": "freq_mask",

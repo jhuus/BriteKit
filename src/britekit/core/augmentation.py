@@ -5,6 +5,9 @@ import logging
 from multiprocessing import Value
 import random
 
+import numpy as np
+from scipy.ndimage import gaussian_filter
+
 from britekit.core.base_config import BaseConfig
 
 AUGMENTATION_REGISTRY = {}
@@ -100,38 +103,30 @@ class AugmentationPipeline:
         return spec
 
     @register_augmentation("add_white_noise")
-    def add_white_noise(self, spec, std1=0.01, max_val=2.5):
+    def add_white_noise(self, spec, min_std=0.01, max_std=0.1, max_val=2.5):
         """Add Gaussian white noise to the spectrogram."""
-        import numpy as np
 
-        noise = np.abs(np.random.normal(0, std1, size=spec.shape))
+        std = random.uniform(min_std, max_std)
+        noise = np.abs(np.random.normal(0, std, size=spec.shape))
         noise = np.clip(noise / max_val, 0, 1)
         return np.clip(spec + noise, 0.0, 1.0)
+
+    @register_augmentation("blur")
+    def blur(self, spec, min_sigma=0.0, max_sigma=1.0):
+        """Apply Gaussian blur equally along both axes."""
+        sigma = random.uniform(min_sigma, max_sigma)
+        return gaussian_filter(spec, sigma=sigma)
 
     @register_augmentation("flip_horizontal")
     def flip_horizontal(self, spec):
         """
         Flips the spectrogram along the time axis.
         """
-        import numpy as np
-
         return np.flip(spec, axis=-1)
-
-    @register_augmentation("freq_blur")
-    def freq_blur(self, spec, sigma=0.5):
-        from scipy.ndimage import gaussian_filter
-
-        """Apply Gaussian blur along the frequency axis."""
-        if spec.ndim == 2:
-            return gaussian_filter(spec, sigma=[0, sigma])
-        else:
-            return gaussian_filter(spec, sigma=[0, 0, sigma])
 
     @register_augmentation("freq_mask")
     def freq_mask(self, spec, max_width1=8):
         """Mask a random frequency band by setting it to zero."""
-        import numpy as np
-
         f = spec.shape[-2]
         w = min(np.random.randint(1, max_width1 + 1), f)  # Ensure w doesn't exceed f
         start = np.random.randint(0, max(1, f - w))  # Ensure start is valid
@@ -143,8 +138,6 @@ class AugmentationPipeline:
         """
         Perform a random horizontal shift of the spectrogram
         """
-        import numpy as np
-
         if max_shift <= 0:
             return spec
 
@@ -156,8 +149,6 @@ class AugmentationPipeline:
         """
         Add a copy multiplied by random pixels (larger stdev leads to more speckling)
         """
-        import numpy as np
-
         noise = np.random.normal(loc=0.0, scale=std2, size=spec.shape)
         spec += spec * noise
         return np.clip(spec, 0, 1)
@@ -165,8 +156,6 @@ class AugmentationPipeline:
     @register_augmentation("time_mask")
     def time_mask(self, spec, max_width2=16):
         """Mask a random time segment by setting it to zero."""
-        import numpy as np
-
         t = spec.shape[-1]
         w = min(np.random.randint(1, max_width2 + 1), t)  # Ensure w doesn't exceed t
         start = np.random.randint(0, max(1, t - w))  # Ensure start is valid
@@ -183,8 +172,6 @@ class AugmentationPipeline:
         Returns:
             Augmented spectrogram with values clipped to [0, 1]
         """
-        import numpy as np
-
         num_augmentations = 0
         for prob, fn in self.augmentations:
             if num_augmentations >= self.cfg.train.max_augmentations:
