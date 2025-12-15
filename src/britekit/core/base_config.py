@@ -79,8 +79,9 @@ class TrainingConfig:
     # SED-specific parameters
     sed_fps: int = 4  # Frames per second from SED heads
     frame_loss_weight: float = 0.5  # Segment_loss_weight = 1 - frame_loss_weight
+    offpeak_weight: float = 0.002 # Loss penalty weight for SED models
 
-    # data augmentation
+    # Data augmentation
     augment: bool = True  # Use data augmentation?
     max_augmentations: int = 1  # Up to this many per spectrogram
     noise_class_name: str = "Noise"  # Augmentation treats noise specially
@@ -88,9 +89,6 @@ class TrainingConfig:
     prob_fade1: float = 0.5  # Prob of fading after augmentation
     min_fade1: float = 0.1  # Min factor for fading
     max_fade1: float = 1.0  # Max factor for fading
-
-    # Loss penalty weight for SED models
-    offpeak_weight: float = 0.002
 
     # Detailed augmentation settings
     augmentations: list = field(
@@ -145,6 +143,7 @@ class InferenceConfig:
     # that match the sounds detected, otherwise output tags of length segment_len seconds.
     # For non-SED models, segment_len is defined by the model.
     segment_len: Optional[float] = None
+    sed_quantile: float = 0.92 # convert SED frame scores to clip scores with this quantile
     # Number of seconds overlap for adjacent spectrograms
     overlap: float = 0.0
     min_score: float = 0.80  # Only generate labels when score is at least this
