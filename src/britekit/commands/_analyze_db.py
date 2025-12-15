@@ -3,8 +3,6 @@
 import logging
 import os
 from pathlib import Path
-import pickle
-from types import SimpleNamespace
 from typing import Optional
 
 import click

@@ -4,7 +4,7 @@ import importlib.util
 import logging
 import math
 import os
-from typing import Sequence, Optional, List
+from typing import cast, Any, List, Optional, Sequence
 
 import numpy as np
 
@@ -289,14 +289,18 @@ class Predictor:
                             start_idx = j
                     elif curr_label is not None:
                         # end current label
-                        score = np.quantile(frame_map[start_idx:j, i], self.cfg.infer.sed_quantile)
+                        score = np.quantile(
+                            frame_map[start_idx:j, i], self.cfg.infer.sed_quantile
+                        )
                         curr_label.score = round(score, 3)
                         curr_label.end_time = round(j / frames_per_second, 3)
                         labels[names[i]].append(curr_label)
                         curr_label = None
 
                 if curr_label is not None:
-                    score = np.quantile(frame_map[start_idx:, i], self.cfg.infer.sed_quantile)
+                    score = np.quantile(
+                        frame_map[start_idx:, i], self.cfg.infer.sed_quantile
+                    )
                     curr_label.score = round(score, 3)
                     curr_label.end_time = round(num_frames / frames_per_second, 3)
                     labels[names[i]].append(curr_label)
@@ -318,15 +322,17 @@ class Predictor:
                     start_idx = int(j * frames_per_segment)
                     end_idx = int((j + 1) * frames_per_segment)
 
-                    score = np.quantile(frame_map[start_idx:end_idx, i], self.cfg.infer.sed_quantile)
+                    score = np.quantile(
+                        frame_map[start_idx:end_idx, i], self.cfg.infer.sed_quantile
+                    )
                     if score >= self.cfg.infer.min_score:
                         score = round(score, 3)
                         start_time = j * self.cfg.infer.segment_len
                         end_time = (j + 1) * self.cfg.infer.segment_len
                         labels[names[i]].append(Label(score, start_time, end_time))
 
-        self.last_frame_map = frame_map # avoid doing calc twice
-        self.labels = labels
+        self.last_frame_map = frame_map  # avoid doing calc twice
+        self.labels = cast(Any, labels)
 
         return labels
 
