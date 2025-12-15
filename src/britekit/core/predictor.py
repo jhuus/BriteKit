@@ -47,6 +47,9 @@ class Predictor:
         self.class_alt_names: Optional[List[str]] = None
         self.class_alt_codes: Optional[List[str]] = None
 
+        self.last_frame_map = None
+        self.labels = None
+
         ignore_file = self.cfg.misc.ignore_file
         self.ignore_classes = set()  # Initialize empty set by default
         if ignore_file:
@@ -174,7 +177,7 @@ class Predictor:
 
         specs = specs**self.cfg.infer.audio_power
         specs = specs.unsqueeze(1)  # (N,H,W) -> (N,1,H,W)
-        avg_score, avg_frame_map = self.get_block_scores(specs)
+        avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
 
         return avg_score, avg_frame_map, start_times
 
@@ -256,6 +259,10 @@ class Predictor:
                 f"Number of classes in frame_map ({frame_map.shape[1]}) must match number of class names ({len(self.class_names)})"
             )
 
+        # in case we are called more than once on the same frame map
+        if self.last_frame_map is not None and id(self.last_frame_map) == id(frame_map):
+            return self.labels
+
         names = self._get_names()
 
         num_frames, num_classes = frame_map.shape
@@ -270,28 +277,28 @@ class Predictor:
 
                 labels[names[i]] = []
                 curr_label = None
-                curr_seg_len: float = 0.0
                 # process one frame at a time
                 for j in range(num_frames):
                     if frame_map[j, i] >= self.cfg.infer.min_score:
-                        score = round(frame_map[j, i], 3)
-                        frame_time = round(j / frames_per_second, 3)
                         if curr_label is None:
                             # start new label
-                            curr_label = Label(score, frame_time, frame_time)
-                        else:
-                            # update current label
-                            curr_label.score = max(score, curr_label.score)
-                            curr_label.end_time = frame_time + 1 / frames_per_second
+                            score = round(frame_map[j, i], 3)
+                            frame_time = round(j / frames_per_second, 3)
+                            next_frame_time = round(j + 1 / frames_per_second, 3)
+                            curr_label = Label(score, frame_time, next_frame_time)
+                            start_idx = j
                     elif curr_label is not None:
                         # end current label
+                        score = np.quantile(frame_map[start_idx:j, i], self.cfg.infer.sed_quantile)
+                        curr_label.score = round(score, 3)
+                        curr_label.end_time = round(j / frames_per_second, 3)
                         labels[names[i]].append(curr_label)
                         curr_label = None
-                        curr_seg_len = 0.0
-
-                    curr_seg_len += 1 / frames_per_second
 
                 if curr_label is not None:
+                    score = np.quantile(frame_map[start_idx:, i], self.cfg.infer.sed_quantile)
+                    curr_label.score = round(score, 3)
+                    curr_label.end_time = round(num_frames / frames_per_second, 3)
                     labels[names[i]].append(curr_label)
         else:
             # fixed-duration labels
@@ -300,6 +307,7 @@ class Predictor:
                 num_frame_seconds / self.cfg.infer.segment_len
             )
             frames_per_segment = frames_per_second * self.cfg.infer.segment_len
+
             for i in range(num_classes):
                 if self.class_names[i] in self.ignore_classes:
                     continue
@@ -309,12 +317,16 @@ class Predictor:
                 for j in range(num_frame_segments):
                     start_idx = int(j * frames_per_segment)
                     end_idx = int((j + 1) * frames_per_segment)
-                    score = np.max(frame_map[start_idx:end_idx, i])
+
+                    score = np.quantile(frame_map[start_idx:end_idx, i], self.cfg.infer.sed_quantile)
                     if score >= self.cfg.infer.min_score:
                         score = round(score, 3)
                         start_time = j * self.cfg.infer.segment_len
                         end_time = (j + 1) * self.cfg.infer.segment_len
                         labels[names[i]].append(Label(score, start_time, end_time))
+
+        self.last_frame_map = frame_map # avoid doing calc twice
+        self.labels = labels
 
         return labels
 
