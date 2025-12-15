@@ -584,7 +584,7 @@ class TestExpandSpectrogram:
 
         assert isinstance(result, np.ndarray)
         assert result.dtype == np.float32
-        assert result.shape == (64, 128, 1)  # Based on sample_spectrogram shape
+        assert result.shape == (1, 64, 128)  # Based on sample_spectrogram shape
 
     def test_expand_spectrogram_invalid_type(self):
         """Test with invalid input type."""
