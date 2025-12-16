@@ -116,7 +116,14 @@ class Trainer:
 
             inspector = ModelInspector(model.backbone)
             inspector.register_hooks()
-            input_shape = (1, 1, self.cfg.audio.spec_height, self.cfg.audio.spec_width)
+
+            in_chans = 3 if self.cfg.audio.spec_filters else 1
+            input_shape = (
+                1,
+                in_chans,
+                self.cfg.audio.spec_height,
+                self.cfg.audio.spec_width,
+            )
             x = torch.randn(*input_shape).to(model.device)
             _ = model.backbone(x)
             inspector.remove()
