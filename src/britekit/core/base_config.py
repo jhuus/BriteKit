@@ -23,7 +23,7 @@ class AudioConfig:
     db_power: float = 1.0  # Raise to this exponent after convert to decibels
     log_freq_gain: float = 0.6  # Boost loudness of higher frequencies with log scale
 
-    # parameters for the channel selection heuristic
+    # Parameters for the channel selection heuristic
     choose_channel: bool = False  # Use heuristic to pick the cleanest audio channel
     check_seconds: float = 6.0  # Check this many seconds to pick channel
     energy_min_freq: int = 500  # energy band min for channel heuristic
@@ -31,10 +31,20 @@ class AudioConfig:
     median_threshold: float = 0.77  # see code in Audio::_choose_channel
     sum_threshold: float = 1.08  # see code in Audio::_choose_channel
 
+    # Parameters for optional 3-channel filtered spectrograms
+    spec_filters: bool = False  # If true, use 3-channel filtered spectrograms
+    low_pass_end: float = 0.35  # End of low-pass filter, as height quantile
+    low_pass_steepness: float = 25.0  # Steepness of low-pass filter
+    band_pass_start: float = 0.30  # Start of band-pass filter, as height quantile
+    band_pass_end: float = 0.70  # End of band-pass filter, as height quantile
+    band_pass_steepness: float = 25.0  # Steepness of band-pass filter
+    high_pass_start: float = 0.65  # Start of high-pass filter, as height quantile
+    high_pass_steepness: float = 25.0  # Steepness of high-pass filter
+
 
 @dataclass
 class TrainingConfig:
-    # model selection parameters
+    # Model selection parameters
     model_type: str = "effnet.2"  # Use timm.x for timm model "x"
     head_type: Optional[str] = None  # If None, use backbone's default
     hidden_channels: int = 256  # Used by some non-default classifier heads
@@ -42,7 +52,7 @@ class TrainingConfig:
     load_ckpt_path: Optional[str] = None  # For transfer learning or fine-tuning
     freeze_backbone: bool = False  # Option when transfer learning
 
-    # general training parameters
+    # General training parameters
     multi_label: bool = True  # Multi-label or multi-class?
     deterministic: bool = False  # Deterministic training?
     seed: Optional[int] = None  # Training seed
@@ -64,15 +74,13 @@ class TrainingConfig:
     pos_label_smoothing: float = 0.08  # Positive side of asymmetric label smoothing
     neg_label_smoothing: float = 0.01  # Negative side of asymmetric label smoothing
 
-    # optimizer parameters; other good choices are
-    # "adam" with decay = 1e-6
-    # "adamp" with decay = 0
+    # Optimizer parameters
     optimizer: str = "radam"  # Any timm optimizer
     opt_weight_decay: float = 1e-6  # Weight decay option (L2 regularization)
     opt_beta1: float = 0.9  # Optimizer parameter
     opt_beta2: float = 0.999  # Optimizer parameter
 
-    # dropout parameters are passed to model only if not None
+    # Dropout parameters are passed to model only if not None
     drop_rate: Optional[float] = None  # Standard dropout
     drop_path_rate: Optional[float] = None  # Stochastic depth dropout
 
