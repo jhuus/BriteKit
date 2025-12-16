@@ -91,7 +91,6 @@ def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = Non
 
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     device = get_device()
-
     model_class: Any = None
     if "model_type" in ckpt["hyper_parameters"]:
         model_type = ckpt["hyper_parameters"]["model_type"]

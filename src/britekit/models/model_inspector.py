@@ -65,6 +65,7 @@ class ModelInspector:
         Pass an input through the model and capture all shapes.
         Returns list of (name, class, in_shape, out_shape).
         """
+        print(f"ModelInspector.run start {x.shape=}")
         self.register_hooks()
         _ = self.model(x)
         self.remove()
@@ -73,6 +74,7 @@ class ModelInspector:
             self.print_report()
 
         return self.layer_info
+        print("ModelInspector.run end")
 
     def print_report(self, file=None):
         def write(line):

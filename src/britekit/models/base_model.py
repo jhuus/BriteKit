@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 from britekit.core.config_loader import get_config
+from britekit.core.spec_filter import SpecFilter
 from britekit.core import util
 from britekit.models.head_factory import is_sed
 
@@ -40,6 +41,10 @@ class BaseModel(pl.LightningModule):
         num_train_specs (int): Number of training spectrograms
         multi_label (bool): If true, train multi_label model, else multi_class model.
     """
+
+    # ==================================================================
+    # Initialization & configuration
+    # ==================================================================
 
     def __init__(
         self,
@@ -86,122 +91,161 @@ class BaseModel(pl.LightningModule):
         self.train_class_alt_codes = train_class_alt_codes
         self.num_train_specs = num_train_specs
         self.num_classes = len(train_class_names)
-        self.learning_rate = self.cfg.train.learning_rate  # needed by lr_finder
+        self.learning_rate = self.cfg.train.learning_rate
+        self.use_spec_filters = self.cfg.audio.spec_filters
 
-        # Define loss functions
+        # Spec filter (lazy init)
+        self.spec_filter = None
+
+        # Loss function
         if self.multi_label:
             self.loss_fn: Any = nn.BCEWithLogitsLoss()
         else:
             self.loss_fn = nn.CrossEntropyLoss()
 
-        # Placeholder for model definition (subclass must define)
+        # Model components (defined by subclass)
         self.backbone: Optional[nn.Module] = None
         self.head: Optional[nn.Module] = None
 
+    # ==================================================================
+    # Lightning lifecycle hooks
+    # ==================================================================
+
+    def on_save_checkpoint(self, checkpoint):
+        if not hasattr(self, "identifier"):
+            self.identifier = str(uuid.uuid4()).upper()
+            self.training_date = datetime.today().strftime("%Y-%m-%d")
+
+        checkpoint["identifier"] = self.identifier
+        checkpoint["training_date"] = self.training_date
+        checkpoint["training_cfg"] = util.cfg_to_pure(self.cfg)
+
+    def on_load_checkpoint(self, checkpoint):
+        if "identifier" in checkpoint:
+            self.identifier = checkpoint["identifier"]
+            self.training_date = checkpoint["training_date"]
+            self.training_cfg = checkpoint["training_cfg"]
+
+            self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
+            self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
+        else:
+            raise ValueError("Checkpoint metadata not found.")
+
+    # ==================================================================
+    # Forward pass
+    # ==================================================================
+
     def forward(self, x):
-        """
-        Return (segment_logits, frame_logits).
-        SED heads return (segment_logits, frame_logits) and
-        non-SED heads return (segment_logits, None).
-        """
         if self.backbone is None:
-            raise RuntimeError(
-                "backbone is not initialized. Subclass must set self.backbone"
-            )
+            raise RuntimeError("Backbone is not initialized.")
         if self.head is None:
-            raise RuntimeError("head is not initialized. Subclass must set self.head")
+            raise RuntimeError("Head is not initialized.")
+
+        if self.use_spec_filters:
+            if self.spec_filter is None:
+                self.spec_filter = SpecFilter(self.cfg, device=self.device)
+
+            if x.ndim == 4 and x.shape[1] == 1:
+                x = x.squeeze(1)
+
+            x = torch.stack(
+                [self.spec_filter.filter(xi) for xi in x],
+                dim=0,
+            )
+
+            self._check_input_channels(x)
 
         x = self.backbone(x)
         x = self.head(x)
+
         if self.use_sed:
             segment_logits, frame_logits = x
-            actual_sed_frames = frame_logits.shape[-1]
-            target_sed_frames = int(
-                self.cfg.train.sed_fps * self.cfg.audio.spec_duration
-            )
-            if actual_sed_frames != target_sed_frames:
-                frame_logits = F.interpolate(
-                    frame_logits,
-                    size=target_sed_frames,
-                    mode="linear",
-                )
-
+            actual = frame_logits.shape[-1]
+            target = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
+            if actual != target:
+                frame_logits = F.interpolate(frame_logits, size=target, mode="linear")
             return segment_logits, frame_logits
         else:
             return x, None
 
+    # ==================================================================
+    # Training / validation / testing
+    # ==================================================================
+
     def training_step(self, batch, batch_idx):
-        """Perform a single training step."""
-        input = batch["input"]  # augmented specs
+        input = batch["input"]
         seg_labels = batch["segment_labels"]
 
         if self.multi_label:
-            # apply asymmetric label smoothing
             seg_labels = (
                 seg_labels * (1.0 - self.cfg.train.pos_label_smoothing)
                 + (1.0 - seg_labels) * self.cfg.train.neg_label_smoothing
             )
 
-        seg_logits, frame_logits = self(input)  # shapes [B, C], [B, C, T]
+        seg_logits, frame_logits = self(input)
         loss = self._calc_loss(seg_logits, frame_logits, seg_labels)
 
         if frame_logits is not None and self.cfg.train.offpeak_weight > 0:
-            # add a penalty to discourage spread-out frame scores
             p = torch.sigmoid(frame_logits)
             mask = ~batch["mixup"].bool()
             m = mask.view(-1, 1, 1).float()
             p_sum = (p * m).sum(dim=-1) / m.sum(dim=-1).clamp_min(1.0)
             p_max = (p * m).amax(dim=-1)
-            offpeak_loss = (p_sum - p_max).clamp_min(0).mean()
-            loss += self.cfg.train.offpeak_weight * offpeak_loss
+            loss += self.cfg.train.offpeak_weight * (p_sum - p_max).clamp_min(0).mean()
 
         self.log(
             "lr",
             get_learning_rate(self.optimizer),
             on_step=True,
             on_epoch=False,
-            prog_bar=True,
+            prog_bar=False,
         )
-
         self.log("loss", loss, on_step=True, on_epoch=False, prog_bar=True)
-
         return loss
 
     def validation_step(self, batch, batch_idx):
-        """Perform a single validation step."""
         x, y = batch["input"], batch["segment_labels"]
-        seg_logits, frame_logits = self(x)  # Get both segment and frame logits
-        loss = self.loss_fn(seg_logits, y)  # Use only segment logits for loss
-        if self.multi_label:
-            preds = torch.sigmoid(seg_logits)
-        else:
-            preds = torch.softmax(seg_logits, dim=1)
+        seg_logits, _ = self(x)
+        loss = self.loss_fn(seg_logits, y)
+
+        preds = (
+            torch.sigmoid(seg_logits)
+            if self.multi_label
+            else torch.softmax(seg_logits, dim=1)
+        )
 
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-
-        roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
-        self.log("val_roc", roc_auc, on_step=False, on_epoch=True, prog_bar=True)
-
+        self.log(
+            "val_roc",
+            metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro"),
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+        )
         return loss
 
     def test_step(self, batch, batch_idx):
-        """Perform a single test step."""
         x, y = batch
-        seg_logits, frame_logits = self(x)  # Get both segment and frame logits
-        loss = self.loss_fn(seg_logits, y)  # Use only segment logits for loss
-        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        seg_logits, _ = self(x)
+        loss = self.loss_fn(seg_logits, y)
+        self.log("test_loss", loss, on_epoch=True)
 
         if self.multi_label:
             preds = torch.sigmoid(seg_logits)
-            roc_auc = metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro")
             self.log(
-                "test_roc_auc", roc_auc, on_step=False, on_epoch=True, prog_bar=True
+                "test_roc_auc",
+                metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro"),
+                on_step=False,
+                on_epoch=True,
+                prog_bar=True,
             )
-
         return loss
 
+    # ==================================================================
+    # Optimizers & schedulers
+    # ==================================================================
+
     def configure_optimizers(self):
-        """Configure optimizers and learning rate schedulers."""
         cfg = self.cfg.train
         self.optimizer = create_optimizer_v2(
             self,
@@ -212,67 +256,37 @@ class BaseModel(pl.LightningModule):
             filter_bias_and_bn=False,
         )
 
-        # Add error handling for trainer access
-        if not hasattr(self, "trainer") or self.trainer is None:
-            # Fallback for when trainer is not available (e.g., during testing)
-            total_steps = 1000  # Default value
-        else:
-            total_steps = self.trainer.estimated_stepping_batches
+        total_steps = (
+            self.trainer.estimated_stepping_batches
+            if hasattr(self, "trainer") and self.trainer
+            else 1000
+        )
 
         warmup_steps = self.cfg.train.warmup_fraction * total_steps
         decay_steps = total_steps - warmup_steps
 
-        cosine_sched = CosineAnnealingLR(self.optimizer, T_max=decay_steps, eta_min=0.0)
-
+        cosine = CosineAnnealingLR(self.optimizer, T_max=decay_steps)
         if warmup_steps > 0:
-            # warmup: linearly ramp from 0 to base_lr
-            warmup_sched = LinearLR(
+            warmup = LinearLR(
                 self.optimizer,
-                start_factor=1e-6,  # LR starts near 0
-                end_factor=1.0,  # LR reaches base_lr
+                start_factor=1e-6,
+                end_factor=1.0,
                 total_iters=warmup_steps,
             )
-
-            # stitch them together
             scheduler = SequentialLR(
-                self.optimizer,
-                schedulers=[warmup_sched, cosine_sched],
-                milestones=[warmup_steps],
+                self.optimizer, [warmup, cosine], milestones=[warmup_steps]
             )
         else:
-            scheduler = cosine_sched
+            scheduler = cosine
 
         return {
             "optimizer": self.optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": "step",
-                "frequency": 1,
-            },
+            "lr_scheduler": {"scheduler": scheduler, "interval": "step"},
         }
 
-    def on_save_checkpoint(self, checkpoint):
-        """Save model metadata to checkpoint."""
-        if not hasattr(self, "identifier"):
-            self.identifier = str(uuid.uuid4()).upper()
-            self.training_date = datetime.today().strftime("%Y-%m-%d")
-
-        checkpoint["identifier"] = self.identifier
-        checkpoint["training_date"] = self.training_date
-        checkpoint["training_cfg"] = util.cfg_to_pure(self.cfg)
-
-    def on_load_checkpoint(self, checkpoint):
-        """Load model metadata from checkpoint."""
-        if "identifier" in checkpoint:
-            self.identifier = checkpoint["identifier"]
-            self.training_date = checkpoint["training_date"]
-            self.training_cfg = checkpoint["training_cfg"]
-
-            # set relevant config options based on how it was trained
-            self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
-            self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
-        else:
-            raise ValueError("Checkpoint metadata not found.")
+    # ==================================================================
+    # Inference & embeddings
+    # ==================================================================
 
     def predict(self, x, device=None):
         """
@@ -346,23 +360,6 @@ class BaseModel(pl.LightningModule):
         frame_scores = torch.cat(frame_parts, dim=0) if frame_parts else None
         return segment_scores, frame_scores
 
-    def _iter_blocks(self, X, block_size):
-        """Helper method to iterate over data in blocks."""
-        if isinstance(X, torch.Tensor):
-            n = X.shape[0]
-            if block_size <= 0 or block_size >= n:
-                yield X
-            else:
-                for i in range(0, n, block_size):
-                    yield X[i : i + block_size]
-        else:
-            n = len(X)
-            if block_size <= 0 or block_size >= n:
-                yield X
-            else:
-                for i in range(0, n, block_size):
-                    yield X[i : i + block_size]
-
     def get_embeddings(self, specs, device=None):
         """Get embeddings for use in searching and clustering"""
         if device is None:
@@ -411,11 +408,14 @@ class BaseModel(pl.LightningModule):
         frame_scores = frame_scores.cpu().detach().numpy()
         return segment_scores, frame_scores
 
+    # ==================================================================
+    # Utilities & helpers
+    # ==================================================================
+
     def freeze_backbone(self):
-        """Freeze the backbone, in a way that works with any timm model"""
         if self.backbone:
-            for _, param in self.backbone.named_parameters():
-                param.requires_grad = False
+            for _, p in self.backbone.named_parameters():
+                p.requires_grad = False
 
     def _calc_loss(self, seg_logits, frame_logits, seg_labels):
         segment_loss = self.loss_fn(seg_logits, seg_labels)
@@ -447,3 +447,25 @@ class BaseModel(pl.LightningModule):
         if device is not None:
             x = x.to(device)
         return x
+
+    def _iter_blocks(self, X, block_size):
+        """Helper method to iterate over data in blocks."""
+        if isinstance(X, torch.Tensor):
+            n = X.shape[0]
+            if block_size <= 0 or block_size >= n:
+                yield X
+            else:
+                for i in range(0, n, block_size):
+                    yield X[i : i + block_size]
+        else:
+            n = len(X)
+            if block_size <= 0 or block_size >= n:
+                yield X
+            else:
+                for i in range(0, n, block_size):
+                    yield X[i : i + block_size]
+
+    def _check_input_channels(self, x):
+        expected = 3 if self.use_spec_filters else 1
+        if x.shape[1] != expected:
+            raise RuntimeError(f"Expected {expected}-channel input, got {x.shape[1]}")

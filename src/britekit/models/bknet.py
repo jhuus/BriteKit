@@ -8,6 +8,7 @@ from typing import cast, List, Optional, Type
 
 import torch.nn as nn
 
+from britekit.core.config_loader import get_config
 from britekit.models.base_model import BaseModel
 from britekit.models.bknet_base import BKNetBaseModel
 from britekit.models.head_factory import make_head
@@ -61,10 +62,12 @@ class BKNetModel(BaseModel):
         se_ratio = config.get("se_ratio", 0.25)
 
         # Create backbone
+        cfg = get_config()
+
         self.backbone = BKNetBaseModel(
             cfg=config,
             num_classes=self.num_classes,
-            in_chans=1,
+            in_chans=3 if cfg.audio.spec_filters else 1,
             act_layer=act_layer,
             final_ch=cast(int, final_ch),
             use_se=use_se,

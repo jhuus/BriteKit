@@ -41,10 +41,11 @@ class TimmModel(BaseModel):
         # would be very complicated with so many model types
         cfg = get_config()
         assert model_type.startswith("timm.")
+
         self.backbone = timm.create_model(
             model_type[5:],  # strip off the "timm." prefix
             pretrained=cfg.train.pretrained,
-            in_chans=1,
+            in_chans=3 if cfg.audio.spec_filters else 1,
             num_classes=self.num_classes,
             **kwargs,
         )
