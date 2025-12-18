@@ -31,16 +31,6 @@ class AudioConfig:
     median_threshold: float = 0.77  # see code in Audio::_choose_channel
     sum_threshold: float = 1.08  # see code in Audio::_choose_channel
 
-    # Parameters for optional 3-channel filtered spectrograms
-    spec_filters: bool = False  # If true, use 3-channel filtered spectrograms
-    low_pass_end: float = 0.35  # End of low-pass filter, as height quantile
-    low_pass_steepness: float = 25.0  # Steepness of low-pass filter
-    band_pass_start: float = 0.30  # Start of band-pass filter, as height quantile
-    band_pass_end: float = 0.70  # End of band-pass filter, as height quantile
-    band_pass_steepness: float = 25.0  # Steepness of band-pass filter
-    high_pass_start: float = 0.65  # Start of high-pass filter, as height quantile
-    high_pass_steepness: float = 25.0  # Steepness of high-pass filter
-
 
 @dataclass
 class TrainingConfig:
