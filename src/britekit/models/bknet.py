@@ -67,7 +67,7 @@ class BKNetModel(BaseModel):
         self.backbone = BKNetBaseModel(
             cfg=config,
             num_classes=self.num_classes,
-            in_chans=3 if cfg.audio.spec_filters else 1,
+            in_chans=1,
             act_layer=act_layer,
             final_ch=cast(int, final_ch),
             use_se=use_se,

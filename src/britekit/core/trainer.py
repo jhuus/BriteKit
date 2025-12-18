@@ -117,10 +117,9 @@ class Trainer:
             inspector = ModelInspector(model.backbone)
             inspector.register_hooks()
 
-            in_chans = 3 if self.cfg.audio.spec_filters else 1
             input_shape = (
                 1,
-                in_chans,
+                1,
                 self.cfg.audio.spec_height,
                 self.cfg.audio.spec_width,
             )

@@ -45,7 +45,7 @@ class TimmModel(BaseModel):
         self.backbone = timm.create_model(
             model_type[5:],  # strip off the "timm." prefix
             pretrained=cfg.train.pretrained,
-            in_chans=3 if cfg.audio.spec_filters else 1,
+            in_chans=1,
             num_classes=self.num_classes,
             **kwargs,
         )

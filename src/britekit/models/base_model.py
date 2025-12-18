@@ -13,7 +13,6 @@ import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 from britekit.core.config_loader import get_config
-from britekit.core.spec_filter import SpecFilter
 from britekit.core import util
 from britekit.models.head_factory import is_sed
 
@@ -92,10 +91,6 @@ class BaseModel(pl.LightningModule):
         self.num_train_specs = num_train_specs
         self.num_classes = len(train_class_names)
         self.learning_rate = self.cfg.train.learning_rate
-        self.use_spec_filters = self.cfg.audio.spec_filters
-
-        # Spec filter (lazy init)
-        self.spec_filter = None
 
         # Loss function
         if self.multi_label:
@@ -140,20 +135,6 @@ class BaseModel(pl.LightningModule):
             raise RuntimeError("Backbone is not initialized.")
         if self.head is None:
             raise RuntimeError("Head is not initialized.")
-
-        if self.use_spec_filters:
-            if self.spec_filter is None:
-                self.spec_filter = SpecFilter(self.cfg, device=self.device)
-
-            if x.ndim == 4 and x.shape[1] == 1:
-                x = x.squeeze(1)
-
-            x = torch.stack(
-                [self.spec_filter.filter(xi) for xi in x],
-                dim=0,
-            )
-
-            self._check_input_channels(x)
 
         x = self.backbone(x)
         x = self.head(x)
@@ -464,8 +445,3 @@ class BaseModel(pl.LightningModule):
             else:
                 for i in range(0, n, block_size):
                     yield X[i : i + block_size]
-
-    def _check_input_channels(self, x):
-        expected = 3 if self.use_spec_filters else 1
-        if x.shape[1] != expected:
-            raise RuntimeError(f"Expected {expected}-channel input, got {x.shape[1]}")

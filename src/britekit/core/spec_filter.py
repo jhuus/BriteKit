@@ -1,34 +1,34 @@
 """
-Torch-based spectrogram filtering utilities.
+SpecFilter applies frequency-domain masks (low-pass,
+band-pass, high-pass) to spectrogram tensors.
 
-SpecFilter converts a single-channel spectrogram into a 3-channel
-representation using low-pass, band-pass, and high-pass frequency masks
-applied directly to the spectrogram.
+Note: this class is experimental and not currently used.
 """
 
 from __future__ import annotations
 
 import torch
 
+from britekit.core.base_config import BaseConfig
+
 
 class SpecFilter:
     """
     Spectrogram frequency filter operating directly on spectrograms.
-
-    Assumes a fixed spectrogram height defined by cfg.audio.spec_height
-    and a fixed device provided at construction time.
     """
 
-    def __init__(self, cfg, device: torch.device | str):
+    def __init__(self, cfg: BaseConfig, device: torch.device | str):
         self.cfg = cfg
         self.device = torch.device(device)
-
-        self.H = cfg.audio.spec_height
-        self.dtype = torch.float32  # explicit; change if needed
+        self.min_val = torch.tensor(cfg.infer.min_filter_value, device=self.device, dtype=torch.float32)
+        self.min_normalizer = torch.tensor(
+            self.cfg.infer.min_filter_normalizer, device=self.device, dtype=torch.float32
+        )
+        self.spec_height = cfg.audio.spec_height
 
         # Precompute frequency axis
         self._f = torch.linspace(
-            0.0, 1.0, self.H, device=self.device, dtype=self.dtype
+            0.0, 1.0, self.spec_height, device=self.device, dtype=torch.float32
         ).unsqueeze(
             1
         )  # (H, 1)
@@ -43,83 +43,66 @@ class SpecFilter:
     # ------------------------------------------------------------------
 
     def _create_low_pass_mask(self) -> torch.Tensor:
-        return torch.sigmoid(
-            (self.cfg.audio.low_pass_end - self._f) * self.cfg.audio.low_pass_steepness
+        mask = torch.sigmoid(
+            (self.cfg.infer.low_pass_end - self._f) * self.cfg.infer.filter_steepness
         )
+
+        # ensure range is [0, 1], then set min value
+        mask -= mask.min()
+        mask /= mask.max().clamp_min(1e-6)
+        return (mask * (1 - self.min_val) + self.min_val).unsqueeze(0)
 
     def _create_high_pass_mask(self) -> torch.Tensor:
-        return torch.sigmoid(
-            (self._f - self.cfg.audio.high_pass_start)
-            * self.cfg.audio.high_pass_steepness
+        mask = torch.sigmoid(
+            (self._f - self.cfg.infer.high_pass_start) * self.cfg.infer.filter_steepness
         )
 
+        # ensure range is [0, 1], then set min value
+        mask -= mask.min()
+        mask /= mask.max().clamp_min(1e-6)
+        return (mask * (1 - self.min_val) + self.min_val).unsqueeze(0)
+
     def _create_band_pass_mask(self) -> torch.Tensor:
-        low_q = self.cfg.audio.band_pass_start
-        high_q = self.cfg.audio.band_pass_end
+        low_q = self.cfg.infer.band_pass_start
+        high_q = self.cfg.infer.band_pass_end
 
         if low_q >= high_q:
             raise ValueError("band-pass start must be < end")
 
-        low_edge = torch.sigmoid((self._f - low_q) * self.cfg.audio.band_pass_steepness)
-        high_edge = torch.sigmoid(
-            (high_q - self._f) * self.cfg.audio.band_pass_steepness
-        )
+        low_edge = torch.sigmoid((self._f - low_q) * self.cfg.infer.filter_steepness)
+        high_edge = torch.sigmoid((high_q - self._f) * self.cfg.infer.filter_steepness)
 
-        return low_edge * high_edge
+        mask = low_edge * high_edge
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+        # ensure range is [0, 1], then set min value
+        mask -= mask.min()
+        mask /= mask.max().clamp_min(1e-6)
+        return (mask * (1 - self.min_val) + self.min_val).unsqueeze(0)
 
-    @staticmethod
-    def _ensure_2d(spec: torch.Tensor) -> torch.Tensor:
+    def _apply_filter(self, spec_array: torch.Tensor, mask: torch.Tensor, normalize: bool = False):
         """
-        Ensure spectrogram has shape (H, W).
-        Accepts (H, W) or (1, H, W).
+        spec_array: (N, H, W)
+        mask: (1, H, 1)
         """
-        if spec.ndim == 2:
-            return spec
-        if spec.ndim == 3 and spec.shape[0] == 1:
-            return spec[0]
-        raise ValueError(
-            f"Expected spectrogram of shape (H, W) or (1, H, W), "
-            f"got {tuple(spec.shape)}"
-        )
+        out = spec_array * mask
+
+        if not normalize:
+            return out
+
+        max_vals = out.amax(dim=(1, 2), keepdim=True).clamp_min(self.min_normalizer)
+        return out / max_vals
+
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def low_pass_filter(self, spec: torch.Tensor) -> torch.Tensor:
-        spec = self._ensure_2d(spec)
-        return spec * self._lp_mask
+    def low_pass_filter(self, spec_array: torch.Tensor, normalize: bool = False) -> torch.Tensor:
+        return self._apply_filter(spec_array, self._lp_mask, normalize)
 
-    def band_pass_filter(self, spec: torch.Tensor) -> torch.Tensor:
-        spec = self._ensure_2d(spec)
-        return spec * self._bp_mask
+    def band_pass_filter(self, spec_array: torch.Tensor, normalize: bool = False) -> torch.Tensor:
+        return self._apply_filter(spec_array, self._bp_mask, normalize)
 
-    def high_pass_filter(self, spec: torch.Tensor) -> torch.Tensor:
-        spec = self._ensure_2d(spec)
-        return spec * self._hp_mask
+    def high_pass_filter(self, spec_array: torch.Tensor, normalize: bool = False):
+        return self._apply_filter(spec_array, self._hp_mask, normalize)
 
-    def filter(self, spec: torch.Tensor) -> torch.Tensor:
-        """
-        Convert a 1-channel spectrogram into a 3-channel spectrogram.
-
-        Input:
-            spec: (H, W) or (1, H, W)
-            (must already be on self.device)
-
-        Output:
-            (3, H, W) -> [low-pass, band-pass, high-pass]
-        """
-        spec = self._ensure_2d(spec)
-
-        return torch.stack(
-            (
-                spec * self._lp_mask,
-                spec * self._bp_mask,
-                spec * self._hp_mask,
-            ),
-            dim=0,
-        )
