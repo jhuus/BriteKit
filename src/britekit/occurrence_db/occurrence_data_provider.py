@@ -251,6 +251,7 @@ class OccurrenceDataProvider:
             else:
                 occurrences = self.occurrences(counties[0].code, class_name)
         else:
+            zeros = [0 for i in range(48)]
             occurrence_lists = []
             for county in counties:
                 if smoothed:
@@ -260,6 +261,8 @@ class OccurrenceDataProvider:
 
                 if len(occurrences) > 0:
                     occurrence_lists.append(occurrences)
+                else:
+                    occurrence_lists.append(zeros)
 
             if len(occurrences) > 0:
                 occurrences = np.array(occurrence_lists)
