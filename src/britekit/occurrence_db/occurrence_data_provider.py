@@ -258,12 +258,18 @@ class OccurrenceDataProvider:
                 else:
                     occurrences = self.occurrences(county.code, class_name)
 
-                occurrence_lists.append(occurrences)
+                if len(occurrences) > 0:
+                    occurrence_lists.append(occurrences)
 
-            occurrences = np.array(occurrence_lists)
-            occurrences = np.mean(occurrences, axis=0)
+            if len(occurrences) > 0:
+                occurrences = np.array(occurrence_lists)
+                occurrences = np.mean(occurrences, axis=0)
+
+        if len(occurrences) == 0:
+            # class exists in some regions, but not this one
+            return True, True, 0
 
         if week_num is None:
-            return location_found, class_found, np.nanmax(occurrences).item()
+            return True, True, np.nanmax(occurrences).item()
         else:
-            return location_found, class_found, occurrences[week_num].item()
+            return True, True, occurrences[week_num].item()
