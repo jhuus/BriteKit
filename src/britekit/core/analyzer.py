@@ -75,7 +75,9 @@ class Analyzer:
             recording_name = Path(recording_path).stem
             if rtype in {"audacity", "both"}:
                 file_path = str(Path(output_path) / f"{recording_name}_scores.txt")
-                self._save_audacity_labels(predictor, scores, frame_map, offsets, file_path)
+                self._save_audacity_labels(
+                    predictor, scores, frame_map, offsets, file_path
+                )
 
             if rtype in {"csv", "both"}:
                 dataframe = predictor.get_dataframe(
