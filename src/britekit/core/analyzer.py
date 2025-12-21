@@ -6,6 +6,7 @@ import threading
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
+from britekit.core.predictor import Predictor
 from britekit.core import util
 
 
@@ -17,6 +18,32 @@ class Analyzer:
     def __init__(self):
         self.cfg = get_config()
         self.dataframes = []
+
+        exclude_list = self.cfg.misc.exclude_list
+        self.exclude_set = set()  # Initialize empty set by default
+        if exclude_list:
+            if not os.path.exists(exclude_list):
+                raise InferenceError(f'Ignore file "{exclude_list}" not found.')
+
+            self.exclude_set = set(util.get_file_lines(exclude_list))
+
+    @staticmethod
+    def _split_list(input_list, n):
+        """
+        Split the input list into `n` lists based on index modulo `n`.
+
+        Args:
+        - input_list (list): The input list to split.
+        - n (int): Number of resulting groups.
+
+        Returns:
+            List[List]: A list of `n` lists, where each sublist contains elements
+                        whose indices mod n are equal.
+        """
+        result = [[] for _ in range(n)]
+        for i, item in enumerate(input_list):
+            result[i % n].append(item)
+        return result
 
     def _process_recordings(
         self,
@@ -36,8 +63,6 @@ class Analyzer:
         - rtype (str): Output format: "audacity", "csv" or "both".
         - start_seconds (float): Where to start processing each recording, in seconds from start.
         """
-        from britekit.core.predictor import Predictor
-
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
             logging.info(f"[Thread {thread_num}] Processing {recording_path}")
@@ -50,7 +75,7 @@ class Analyzer:
             recording_name = Path(recording_path).stem
             if rtype in {"audacity", "both"}:
                 file_path = str(Path(output_path) / f"{recording_name}_scores.txt")
-                predictor.save_audacity_labels(scores, frame_map, offsets, file_path)
+                self._save_audacity_labels(predictor, scores, frame_map, offsets, file_path)
 
             if rtype in {"csv", "both"}:
                 dataframe = predictor.get_dataframe(
@@ -64,23 +89,46 @@ class Analyzer:
         if thread_num == 1:
             predictor.save_manifest(output_path)
 
-    @staticmethod
-    def _split_list(input_list, n):
+    def _save_audacity_labels(
+        self,
+        predictor: Predictor,
+        scores,
+        frame_map,
+        start_times: list[float],
+        file_path: str,
+    ) -> None:
         """
-        Split the input list into `n` lists based on index modulo `n`.
+        Given an array of raw scores, convert to Audacity labels and save in the given file.
 
         Args:
-        - input_list (list): The input list to split.
-        - n (int): Number of resulting groups.
+        - scores (np.ndarray): Segment-level scores of shape (num_spectrograms, num_species).
+        - frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
+            If provided, uses frame-level labels; otherwise uses segment-level labels.
+        - start_times (list[float]): Start time in seconds for each spectrogram.
+        - file_path (str): Output path for the Audacity label file.
 
         Returns:
-            List[List]: A list of `n` lists, where each sublist contains elements
-                        whose indices mod n are equal.
+            None: Writes the labels directly to the specified file.
         """
-        result = [[] for _ in range(n)]
-        for i, item in enumerate(input_list):
-            result[i % n].append(item)
-        return result
+
+        if frame_map is None:
+            labels = predictor.get_segment_labels(scores, start_times)
+        else:
+            labels = predictor.get_frame_labels(frame_map)
+
+        try:
+            with open(file_path, "w") as out_file:
+                for name in sorted(labels):
+                    if name in self.exclude_set:
+                        continue
+
+                    for label in labels[name]:
+                        text = f"{label.start_time:.2f}\t{label.end_time:.2f}\t{name};{label.score:.3f}\n"
+                        out_file.write(text)
+        except (IOError, OSError) as e:
+            raise InferenceError(
+                f"Failed to write Audacity labels to {file_path}: {str(e)}"
+            )
 
     def run(
         self,
@@ -148,6 +196,12 @@ class Analyzer:
 
         if rtype in {"csv", "both"}:
             file_path = os.path.join(output_path, "scores.csv")
-            combined_df = pd.concat(self.dataframes, ignore_index=True)
-            sorted_df = combined_df.sort_values(by=["recording", "name", "start_time"])
+            df = pd.concat(self.dataframes, ignore_index=True)
+
+            # remove the excluded classes
+            for name in self.exclude_set:
+                df = df[df["name"] != name]
+
+            # sort and save
+            sorted_df = df.sort_values(by=["recording", "name", "start_time"])
             sorted_df.to_csv(file_path, index=False, float_format="%.3f")

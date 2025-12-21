@@ -170,8 +170,8 @@ class MiscConfig:
     search_ckpt_path: Optional[str] = None
     # List of classes used to generate pickle files
     classes_file: str = "data/classes.txt"
-    # Classes listed in this file are ignored in analysis
-    ignore_file: str = "data/ignore.txt"
+    # Classes listed in this file are excluded from inference output
+    exclude_list: str = "data/exclude.txt"
 
     # Sample regexes to map recording names to source names
     source_regexes: Optional[list] = field(

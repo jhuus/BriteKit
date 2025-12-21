@@ -50,14 +50,6 @@ class Predictor:
         self.last_frame_map = None
         self.labels = None
 
-        ignore_file = self.cfg.misc.ignore_file
-        self.ignore_classes = set()  # Initialize empty set by default
-        if ignore_file:
-            if not os.path.exists(ignore_file):
-                raise InferenceError(f'Ignore file "{ignore_file}" not found.')
-
-            self.ignore_classes = set(util.get_file_lines(ignore_file))
-
         self.device = device or util.get_device()
         if self.device == "cpu" and importlib.util.find_spec("openvino") is not None:
             import openvino as ov
@@ -217,9 +209,6 @@ class Predictor:
         num_specs, num_classes = scores.shape
         for i in range(num_specs):
             for j in range(num_classes):
-                if self.class_names[j] in self.ignore_classes:
-                    continue
-
                 if names[j] not in labels:
                     labels[names[j]] = []
 
@@ -272,9 +261,6 @@ class Predictor:
         if self.cfg.infer.segment_len is None:
             # variable-duration labels
             for i in range(num_classes):
-                if self.class_names[i] in self.ignore_classes:
-                    continue
-
                 labels[names[i]] = []
                 curr_label = None
                 # process one frame at a time
@@ -313,9 +299,6 @@ class Predictor:
             frames_per_segment = frames_per_second * self.cfg.infer.segment_len
 
             for i in range(num_classes):
-                if self.class_names[i] in self.ignore_classes:
-                    continue
-
                 labels[names[i]] = []
                 # process one segment at a time
                 for j in range(num_frame_segments):
@@ -408,43 +391,6 @@ class Predictor:
             j = np.argmax(scores)
             logging.info(f"{names[j]}: {scores[j]:.4f}")
             scores[j] = 0
-
-    def save_audacity_labels(
-        self,
-        scores,
-        frame_map,
-        start_times: list[float],
-        file_path: str,
-    ) -> None:
-        """
-        Given an array of raw scores, convert to Audacity labels and save in the given file.
-
-        Args:
-        - scores (np.ndarray): Segment-level scores of shape (num_spectrograms, num_species).
-        - frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
-            If provided, uses frame-level labels; otherwise uses segment-level labels.
-        - start_times (list[float]): Start time in seconds for each spectrogram.
-        - file_path (str): Output path for the Audacity label file.
-
-        Returns:
-            None: Writes the labels directly to the specified file.
-        """
-
-        if frame_map is None:
-            labels = self.get_segment_labels(scores, start_times)
-        else:
-            labels = self.get_frame_labels(frame_map)
-
-        try:
-            with open(file_path, "w") as out_file:
-                for name in sorted(labels):
-                    for label in labels[name]:
-                        text = f"{label.start_time:.2f}\t{label.end_time:.2f}\t{name};{label.score:.3f}\n"
-                        out_file.write(text)
-        except (IOError, OSError) as e:
-            raise InferenceError(
-                f"Failed to write Audacity labels to {file_path}: {str(e)}"
-            )
 
     def save_manifest(self, output_path: str, cfg=None):
         """
