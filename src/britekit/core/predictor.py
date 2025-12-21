@@ -2,9 +2,8 @@
 from copy import deepcopy
 import importlib.util
 import logging
-import math
 import os
-from typing import cast, Any, List, Optional, Sequence
+from typing import cast, Any, Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -238,85 +237,116 @@ class Predictor:
         assert self.class_names is not None
 
         # Validate input dimensions
-        if len(frame_map.shape) != 2:
+        if frame_map.ndim != 2:
             raise InferenceError(
                 f"Frame map must be 2D array, got shape {frame_map.shape}"
             )
 
         if frame_map.shape[1] != len(self.class_names):
             raise InferenceError(
-                f"Number of classes in frame_map ({frame_map.shape[1]}) must match number of class names ({len(self.class_names)})"
+                f"Number of classes in frame_map ({frame_map.shape[1]}) "
+                f"must match number of class names ({len(self.class_names)})"
             )
 
-        # in case we are called more than once on the same frame map
+        # Avoid recomputation if called repeatedly on same object
         if self.last_frame_map is not None and id(self.last_frame_map) == id(frame_map):
             return self.labels
 
         names = self._get_names()
-
         num_frames, num_classes = frame_map.shape
-        frames_per_second = self.cfg.train.sed_fps
-        labels: dict[str, list] = {}  # name -> [(score, start_time, end_time)]
 
-        if self.cfg.infer.segment_len is None:
-            # variable-duration labels
-            for i in range(num_classes):
-                labels[names[i]] = []
-                curr_label = None
-                # process one frame at a time
-                for j in range(num_frames):
-                    if frame_map[j, i] >= self.cfg.infer.min_score:
-                        if curr_label is None:
-                            # start new label
-                            score = round(frame_map[j, i], 3)
-                            frame_time = round(j / frames_per_second, 3)
-                            next_frame_time = round(j + 1 / frames_per_second, 3)
-                            curr_label = Label(score, frame_time, next_frame_time)
-                            start_idx = j
-                    elif curr_label is not None:
-                        # end current label
-                        score = np.quantile(
-                            frame_map[start_idx:j, i], self.cfg.infer.sed_quantile
+        fps = self.cfg.train.sed_fps
+        min_score = self.cfg.infer.min_score
+        q = self.cfg.infer.sed_quantile
+        segment_len = self.cfg.infer.segment_len
+
+        labels: dict[str, list[Label]] = {}
+
+        # ------------------------------------------------------------------
+        # Variable-duration labels (run-based)
+        # ------------------------------------------------------------------
+        if segment_len is None:
+            for i, name in enumerate(names):
+                col = frame_map[:, i]
+                active = col >= min_score
+
+                if not np.any(active):
+                    labels[name] = []
+                    continue
+
+                # Find contiguous True runs
+                diff = np.diff(active.astype(np.int8))
+                starts = np.where(diff == 1)[0] + 1
+                ends = np.where(diff == -1)[0] + 1
+
+                if active[0]:
+                    starts = np.r_[0, starts]
+                if active[-1]:
+                    ends = np.r_[ends, len(active)]
+
+                class_labels = []
+                for s, e in zip(starts, ends):
+                    score = np.quantile(col[s:e], q)
+                    class_labels.append(
+                        Label(
+                            round(float(score), 3),
+                            round(s / fps, 3),
+                            round(e / fps, 3),
                         )
-                        curr_label.score = round(score, 3)
-                        curr_label.end_time = round(j / frames_per_second, 3)
-                        labels[names[i]].append(curr_label)
-                        curr_label = None
-
-                if curr_label is not None:
-                    score = np.quantile(
-                        frame_map[start_idx:, i], self.cfg.infer.sed_quantile
                     )
-                    curr_label.score = round(score, 3)
-                    curr_label.end_time = round(num_frames / frames_per_second, 3)
-                    labels[names[i]].append(curr_label)
+
+                labels[name] = class_labels
+
+        # ------------------------------------------------------------------
+        # Fixed-duration labels (vectorized segmentation)
+        # ------------------------------------------------------------------
         else:
-            # fixed-duration labels
-            num_frame_seconds = num_frames / frames_per_second
-            num_frame_segments = math.ceil(
-                num_frame_seconds / self.cfg.infer.segment_len
+            frames_per_segment = int(round(fps * segment_len))
+            if frames_per_segment <= 0:
+                raise InferenceError("frames_per_segment must be > 0")
+
+            num_segments = (num_frames + frames_per_segment - 1) // frames_per_segment
+
+            # Pad frames so reshape is safe
+            pad = num_segments * frames_per_segment - num_frames
+            if pad > 0:
+                frame_map_padded = np.pad(
+                    frame_map,
+                    ((0, pad), (0, 0)),
+                    mode="constant",
+                    constant_values=0.0,
+                )
+            else:
+                frame_map_padded = frame_map
+
+            # Shape: (segments, frames_per_segment, classes)
+            seg_view = frame_map_padded.reshape(
+                num_segments, frames_per_segment, num_classes
             )
-            frames_per_segment = frames_per_second * self.cfg.infer.segment_len
 
-            for i in range(num_classes):
-                labels[names[i]] = []
-                # process one segment at a time
-                for j in range(num_frame_segments):
-                    start_idx = int(j * frames_per_segment)
-                    end_idx = int((j + 1) * frames_per_segment)
+            # Quantiles across frames
+            seg_scores = np.quantile(seg_view, q, axis=1)  # (segments, classes)
 
-                    score = np.quantile(
-                        frame_map[start_idx:end_idx, i], self.cfg.infer.sed_quantile
+            for i, name in enumerate(names):
+                scores_i = seg_scores[:, i]
+                keep = scores_i >= min_score
+
+                if not np.any(keep):
+                    labels[name] = []
+                    continue
+
+                js = np.nonzero(keep)[0]
+                labels[name] = [
+                    Label(
+                        round(float(scores_i[j]), 3),
+                        round(j * segment_len, 3),
+                        round((j + 1) * segment_len, 3),
                     )
-                    if score >= self.cfg.infer.min_score:
-                        score = round(score, 3)
-                        start_time = j * self.cfg.infer.segment_len
-                        end_time = (j + 1) * self.cfg.infer.segment_len
-                        labels[names[i]].append(Label(score, start_time, end_time))
+                    for j in js
+                ]
 
-        self.last_frame_map = frame_map  # avoid doing calc twice
+        self.last_frame_map = cast(Any, frame_map)
         self.labels = cast(Any, labels)
-
         return labels
 
     def get_dataframe(
@@ -398,7 +428,6 @@ class Predictor:
         """
         from pathlib import Path
         import yaml
-        from typing import Any, Dict
         from britekit.models.base_model import BaseModel
 
         # Add class list
