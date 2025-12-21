@@ -33,6 +33,8 @@ class OccurrenceDataProvider:
         for _class in self.classes:
             self.class_dict[_class.name] = _class
 
+        self.county_dict = {}
+
     def find_county(self, latitude: float, longitude: float):
         """
         Return county info for a given latitude/longitude, or None if not found.
@@ -44,6 +46,10 @@ class OccurrenceDataProvider:
         Returns:
             County object, or None if not found.
         """
+
+        if (latitude, longitude) in self.county_dict:
+            return self.county_dict[(latitude, longitude)]
+
         for county in self.counties:
             if (
                 latitude >= county.min_y
@@ -51,6 +57,8 @@ class OccurrenceDataProvider:
                 and longitude >= county.min_x
                 and longitude <= county.max_x
             ):
+                # cache for quick access next time
+                self.county_dict[(latitude, longitude)] = county
                 return county
 
         return None
