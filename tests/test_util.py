@@ -108,16 +108,16 @@ def sample_csv_file(temp_dir):
 
 
 @dataclass
-class TestConfig:
-    """Test dataclass for cfg_to_pure testing."""
+class SampleConfig:
+    """Dataclass for cfg_to_pure testing."""
 
     name: str
     value: int
     nested: dict
 
 
-class TestEnum(Enum):
-    """Test enum for cfg_to_pure testing."""
+class SampleEnum(Enum):
+    """Enum for cfg_to_pure testing."""
 
     VALUE1 = "value1"
     VALUE2 = "value2"
@@ -197,14 +197,14 @@ class TestCfgToPure:
 
     def test_cfg_to_pure_dataclass(self):
         """Test converting dataclass to pure format."""
-        config = TestConfig("test", 42, {"nested": "value"})
+        config = SampleConfig("test", 42, {"nested": "value"})
         result = cfg_to_pure(config)
         expected = {"name": "test", "value": 42, "nested": {"nested": "value"}}
         assert result == expected
 
     def test_cfg_to_pure_enum(self):
         """Test converting enum to pure format."""
-        result = cfg_to_pure(TestEnum.VALUE1)
+        result = cfg_to_pure(SampleEnum.VALUE1)
         assert result == "value1"
 
     def test_cfg_to_pure_path(self):
@@ -283,8 +283,8 @@ class TestCfgToPure:
 
     def test_cfg_to_pure_class(self):
         """Test converting class to pure format."""
-        result = cfg_to_pure(TestConfig)
-        assert "TestConfig" in result
+        result = cfg_to_pure(SampleConfig)
+        assert "SampleConfig" in result
 
     def test_cfg_to_pure_primitive(self):
         """Test converting primitive types."""

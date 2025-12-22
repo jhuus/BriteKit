@@ -1,13 +1,15 @@
 # Defer some imports to improve initialization performance.
 import logging
 from typing import Any, Optional
-import warnings
 
 from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config
 from britekit.core.util import get_device
 
-warnings.filterwarnings("ignore")  # librosa generates too many warnings
+# suppress some torchaudio warnings
+import warnings
+
+warnings.filterwarnings("ignore", message=".*TorchCodec.*|.*StreamingMediaDecoder.*")
 
 
 class Audio:
@@ -123,26 +125,34 @@ class Audio:
         Note:
             If loading fails, signal will be None and an error will be logged.
         """
-        import librosa
+        import torchaudio as ta  # faster than librosa
+        import numpy as np
 
         if not path or not isinstance(path, str):
             logging.error(f"Invalid path provided: {path}")
             return None, self.cfg.audio.sampling_rate
 
         try:
+            # Load (channels, samples), float32
             self.path = path
+            waveform, sr = ta.load(path)
 
-            if self.cfg.audio.choose_channel:
-                self.signal, _ = librosa.load(
-                    path, sr=self.cfg.audio.sampling_rate, mono=False
+            # Resample if needed
+            if sr != self.cfg.audio.sampling_rate:
+                waveform = ta.functional.resample(
+                    waveform, sr, self.cfg.audio.sampling_rate
                 )
 
-                if len(self.signal.shape) == 2:
-                    self.signal = self._choose_channel(self.signal[0], self.signal[1])
-            else:
-                self.signal, _ = librosa.load(
-                    path, sr=self.cfg.audio.sampling_rate, mono=True
-                )
+            # Handle channels
+            waveform = waveform.numpy()
+            if waveform.ndim == 2:
+                if self.cfg.audio.choose_channel:
+                    waveform = self._choose_channel(waveform[0], waveform[1])
+                else:
+                    waveform = waveform.mean(axis=0)
+
+            # Ensure 1D float32
+            self.signal = np.asarray(waveform, dtype=np.float32)
 
         except Exception as e:
             self.signal = None

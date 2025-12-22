@@ -175,7 +175,7 @@ def _analyze_cmd(
 ):
     from britekit.core import util
 
-    util.set_logging()
+    util.set_logging(timestamp=True)
     if start_seconds_str:
         start_seconds = util.get_seconds_from_time_string(start_seconds_str)
     else:
