@@ -18,7 +18,7 @@ def _download_recording(
 ) -> bool:
     # download it as wav, which is faster than downloading as mp3;
     # then convert to mp3 when the 10-second clip is extracted
-    import librosa
+    from britekit.core.audio import load_audio
 
     command = f'yt-dlp -q -o "{output_dir}/{youtube_id}.%(EXT)s" -x --audio-format wav https://www.youtube.com/watch?v={youtube_id}'
     logging.info(f"Downloading {youtube_id}")
@@ -29,16 +29,15 @@ def _download_recording(
     if os.path.exists(audio_path1):
         logging.info("Extracting 10-second clip")
         audio_path2 = os.path.join(output_dir, f"{youtube_id}-{int(start_seconds)}.mp3")
-        audio, sr = librosa.load(audio_path1, sr=sampling_rate)
-        assert isinstance(sr, int)
+        audio = load_audio(audio_path1, sr=sampling_rate)
 
         import numpy as np
         import soundfile as sf
 
         assert isinstance(audio, np.ndarray)
-        start_sample = int(start_seconds * sr)
-        end_sample = int((start_seconds + 10) * sr)
-        sf.write(audio_path2, audio[start_sample:end_sample], sr, format="mp3")
+        start_sample = int(start_seconds * sampling_rate)
+        end_sample = int((start_seconds + 10) * sampling_rate)
+        sf.write(audio_path2, audio[start_sample:end_sample], sampling_rate, format="mp3")
         os.remove(audio_path1)
         return True  # succeeded
     else:

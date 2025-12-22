@@ -11,6 +11,35 @@ import warnings
 
 warnings.filterwarnings("ignore", message=".*TorchCodec.*|.*StreamingMediaDecoder.*")
 
+def load_audio(path, sr):
+    """Fast audio load for general use."""
+
+    import torchaudio as ta  # faster than librosa
+    import numpy as np
+
+    try:
+        # Load (channels, samples), float32
+        signal, sr0 = ta.load(path)
+
+        # Resample if needed
+        if sr0 != sr:
+            signal = ta.functional.resample(
+                signal, sr0, sr
+            )
+
+        # Make it mono
+        signal = signal.numpy()
+        if signal.ndim == 2:
+            signal = signal.mean(axis=0)
+
+        # Ensure 1D float32
+        signal = np.asarray(signal, dtype=np.float32)
+
+    except Exception as e:
+        logging.error(f"Caught exception in audio load of {path}: {e}")
+        return None
+
+    return signal
 
 class Audio:
     """

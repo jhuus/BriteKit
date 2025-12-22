@@ -21,9 +21,9 @@ def youtube(
     - output_dir (str): Directory where downloaded recordings will be saved.
     - sampling_rate (float): Output sampling rate in Hz. Default is 32000.
     """
-    import librosa
     import numpy as np
     import soundfile as sf
+    from britekit.core.audio import load_audio
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -38,10 +38,9 @@ def youtube(
     audio_path1 = os.path.join(output_dir, f"{id}.NA.wav")
     if os.path.exists(audio_path1):
         audio_path2 = os.path.join(output_dir, f"{id}.mp3")
-        audio, sr = librosa.load(audio_path1, sr=sampling_rate)
-        assert isinstance(sr, int)
+        audio = load_audio(audio_path1, sr=sampling_rate)
         assert isinstance(audio, np.ndarray)
-        sf.write(audio_path2, audio, sr, format="mp3")
+        sf.write(audio_path2, audio, sampling_rate, format="mp3")
         os.remove(audio_path1)
     else:
         logging.info("Download failed")
