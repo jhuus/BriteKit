@@ -159,7 +159,8 @@ class Predictor:
         # Validate audio duration
         audio_duration = self.audio.seconds()
         if audio_duration <= 0:
-            raise InferenceError(f"Invalid audio duration: {audio_duration} seconds")
+            logging.error(f"Invalid audio duration: {audio_duration} seconds")
+            return None, None, []
 
         start_times = self.get_start_times(audio_duration, start_seconds)
         specs, _ = self.audio.get_spectrograms(start_times)
