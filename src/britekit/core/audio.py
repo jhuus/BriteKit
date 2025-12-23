@@ -11,6 +11,7 @@ import warnings
 
 warnings.filterwarnings("ignore", message=".*TorchCodec.*|.*StreamingMediaDecoder.*")
 
+
 def load_audio(path, sr):
     """Fast audio load for general use."""
 
@@ -23,9 +24,7 @@ def load_audio(path, sr):
 
         # Resample if needed
         if sr0 != sr:
-            signal = ta.functional.resample(
-                signal, sr0, sr
-            )
+            signal = ta.functional.resample(signal, sr0, sr)
 
         # Make it mono
         signal = signal.numpy()
@@ -40,6 +39,7 @@ def load_audio(path, sr):
         return None
 
     return signal
+
 
 class Audio:
     """
@@ -174,7 +174,8 @@ class Audio:
 
             # Handle channels
             waveform = waveform.numpy()
-            if waveform.ndim == 2:
+            if waveform.shape[0] == 2:
+                # stereo recording
                 if self.cfg.audio.choose_channel:
                     waveform = self._choose_channel(waveform[0], waveform[1])
                 else:

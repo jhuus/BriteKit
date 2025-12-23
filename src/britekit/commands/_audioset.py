@@ -37,7 +37,9 @@ def _download_recording(
         assert isinstance(audio, np.ndarray)
         start_sample = int(start_seconds * sampling_rate)
         end_sample = int((start_seconds + 10) * sampling_rate)
-        sf.write(audio_path2, audio[start_sample:end_sample], sampling_rate, format="mp3")
+        sf.write(
+            audio_path2, audio[start_sample:end_sample], sampling_rate, format="mp3"
+        )
         os.remove(audio_path1)
         return True  # succeeded
     else:
