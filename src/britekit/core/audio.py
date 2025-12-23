@@ -183,6 +183,8 @@ class Audio:
 
             # Ensure 1D float32
             self.signal = np.asarray(waveform, dtype=np.float32)
+            if self.signal.ndim == 2:
+                self.signal = self.signal.squeeze(0) # (1, len) -> (len,)
 
         except Exception as e:
             self.signal = None
@@ -285,6 +287,7 @@ class Audio:
         """
         if self.signal is None or self.cfg.audio.sampling_rate == 0:
             return 0.0
+
         return self.signal_len() / self.cfg.audio.sampling_rate
 
     def signal_len(self):
