@@ -9,7 +9,96 @@ from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
 
 
-class Pickler:
+class OccurrencePickler:
+    """
+    Create a pickle file from an occurrence database, for fast access during inference.
+
+    Attributes:
+        db_path (str): path to database.
+        output_path (str): output_path.
+    """
+
+    def __init__(
+        self,
+        db_path: str,
+        output_path: str,
+    ):
+        from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
+
+        self.cfg = get_config()
+        self.output_path = output_path
+
+        if not os.path.exists(db_path):
+            raise InputError(f'Database "{db_path}" not found')
+
+        self.db = OccurrenceDatabase(db_path)
+
+    def _smooth(self, occurrences):
+        """Smooth by setting each weekly value to the max of adjacent values."""
+        import numpy as np
+
+        smoothed = np.zeros(len(occurrences)).astype(np.float16)
+        for i in range(len(occurrences)):
+            smoothed[i] = (
+                max(
+                    max(occurrences[i], occurrences[(i + 1) % 48]),
+                    occurrences[(i - 1) % 48],
+                )
+                .astype(np.float16)
+                .item()
+            )
+
+        return smoothed
+
+    def pickle(self, quiet=False):
+        """Create the pickle file as specified."""
+
+        import numpy as np
+
+        # add county info
+        logging.info("Fetching county info.")
+        counties = self.db.get_all_counties()
+        pickle_dict = {}
+        pickle_dict["counties"] = {}
+        for county in counties:
+            pickle_dict["counties"][county.code] = county
+
+        # add class info
+        logging.info("Fetching class info.")
+        classes = self.db.get_all_classes()
+        pickle_dict["classes"] = {}
+        for _class in classes:
+            pickle_dict["classes"][_class.name] = _class
+
+        # add occurrence info
+        pickle_dict["occurrences"] = {}  # array of weekly values per county/class
+        pickle_dict["smoothed"] = {}  # smoothed array of weekly values
+        pickle_dict["max"] = {}  # max of weekly values
+
+        for county in counties:
+            logging.info(f"Processing occurrence data for {county.code}.")
+            pickle_dict["occurrences"][county.code] = {}
+            pickle_dict["smoothed"][county.code] = {}
+            pickle_dict["max"][county.code] = {}
+
+            for _class in classes:
+                occurrences = self.db.get_occurrences(county.id, _class.name)
+                if len(occurrences) > 0:
+                    occurrences = np.array(occurrences).astype(np.float16)
+                    smoothed = self._smooth(occurrences).astype(np.float16)
+                    pickle_dict["occurrences"][county.code][_class.name] = occurrences
+                    pickle_dict["smoothed"][county.code][_class.name] = smoothed
+                    pickle_dict["max"][county.code][_class.name] = (
+                        occurrences.max().astype(np.float16).item()
+                    )
+
+        # pickle it
+        pickle_file = open(self.output_path, "wb")
+        pickle.dump(pickle_dict, pickle_file)
+        logging.info(f'Saved data in "{self.output_path}"')
+
+
+class TrainingPickler:
     """
     Create a pickle file from selected training records, for input to training.
 

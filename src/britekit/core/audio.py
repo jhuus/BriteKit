@@ -174,7 +174,7 @@ class Audio:
 
             # Handle channels
             waveform = waveform.numpy()
-            if waveform.shape[0] == 2:
+            if waveform.ndim == 2 and waveform.shape[0] == 2:
                 # stereo recording
                 if self.cfg.audio.choose_channel:
                     waveform = self._choose_channel(waveform[0], waveform[1])
@@ -184,7 +184,7 @@ class Audio:
             # Ensure 1D float32
             self.signal = np.asarray(waveform, dtype=np.float32)
             if self.signal.ndim == 2:
-                self.signal = self.signal.squeeze(0) # (1, len) -> (len,)
+                self.signal = self.signal.squeeze(0)  # (1, len) -> (len,)
 
         except Exception as e:
             self.signal = None

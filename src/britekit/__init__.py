@@ -23,7 +23,7 @@ from britekit.core.analyzer import Analyzer
 from britekit.core.audio import Audio
 from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config
-from britekit.core.pickler import Pickler
+from britekit.core.pickler import OccurrencePickler
 from britekit.core.predictor import Predictor
 from britekit.core.trainer import Trainer
 from britekit.core.tuner import Tuner
@@ -31,6 +31,7 @@ from britekit.models.model_loader import load_new_model
 from britekit.models.model_loader import load_from_checkpoint
 from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
 from britekit.occurrence_db.occurrence_data_provider import OccurrenceDataProvider
+from britekit.occurrence_db.occurrence_pickle import OccurrencePickleProvider
 from britekit.testing.per_block_tester import PerBlockTester
 from britekit.testing.per_recording_tester import PerRecordingTester
 from britekit.testing.per_segment_tester import PerSegmentTester
@@ -51,7 +52,8 @@ __all__ = [
     "Extractor",
     "OccurrenceDatabase",
     "OccurrenceDataProvider",
-    "Pickler",
+    "OccurrencePickleProvider",
+    "OccurrencePickler",
     "PerBlockTester",
     "PerRecordingTester",
     "PerSegmentTester",

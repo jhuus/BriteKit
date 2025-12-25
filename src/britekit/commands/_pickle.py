@@ -11,7 +11,70 @@ from britekit.core.config_loader import get_config
 from britekit.core import util
 
 
-def pickle(
+def pickle_occurrence(
+    cfg_path: Optional[str] = None,
+    db_path: Optional[str] = None,
+    output_path: Optional[str] = None,
+    root_dir: str = "",
+) -> None:
+    """
+    Convert an occurrence database to a pickle file for use in inference.
+
+    Args:
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - db_path (str, optional): Path to the occurrence database. Defaults to "data/occurrence.db".
+    - output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+    """
+    from britekit.core.pickler import OccurrencePickler
+
+    get_config(cfg_path)
+    if db_path is None:
+        db_path = str(Path("data") / "occurrence.db")
+
+    if output_path is None:
+        output_path = str(Path(root_dir) / "data" / "occurrence.pkl")
+
+    pickler = OccurrencePickler(db_path, output_path)
+    pickler.pickle()
+
+
+@click.command(
+    name="pickle-occurrence",
+    short_help="Convert an occurrence database to a pickle file for use in inference.",
+    help=util.cli_help_from_doc(pickle_occurrence.__doc__),
+)
+@click.option(
+    "-c",
+    "--cfg",
+    "cfg_path",
+    type=click.Path(exists=True),
+    required=False,
+    help="Path to YAML file defining config overrides.",
+)
+@click.option(
+    "-d", "--db", "db_path", required=False, help="Path to the training database."
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    required=False,
+    help='Output file path. Default is "data/training.pkl".',
+)
+def _pickle_occurrence_cmd(
+    cfg_path: Optional[str],
+    db_path: Optional[str],
+    output_path: Optional[str],
+) -> None:
+    util.set_logging()
+    pickle_occurrence(
+        cfg_path,
+        db_path,
+        output_path,
+    )
+
+
+def pickle_train(
     cfg_path: Optional[str] = None,
     classes_path: Optional[str] = None,
     db_path: Optional[str] = None,
@@ -36,7 +99,7 @@ def pickle(
     - max_per_class (int, optional): Maximum number of spectrograms to include per class.
     - spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
     """
-    from britekit.core.pickler import Pickler
+    from britekit.core.pickler import TrainingPickler
 
     cfg = get_config(cfg_path)
     if db_path is None:
@@ -50,14 +113,16 @@ def pickle(
     if output_path is None:
         output_path = str(Path(root_dir) / "data" / "training.pkl")
 
-    pickler = Pickler(db_path, output_path, classes_path, max_per_class, spec_group)
+    pickler = TrainingPickler(
+        db_path, output_path, classes_path, max_per_class, spec_group
+    )
     pickler.pickle()
 
 
 @click.command(
-    name="pickle",
-    short_help="Convert database records to a pickle file for use in training.",
-    help=util.cli_help_from_doc(pickle.__doc__),
+    name="pickle-train",
+    short_help="Convert a training database to a pickle file for use in training.",
+    help=util.cli_help_from_doc(pickle_train.__doc__),
 )
 @click.option(
     "-c",
@@ -105,7 +170,7 @@ def pickle(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def _pickle_cmd(
+def _pickle_train_cmd(
     cfg_path: Optional[str],
     classes_path: Optional[str],
     db_path: Optional[str],
@@ -115,7 +180,7 @@ def _pickle_cmd(
     spec_group: Optional[str],
 ) -> None:
     util.set_logging()
-    pickle(
+    pickle_train(
         cfg_path,
         classes_path,
         db_path,

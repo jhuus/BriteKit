@@ -20,7 +20,7 @@ from ._extract import extract_all, extract_by_csv, extract_by_image
 
 from ._inat import inat
 from ._init import init
-from ._pickle import pickle
+from ._pickle import pickle_occurrence, pickle_train
 from ._plot import plot_db, plot_dir, plot_rec
 from ._reextract import reextract
 from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_labels, rpt_test
@@ -61,7 +61,8 @@ __all__ = [
     "find_lr",
     "inat",
     "init",
-    "pickle",
+    "pickle_occurrence",
+    "pickle_train",
     "plot_db",
     "plot_dir",
     "plot_rec",

@@ -39,7 +39,7 @@ class Tuner:
         skip_training: bool = False,
         classes_path: Optional[str] = None,
     ):
-        from britekit.core.pickler import Pickler
+        from britekit.core.pickler import TrainingPickler
         from britekit.core.reextractor import Reextractor
 
         self.cfg = get_config()
@@ -66,7 +66,7 @@ class Tuner:
             )
 
             self.pickle_file = tempfile.NamedTemporaryFile(mode="wb")
-            self.pickler = Pickler(
+            self.pickler = TrainingPickler(
                 db_path=self.cfg.train.train_db,
                 output_path=self.pickle_file.name,
                 classes_path=self.classes_path,
