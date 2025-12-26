@@ -70,7 +70,7 @@ class PerSegmentTester(BaseTester):
 
         self.cfg = get_config()
 
-    def _get_recording_info(self):
+    def get_recording_info(self):
         """
         Create a dict with the duration in seconds of every recording
         """
@@ -222,7 +222,7 @@ class PerSegmentTester(BaseTester):
         self.annotated_classes = sorted(self.annotated_class_set)
         self.set_class_indexes()
 
-    def _init_y_true(self):
+    def init_y_true(self):
         """
         Create a dataframe representing the ground truth data, with recordings segmented into 3-second segments
         """
@@ -744,10 +744,10 @@ class PerSegmentTester(BaseTester):
 
         logging.info("Initializing")
         self.get_labels(self.label_dir)
-        self._get_recording_info()
+        self.get_recording_info()
         self.get_annotations()
 
-        self._init_y_true()
+        self.init_y_true()
         self.init_y_pred(
             segments_per_recording=self.segments_per_recording, use_max_score=False
         )

@@ -461,9 +461,9 @@ def plot_test(
     """
     Plot spectrograms for a class or all classes based on test annotations.
 
-    Given a test annotations CSV file, plot one spectrogram at each start offset.
-    Optionally restrict to a given class. If all classes, create an output directory
-    per class.
+    Given a test annotations CSV file, for each selected class, plot a spectrogram at
+    each segment where the class is present. Optionally restrict to a given class.
+    If all classes, create an output directory per class.
 
     Args:
     - cfg_path (str, optional): Path to YAML file defining configuration overrides.
@@ -476,8 +476,13 @@ def plot_test(
     import pandas as pd
     from britekit.core.audio import Audio
     from britekit.core.plot import plot_spec
+    from britekit.testing.per_segment_tester import PerSegmentTester
 
     cfg = get_config(cfg_path)
+    if cfg.infer.segment_len is None:
+        logging.error("Error: actual segment_len must be provided in config YAML.")
+        quit()
+
     audio = Audio()
 
     if power is not None:
@@ -486,27 +491,37 @@ def plot_test(
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    # TODO: refactor PerSegment tester to allow caller to get y_true properly.
+    # This works but is quite kludgy. The issue is that there is no inference
+    # output, which PerSegmentTester normally depends on.
+    df = pd.read_csv(annotations_path, dtype={"recording": str, "class": str})
+    classes = df["class"].unique()
     recordings_path = str(Path(annotations_path).parent)
+    tester = PerSegmentTester(annotations_path, recordings_path, "", "", 0)
+    tester.segment_len = cfg.infer.segment_len
+    tester.overlap = 0
+    tester.trained_classes = classes.tolist()
+    tester.trained_class_set = set(classes)
+    tester.get_recording_info()
+    tester.get_annotations()
+    tester.init_y_true()
+    y_true = tester.y_true_annotated_df
+
     recordings = util.get_audio_files(recordings_path)
     recording_dict = {}
     for recording in recordings:
-        stem = Path(recording).stem
-        recording_dict[stem] = recording
-
-    df = pd.read_csv(annotations_path, dtype={"recording": str, "class": str})
-    df = df.sort_values(by=["recording", "start_time"])
+        # allow lookup by stem or name
+        recording_dict[Path(recording).stem] = recording
+        recording_dict[Path(recording).name] = recording
 
     if class_name is not None:
-        df = df[df["class"] == class_name]
+        use_classes = [class_name]
+    else:
+        use_classes = tester.trained_classes
 
     created_classes = set()
     prev_recording = None
-
-    for i, row in df.iterrows():
-        recording = row["recording"]
-        _class = row["class"]
-        start_time = row["start_time"]
-
+    for _class in use_classes:
         if class_name is None:
             curr_output_dir = os.path.join(output_path, _class)
             if _class not in created_classes:
@@ -515,15 +530,22 @@ def plot_test(
         else:
             curr_output_dir = output_path
 
-        if recording != prev_recording:
-            audio.load(recording_dict[recording])
-            prev_recording = recording
+        df = y_true[y_true[_class] == 1]
+        for _, row in df.iterrows():
+            last_dash = row[""].rfind("-")
+            recording = row[""][:last_dash]
+            segment_num = int(row[""][last_dash + 1 :])
+            start_time = segment_num * cfg.infer.segment_len
 
-        specs, _ = audio.get_spectrograms([start_time])
-        if specs is not None and len(specs) == 1:
-            spec_name = f"{recording}-{start_time:.2f}.jpeg"
-            spec_path = os.path.join(curr_output_dir, spec_name)
-            plot_spec(specs[0].cpu().numpy(), spec_path)
+            if recording != prev_recording:
+                audio.load(recording_dict[recording])
+                prev_recording = recording
+
+            specs, _ = audio.get_spectrograms([start_time])
+            if specs is not None and len(specs) == 1:
+                spec_name = f"{recording}-{start_time:.2f}.jpeg"
+                spec_path = os.path.join(curr_output_dir, spec_name)
+                plot_spec(specs[0].cpu().numpy(), spec_path)
 
 
 @click.command(
