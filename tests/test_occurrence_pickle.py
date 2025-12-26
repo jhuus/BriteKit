@@ -1,11 +1,19 @@
+import os
 from pathlib import Path
+import zipfile
 
 from britekit.occurrence_db.occurrence_pickle import OccurrencePickleProvider
 
 
 def test_all():
-    path = str(Path("tests") / "db" / "occurrence.pkl")
-    provider = OccurrencePickleProvider(pickle_path=path)
+    zip_path = str(Path("tests") / "db" / "occurrence.zip")
+    zip_dir = str(Path("tests") / "db")
+
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(zip_dir)
+
+    pickle_path = str(Path("tests") / "db" / "occurrence.pkl")
+    provider = OccurrencePickleProvider(pickle_path=pickle_path)
 
     county = provider.find_county(45.3, -75.7)
     assert county.code == "CA-ON-OT"
@@ -49,3 +57,6 @@ def test_all():
     assert location_found and class_found
     print(value)
     assert value > 0.2
+
+    os.remove(pickle_path)
+
