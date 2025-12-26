@@ -448,3 +448,143 @@ def _plot_rec_cmd(
 ):
     util.set_logging()
     plot_rec(cfg_path, ndims, input_path, output_path, all, overlap, power)
+
+
+def plot_test(
+    cfg_path: Optional[str] = None,
+    ndims: bool = False,
+    annotations_path: str = "",
+    output_path: str = "",
+    class_name: Optional[str] = None,
+    power: Optional[float] = None,
+):
+    """
+    Plot spectrograms for a class or all classes based on test annotations.
+
+    Given a test annotations CSV file, plot one spectrogram at each start offset.
+    Optionally restrict to a given class. If all classes, create an output directory
+    per class.
+
+    Args:
+    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+    - annotations_path (str): Path to the annotations CSV. The recordings should be in the same directory.
+    - output_path (str): Directory where spectrogram images will be saved.
+    - class_name (str, optional): Optional class name. If omitted, do all annotated classes.
+    - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+    """
+    import pandas as pd
+    from britekit.core.audio import Audio
+    from britekit.core.plot import plot_spec
+
+    cfg = get_config(cfg_path)
+    audio = Audio()
+
+    if power is not None:
+        cfg.audio.power = power
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    recordings_path = str(Path(annotations_path).parent)
+    recordings = util.get_audio_files(recordings_path)
+    recording_dict = {}
+    for recording in recordings:
+        stem = Path(recording).stem
+        recording_dict[stem] = recording
+
+    df = pd.read_csv(annotations_path, dtype={"recording": str, "class": str})
+    df = df.sort_values(by=["recording", "start_time"])
+
+    if class_name is not None:
+        df = df[df["class"] == class_name]
+
+    created_classes = set()
+    prev_recording = None
+
+    for i, row in df.iterrows():
+        recording = row["recording"]
+        _class = row["class"]
+        start_time = row["start_time"]
+
+        if class_name is None:
+            curr_output_dir = os.path.join(output_path, _class)
+            if _class not in created_classes:
+                created_classes.add(_class)
+                os.mkdir(curr_output_dir)
+        else:
+            curr_output_dir = output_path
+
+        if recording != prev_recording:
+            audio.load(recording_dict[recording])
+            prev_recording = recording
+
+        specs, _ = audio.get_spectrograms([start_time])
+        if specs is not None and len(specs) == 1:
+            spec_name = f"{recording}-{start_time:.2f}.jpeg"
+            spec_path = os.path.join(curr_output_dir, spec_name)
+            plot_spec(specs[0].cpu().numpy(), spec_path)
+
+
+@click.command(
+    name="plot-test",
+    short_help="Plot spectrograms for a class or all classes based on test annotations.",
+    help=util.cli_help_from_doc(plot_test.__doc__),
+)
+@click.option(
+    "-c",
+    "--cfg",
+    "cfg_path",
+    type=click.Path(exists=True),
+    required=False,
+    help="Path to YAML file defining config overrides.",
+)
+@click.option(
+    "--ndims",
+    "ndims",
+    is_flag=True,
+    help="If specified, do not show seconds on x-axis and frequencies on y-axis.",
+)
+@click.option(
+    "-a",
+    "--annotations",
+    "annotations_path",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    required=True,
+    help="Path to CSV file containing annotations or ground truth).",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=click.Path(file_okay=False, dir_okay=True),
+    required=True,
+    help="Path to output directory.",
+)
+@click.option(
+    "--name", "class_name", required=False, help="Class name. Default is all classes."
+)
+@click.option(
+    "--power",
+    "power",
+    type=float,
+    required=False,
+    help="Raise spectrograms to this power. Lower values show more detail.",
+)
+def _plot_test_cmd(
+    cfg_path: str,
+    ndims: bool,
+    annotations_path: str,
+    output_path: str,
+    class_name: Optional[str],
+    power: Optional[float],
+):
+    util.set_logging()
+    plot_test(
+        cfg_path,
+        ndims,
+        annotations_path,
+        output_path,
+        class_name,
+        power,
+    )
