@@ -114,8 +114,8 @@ class Audio:
             power=self.cfg.audio.power,
         ).to(self.device)
 
-        self.log2_filterbank = self._make_log2_filterbank()
-        self.decibel_transform = ta.transforms.AmplitudeToDB(stype="power", top_db=80)
+        if self.cfg.audio.freq_scale == "log":
+            self.log2_filterbank = self._make_log2_filterbank()
 
         # previous transforms are needed in choose_channel, but mel may not be needed
         if self.cfg.audio.freq_scale == "mel":
