@@ -155,7 +155,7 @@ MODEL_REGISTRY = {
         num_blocks=[1, 3, 3, 2, 1],
         stage_strides=[2, 2, 2, 2, 1],
         stage_depthwise=[False, False, False, True, True],
-        final_ch=1500,
+        final_ch=1536,
         act_layer="relu",
     ),
     # ~3.0M parameters + head size
