@@ -9,7 +9,7 @@ def test_all():
     zip_path = str(Path("tests") / "db" / "occurrence.zip")
     zip_dir = str(Path("tests") / "db")
 
-    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(zip_dir)
 
     pickle_path = str(Path("tests") / "db" / "occurrence.pkl")
@@ -59,4 +59,3 @@ def test_all():
     assert value > 0.2
 
     os.remove(pickle_path)
-
