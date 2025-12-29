@@ -116,8 +116,7 @@ class Audio:
             power=self.cfg.audio.power,
         ).to(self.device)
 
-        if self.cfg.audio.freq_scale == "log":
-            self.log2_filterbank = self._make_log2_filterbank()
+        self.log2_filterbank = self._make_log2_filterbank()
 
         # previous transforms are needed in choose_channel, but mel may not be needed
         if self.cfg.audio.freq_scale == "mel":
@@ -309,7 +308,7 @@ class Audio:
         import numpy as np
         import torch
 
-        f_min = self.cfg.audio.min_freq
+        f_min = max(self.cfg.audio.min_freq, 1.0)  # prevent log2(0) exception
         f_max = self.cfg.audio.max_freq
         n_bins = self.cfg.audio.spec_height
         sr = self.cfg.audio.sampling_rate
