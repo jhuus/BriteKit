@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Quick script to migrate a training database
 
 from britekit.core.config_loader import get_config

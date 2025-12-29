@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Defer some imports to improve initialization performance.
 import ctypes
 from functools import partial

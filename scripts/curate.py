@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # To create or update a list of curated segments:
 #
 # 1. Download the recordings using audioset.py

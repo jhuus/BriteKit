@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+
 class DatabaseError(Exception):
     """Raised for database-specific errors."""
 

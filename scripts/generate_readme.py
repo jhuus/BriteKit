@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """
 Generate separate command and API reference files:
   - command-reference.md: Command Reference (from click --help output for all commands/subcommands)

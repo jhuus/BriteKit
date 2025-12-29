@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import contextlib
 from datetime import datetime
 from typing import List, Optional, Any

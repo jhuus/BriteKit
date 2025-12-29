@@ -1,4 +1,5 @@
-# tests/conftest.py
+#!/usr/bin/env python3
+
 import warnings
 
 

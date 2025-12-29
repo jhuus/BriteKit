@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 BKNet model for BriteKit - wraps BKNetBaseModel with classifier heads.
 See comments at top of bknet_base.py.

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Defer some imports to improve initialization performance.
 from britekit.core import util
 from britekit.training_db.training_db import TrainingDatabase

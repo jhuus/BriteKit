@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # After using audioset.py to download recordings, then plotting them, deleting images and
 # using curate.py to create a CSV of curated segments, you can use this script to copy the
 # curated clips from where you downloaded them.

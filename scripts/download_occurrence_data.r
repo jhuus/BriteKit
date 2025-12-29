@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript --vanilla
+
 # Use ebirdst to download occurrence data for a list of species
 
 library(data.table)

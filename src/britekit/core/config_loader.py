@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Defer some imports to improve initialization performance.
 from typing import cast, Optional
 from britekit.core.base_config import BaseConfig, FunctionConfig

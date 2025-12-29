@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript --vanilla
+
 # Generate a CSV that can be imported into an occurrence database.
 # First run download_occurrence_data, and reference its output path below.
 

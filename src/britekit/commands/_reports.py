@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # File name starts with _ to keep it out of typeahead for API users.
 # Defer some imports to improve --help performance.
 import glob

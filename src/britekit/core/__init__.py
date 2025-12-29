@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # britekit/core/__init__.py
 
 # This setup allows package users to do "from britekit.core import plot" to

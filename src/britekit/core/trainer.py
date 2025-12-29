@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Defer some imports to improve initialization performance.
 import logging
 from pathlib import Path

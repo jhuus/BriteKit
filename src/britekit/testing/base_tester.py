@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Defer some imports to improve initialization performance.
 from functools import cmp_to_key
 import logging

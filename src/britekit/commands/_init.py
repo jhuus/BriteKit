@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # File name starts with _ to keep it out of typeahead for API users
 import logging
 from pathlib import Path

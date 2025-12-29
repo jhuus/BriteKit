@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 BKNet (BriteKit Network) - A configurable CNN backbone for bioacoustic classification.
 

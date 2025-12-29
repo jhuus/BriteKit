@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from ._analyze import analyze
 from ._analyze_db import analyze_db
 from ._audioset import audioset
