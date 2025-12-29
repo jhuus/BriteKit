@@ -60,6 +60,8 @@ class Predictor:
 
         self.last_frame_map = None
         self.labels = None
+        self.normalized_specs = None
+        self.unnormalized_specs = None
 
         self.device = device or util.get_device()
         if self.device == "cpu" and importlib.util.find_spec("openvino") is not None:
@@ -175,7 +177,9 @@ class Predictor:
             return None, None, []
 
         start_times = self.get_start_times(audio_duration, start_seconds)
-        specs, _ = self.audio.get_spectrograms(start_times)
+        specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
+        self.normalized_specs = specs
+
         if specs is None or len(specs) == 0:
             return None, None, []
 
@@ -410,6 +414,9 @@ class Predictor:
         df["end_time"] = end_times
         df["score"] = score_list
         return df
+
+    def get_specs(self):
+        return self.normalized_specs, self.unnormalized_specs
 
     def log_scores(self, scores):
         """
