@@ -9,6 +9,7 @@ from typing import cast, Any, Dict, List, Optional, Sequence
 
 import numpy as np
 
+from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
 from britekit.core import util
@@ -29,7 +30,12 @@ class Predictor:
     Given a recording and a model or ensemble of models, provide methods to return scores in several formats.
     """
 
-    def __init__(self, model_path: str, device: Optional[str] = None):
+    def __init__(
+        self,
+        model_path: str,
+        device: Optional[str] = None,
+        cfg: Optional[BaseConfig] = None,
+    ):
         """
         Initialize the Predictor with a model or ensemble of models.
 
@@ -41,8 +47,12 @@ class Predictor:
         """
         from britekit.core.audio import Audio
 
-        self.cfg = get_config()
-        self.audio = Audio()
+        if cfg is None:
+            self.cfg = get_config()
+        else:
+            self.cfg = cfg
+
+        self.audio = Audio(cfg=self.cfg)
         self.class_names: Optional[List[str]] = None
         self.class_codes: Optional[List[str]] = None
         self.class_alt_names: Optional[List[str]] = None
