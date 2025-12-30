@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Optional
 
 
 @dataclass
@@ -195,10 +195,3 @@ class BaseConfig:
     train: TrainingConfig = field(default_factory=TrainingConfig)
     infer: InferenceConfig = field(default_factory=InferenceConfig)
     misc: MiscConfig = field(default_factory=MiscConfig)
-
-
-@dataclass
-# TODO: allow API users to replace some functions with their own here.
-# Callables cannot be included in BaseConfig, since they are not serializable
-class FunctionConfig:
-    not_defined_yet: Optional[Callable] = None
