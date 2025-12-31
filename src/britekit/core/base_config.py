@@ -143,9 +143,6 @@ class InferenceConfig:
     # that match the sounds detected, otherwise output tags of length segment_len seconds.
     # For non-SED models, segment_len is defined by the model.
     segment_len: Optional[float] = None
-    sed_quantile: float = (
-        0.92  # convert SED frame scores to clip scores with this quantile
-    )
     # Number of seconds overlap for adjacent spectrograms
     overlap: float = 0.0
     min_score: float = 0.80  # Only generate labels when score is at least this

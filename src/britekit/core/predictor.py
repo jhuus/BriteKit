@@ -273,7 +273,6 @@ class Predictor:
 
         fps = self.cfg.train.sed_fps
         min_score = self.cfg.infer.min_score
-        q = self.cfg.infer.sed_quantile
         segment_len = self.cfg.infer.segment_len
 
         labels: dict[str, list[Label]] = {}
@@ -302,7 +301,7 @@ class Predictor:
 
                 class_labels = []
                 for s, e in zip(starts, ends):
-                    score = np.quantile(col[s:e], q)
+                    score = np.max(col[s:e])
                     class_labels.append(
                         Label(
                             round(float(score), 3),
@@ -340,8 +339,7 @@ class Predictor:
                 num_segments, frames_per_segment, num_classes
             )
 
-            # Quantiles across frames
-            seg_scores = np.quantile(seg_view, q, axis=1)  # (segments, classes)
+            seg_scores = np.max(seg_view, axis=1)  # (segments, classes)
 
             for i, name in enumerate(names):
                 scores_i = seg_scores[:, i]
