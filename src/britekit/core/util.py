@@ -523,6 +523,7 @@ def select_label_regex(line: str) -> Tuple[Optional[re.Pattern], bool]:
 
     label_regex = None
     is_birdnet = False
+    is_other = False
 
     try:
         pattern = re.compile("(\\S+)\\t(\\S+)\\t([\\S ]+);(\\S+)")
@@ -535,11 +536,18 @@ def select_label_regex(line: str) -> Tuple[Optional[re.Pattern], bool]:
                 # BirdNET labels with --rtype audacity
                 label_regex = pattern
                 is_birdnet = True
+            else:
+                # like BriteKit but no semi-colon and no score
+                pattern = re.compile("(\\S+)\\t(\\S+)\\t([\\S ]+)")
+                if pattern.match(line):
+                    label_regex = pattern
+                    is_other = True
+
     except re.error as e:
         logging.error(f"Invalid regex pattern: {e}")
-        return None, False
+        return None, False, False
 
-    return label_regex, is_birdnet
+    return label_regex, is_birdnet, is_other
 
 
 def labels_to_list(input_path: str) -> List[SimpleNamespace]:
@@ -567,9 +575,15 @@ def labels_to_list(input_path: str) -> List[SimpleNamespace]:
                 continue  # ignore this one
 
             lines = get_file_lines(label_path)
+
+            # get the labels
             for line in lines:
+                # ignore continuation lines (e.g. as used in WABAD dataset)
+                if line[0] == '\\':
+                    continue
+
                 if label_regex is None:
-                    label_regex, is_birdnet = select_label_regex(line)
+                    label_regex, is_birdnet, is_other = select_label_regex(line)
                     if label_regex is None:
                         logging.error(f"Unknown label format in {label_path}: {line}")
                         continue
@@ -584,6 +598,15 @@ def labels_to_list(input_path: str) -> List[SimpleNamespace]:
                         end_time = float(result[2])
                         name = result[3]
                         score = float(result[4])
+                    elif is_other:
+                        result = re.split(label_regex, line)
+                        if len(result) != 5:
+                            continue
+
+                        start_time = float(result[1])
+                        end_time = float(result[2])
+                        name = result[3]
+                        score = 0
                     else:
                         # this is faster than regex for parsing BriteKit-format labels
                         tokens = line.split("\t")
