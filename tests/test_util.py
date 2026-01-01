@@ -631,7 +631,7 @@ class TestSelectLabelRegex:
     def test_select_label_regex_empty_line(self):
         """Test with empty line."""
         result = select_label_regex("")
-        assert result == (None, False)
+        assert result == (None, False, False)
 
     def test_select_label_regex_britekit_format(self):
         """Test BriteKit format line."""
@@ -639,6 +639,7 @@ class TestSelectLabelRegex:
         result = select_label_regex(line)
         assert result[0] is not None
         assert result[1] is False
+        assert result[2] is False
 
     def test_select_label_regex_birdnet_format(self):
         """Test BirdNET format line."""
@@ -646,12 +647,13 @@ class TestSelectLabelRegex:
         result = select_label_regex(line)
         assert result[0] is not None
         assert result[1] is True
+        assert result[2] is False
 
     def test_select_label_regex_unknown_format(self):
         """Test unknown format line."""
         line = "unknown format line"
         result = select_label_regex(line)
-        assert result == (None, False)
+        assert result == (None, False, False)
 
     def test_select_label_regex_invalid_regex(self):
         """Test with invalid regex pattern."""
@@ -660,7 +662,7 @@ class TestSelectLabelRegex:
             "britekit.core.util.re.compile", side_effect=re.error("Invalid pattern")
         ):
             result = select_label_regex("0.0\t1.0\tCommonYellowthroat;0.95")
-            assert result == (None, False)
+            assert result == (None, False, False)
 
 
 class TestLabelsToList:
