@@ -514,12 +514,12 @@ def expand_spectrogram(spec: bytes):
 # =============================================================================
 
 
-def select_label_regex(line: str) -> Tuple[Optional[re.Pattern], bool]:
+def select_label_regex(line: str) -> Tuple[Optional[re.Pattern], bool, bool]:
     """
     Given a label line, choose a suitable regular expression to parse it.
     """
     if not line:
-        return None, False
+        return None, False, False
 
     label_regex = None
     is_birdnet = False
@@ -579,7 +579,7 @@ def labels_to_list(input_path: str) -> List[SimpleNamespace]:
             # get the labels
             for line in lines:
                 # ignore continuation lines (e.g. as used in WABAD dataset)
-                if line[0] == '\\':
+                if line[0] == "\\":
                     continue
 
                 if label_regex is None:

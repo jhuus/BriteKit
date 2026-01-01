@@ -278,7 +278,7 @@ class Predictor:
         labels: dict[str, list[Label]] = {}
 
         # ------------------------------------------------------------------
-        # Variable-duration labels (run-based)
+        # Variable-duration labels
         # ------------------------------------------------------------------
         if segment_len is None:
             for i, name in enumerate(names):
@@ -304,25 +304,25 @@ class Predictor:
                     score = np.max(col[s:e])
                     class_labels.append(
                         Label(
-                            round(float(score), 3),
-                            round(s / fps, 3),
-                            round(e / fps, 3),
+                            float(score),
+                            s / fps,
+                            e / fps,
                         )
                     )
 
                 labels[name] = class_labels
 
-        # ------------------------------------------------------------------
-        # Fixed-duration labels (vectorized segmentation)
-        # ------------------------------------------------------------------
         else:
+            # ------------------------------------------------------------------
+            # Fixed-duration labels
+            # ------------------------------------------------------------------
             frames_per_segment = int(round(fps * segment_len))
             if frames_per_segment <= 0:
                 raise InferenceError("frames_per_segment must be > 0")
 
             num_segments = (num_frames + frames_per_segment - 1) // frames_per_segment
 
-            # Pad frames so reshape is safe
+            # Pad frames once so reshape is safe
             pad = num_segments * frames_per_segment - num_frames
             if pad > 0:
                 frame_map_padded = np.pad(
@@ -339,22 +339,28 @@ class Predictor:
                 num_segments, frames_per_segment, num_classes
             )
 
-            seg_scores = np.max(seg_view, axis=1)  # (segments, classes)
+            # Fast reduction over frames to (segments, classes)
+            seg_scores = np.max(seg_view, axis=1)
+
+            # Precompute segment times once
+            segment_starts = np.arange(num_segments, dtype=np.float32) * segment_len
+            segment_ends = segment_starts + segment_len
+
+            min_score = self.cfg.infer.min_score
 
             for i, name in enumerate(names):
                 scores_i = seg_scores[:, i]
-                keep = scores_i >= min_score
+                js = np.flatnonzero(scores_i >= min_score)
 
-                if not np.any(keep):
+                if js.size == 0:
                     labels[name] = []
                     continue
 
-                js = np.nonzero(keep)[0]
                 labels[name] = [
                     Label(
-                        round(float(scores_i[j]), 3),
-                        round(j * segment_len, 3),
-                        round((j + 1) * segment_len, 3),
+                        float(scores_i[j]),
+                        float(segment_starts[j]),
+                        float(segment_ends[j]),
                     )
                     for j in js
                 ]
