@@ -262,9 +262,6 @@ class Audio:
                     db_power=db_power,
                 )
                 if spec_duration == self.cfg.audio.spec_duration:
-                    spec = spec[
-                        : self.cfg.audio.spec_height, : self.cfg.audio.spec_width
-                    ]
                     if spec.shape[1] < self.cfg.audio.spec_width:
                         pad_width = self.cfg.audio.spec_width - spec.shape[1]
                         spec = F.pad(spec, (0, pad_width), mode="constant", value=0)
@@ -422,7 +419,6 @@ class Audio:
             if specs[i] is None:
                 continue
 
-            specs[i] -= specs[i].min()
             max = specs[i].max()
             if max > 0:
                 specs[i] = specs[i] / max
