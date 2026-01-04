@@ -391,12 +391,12 @@ class Audio:
             )
             spec = spec[:, mask, :].unsqueeze(1)  # [1, 1, F_sel, T]
 
-        # downsample frequency to spec_height (energy-preserving)
-        spec = F.interpolate(
-            spec,
-            size=(self.cfg.audio.spec_height, spec.shape[-1]),
-            mode="area",
-        )
+            # downsample frequency to spec_height (energy-preserving)
+            spec = F.interpolate(
+                spec,
+                size=(self.cfg.audio.spec_height, spec.shape[-1]),
+                mode="area",
+            )
 
         # pad or crop to spec_width
         T = spec.shape[-1]
