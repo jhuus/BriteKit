@@ -106,7 +106,7 @@ class Predictor:
         Args:
         - specs: Spectrograms.
         - start_times: Start time per spectrogram, in seconds from start of recording.
-          This is optional and usedwith SED models only.
+          This is optional and used with SED models only.
 
         Returns:
             tuple: A tuple containing:

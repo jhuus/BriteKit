@@ -58,6 +58,7 @@ class Audio:
         else:
             self.device = device
 
+        self.cached = None
         self.path = None
         self.signal: Any = None
         self.set_config(cfg)
@@ -178,6 +179,7 @@ class Audio:
             if waveform.ndim == 2 and waveform.shape[0] == 2:
                 # stereo recording
                 if self.cfg.audio.choose_channel:
+                    self.cached = None  # important to set this before choose-channel
                     waveform = self._choose_channel(waveform[0], waveform[1])
                 else:
                     waveform = waveform.mean(axis=0)
@@ -192,6 +194,7 @@ class Audio:
             self.path = None
             logging.error(f"Caught exception in audio load of {path}: {e}")
 
+        self.cached = None  # important to set this after choose-channel too
         return self.signal, self.cfg.audio.sampling_rate
 
     def get_spectrograms(
@@ -246,25 +249,29 @@ class Audio:
             # since self.cfg.audio.spec_duration can be modified after the parameter list is evaluated
             spec_duration = self.cfg.audio.spec_duration
 
-        specs = []
-        sr = self.cfg.audio.sampling_rate
-        min_samples = min(1, self.cfg.audio.spec_duration) * sr
-        for i, offset in enumerate(start_times):
-            start_sample = int(offset * sr)
-            end_sample = int((offset + spec_duration) * sr)
+        # Get one spectrogram for the whole recording, then split it up
+        if self.cached is None:
+            self.cached = self._get_raw_spectrogram(
+                self.signal,
+                freq_scale=freq_scale,
+                decibels=decibels,
+                top_db=top_db,
+                db_power=db_power,
+            )
 
-            if start_sample <= len(self.signal) - min_samples:
-                spec = self._get_raw_spectrogram(
-                    self.signal[start_sample:end_sample],
-                    freq_scale=freq_scale,
-                    decibels=decibels,
-                    top_db=top_db,
-                    db_power=db_power,
-                )
-                if spec_duration == self.cfg.audio.spec_duration:
-                    if spec.shape[1] < self.cfg.audio.spec_width:
-                        pad_width = self.cfg.audio.spec_width - spec.shape[1]
-                        spec = F.pad(spec, (0, pad_width), mode="constant", value=0)
+        assert self.cached is not None
+        samples_per_sec = int(self.cfg.audio.spec_width / self.cfg.audio.spec_duration)
+        specs = []
+        for i, offset in enumerate(start_times):
+            start_sample = int(offset * samples_per_sec)
+            end_sample = int((offset + spec_duration) * samples_per_sec)
+
+            if start_sample < self.cached.shape[1]:
+                spec = self.cached[:, start_sample:end_sample]
+                if spec.shape[1] < self.cfg.audio.spec_width:
+                    pad_width = self.cfg.audio.spec_width - spec.shape[1]
+                    spec = F.pad(spec, (0, pad_width), mode="constant", value=0)
+
                 specs.append(spec)
 
         # Handle empty specs list to prevent torch.stack error
@@ -395,22 +402,12 @@ class Audio:
                 mode="area",
             )
 
-        # pad or crop to spec_width
-        T = spec.shape[-1]
-        if T < self.cfg.audio.spec_width:
-            pad_width = self.cfg.audio.spec_width - T
-            spec = F.pad(spec, (0, pad_width))  # pad on the right (time axis)
-        else:
-            spec = spec[..., : self.cfg.audio.spec_width]
-
         spec = spec.squeeze(1)
 
         if decibels:
             spec = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(spec)
             spec **= db_power
 
-        # returned spec might be wider than cfg.audio.spec_width,
-        # which is desirable when plotting whole recordings
         return spec[0]
 
     def _normalize(self, specs):
