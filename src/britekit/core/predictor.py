@@ -99,7 +99,7 @@ class Predictor:
 
         return average_embeddings
 
-    def get_block_scores(self, specs, start_times=None):
+    def get_block_scores(self, specs, start_times=None, audio_duration=None):
         """
         Get scores in array format from the loaded models for the given block of spectrograms.
 
@@ -126,10 +126,13 @@ class Predictor:
 
                 if frame_scores is not None and start_times is not None:
                     # SED model, so combine all frame scores into one array
+                    if audio_duration is None:
+                        audio_duration = self.audio.seconds()
+
                     frame_map = self.to_global_frames(
                         frame_scores,
                         start_times,
-                        self.audio.seconds(),
+                        audio_duration,
                     )
                     frame_maps.append(frame_map.cpu().detach().numpy())
 
@@ -176,7 +179,7 @@ class Predictor:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None, None, []
 
-        start_times = self.get_start_times(audio_duration, start_seconds)
+        start_times = self._get_start_times(audio_duration, start_seconds)
         specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
         self.normalized_specs = specs
 
@@ -562,14 +565,12 @@ class Predictor:
     # Private Helper Methods
     # =============================================================================
 
-    def get_start_times(self, audio_duration, start_seconds):
+    def _get_start_times(self, audio_duration, start_seconds):
         """
         Return start offset per spectrogram.
 
-        spec_duration (float): spectrogram duration in seconds
-        overlap (float): spectrogram overlap in seconds
-        audio_duration (float): total audio duration in seconds
-        start_seconds (float): where to start processing the audio (offset in seconds)
+        - audio_duration (float): total audio duration in seconds
+        - start_seconds (float): where to start processing the audio (offset in seconds)
         """
 
         increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
