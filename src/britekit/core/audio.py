@@ -163,6 +163,10 @@ class Audio:
             logging.error(f"Invalid path provided: {path}")
             return None, self.cfg.audio.sampling_rate
 
+        if path == self.path:
+            # already loaded this recording
+            return self.signal, self.cfg.audio.sampling_rate
+
         try:
             # Load (channels, samples), float32
             self.path = path
@@ -267,7 +271,7 @@ class Audio:
             end_sample = int((offset + spec_duration) * samples_per_sec)
             end_sample = min(end_sample, self.cached.shape[1])
             if end_sample - start_sample < samples_per_sec:
-                break # require at least one second of audio in a spectrogram
+                break  # require at least one second of audio in a spectrogram
 
             if start_sample < self.cached.shape[1]:
                 spec = self.cached[:, start_sample:end_sample]
