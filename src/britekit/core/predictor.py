@@ -115,14 +115,18 @@ class Predictor:
                 - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models.
                   Shape is (num_frames, num_classes). None if not using SED models.
         """
+        import torch
+
         frame_maps = []
         if self.ov:
             scores = self._get_openvino_scores(specs.cpu().numpy())
         else:
             scores = []
             for model in self.models:
-                segment_scores, frame_scores = model.predict(specs, self.device)
-                scores.append(segment_scores.cpu().detach().numpy())
+                with torch.inference_mode():
+                    segment_scores, frame_scores = model.predict(specs, self.device)
+
+                scores.append(segment_scores.cpu().numpy())
 
                 if frame_scores is not None and start_times is not None:
                     # SED model, so combine all frame scores into one array
@@ -130,11 +134,11 @@ class Predictor:
                         audio_duration = self.audio.seconds()
 
                     frame_map = self.to_global_frames(
-                        frame_scores,
+                        frame_scores.cpu(),
                         start_times,
                         audio_duration,
                     )
-                    frame_maps.append(frame_map.cpu().detach().numpy())
+                    frame_maps.append(frame_map.cpu().numpy())
 
         # return the average score across models in the ensemble,
         # and the corresponding start_times (spectrogram start times) in the recording
@@ -175,6 +179,7 @@ class Predictor:
 
         # Validate audio duration
         audio_duration = self.audio.seconds()
+        print(f"{audio_duration=:.2f}")
         if audio_duration <= 0:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None, None, []
@@ -512,7 +517,7 @@ class Predictor:
         """
         import torch
 
-        with torch.no_grad():
+        with torch.inference_mode():
             assert (
                 frame_scores.dim() == 3
             ), "frame_scores must be (num_specs, num_classes, T_spec)"
