@@ -188,7 +188,7 @@ class Predictor:
             return None, None, []
 
         specs = specs**self.cfg.infer.audio_power
-        specs = np.expand_dims(specs, axis=1) # (N,H,W) -> (N,1,H,W)
+        specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
         avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
 
         return avg_score, avg_frame_map, start_times
