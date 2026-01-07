@@ -390,8 +390,8 @@ class Audio:
         db_power: Optional[float] = None,
     ):
         import torch
-        import torch.nn.functional as F
         import torchaudio as ta
+        import numpy as np
 
         if freq_scale is None:
             freq_scale = self.cfg.audio.freq_scale
@@ -407,6 +407,43 @@ class Audio:
         if db_power is None:
             db_power = self.cfg.audio.db_power
 
+        # Process in chunks to avoid CUDA memory errors on long recordings.
+        # 5 minutes at 32kHz = 9.6M samples.
+        max_chunk_samples = 5 * 60 * self.cfg.audio.sampling_rate
+
+        if signal.shape[0] <= max_chunk_samples:
+            # Short signal: process all at once
+            spec = self._compute_spectrogram_chunk(signal, freq_scale)
+        else:
+            # Long signal: process in chunks and concatenate
+            chunks = []
+            for start in range(0, signal.shape[0], max_chunk_samples):
+                end = min(start + max_chunk_samples, signal.shape[0])
+                chunk_signal = signal[start:end]
+                if chunk_signal.shape[0] < max_chunk_samples:
+                    chunk_signal = np.pad(chunk_signal, (0, max_chunk_samples - chunk_signal.shape[0]))
+
+                chunk_spec = self._compute_spectrogram_chunk(chunk_signal, freq_scale)
+                chunks.append(chunk_spec)
+                del chunk_spec
+                torch.cuda.empty_cache()
+
+            spec = np.concatenate(chunks, axis=1)
+
+        if decibels:
+            # Apply dB conversion on CPU (already numpy)
+            spec = torch.from_numpy(spec).unsqueeze(0)  # [1, F, T]
+            spec = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(spec)
+            spec = spec**db_power
+            spec = spec[0].numpy()
+
+        return spec
+
+    def _compute_spectrogram_chunk(self, signal, freq_scale):
+        """Compute spectrogram for a single chunk of audio, returning numpy array."""
+        import torch
+        import torch.nn.functional as F
+
         signal = signal.reshape((1, signal.shape[0]))
         tensor = torch.from_numpy(signal).to(self.device)
 
@@ -415,10 +452,10 @@ class Audio:
             spec = torch.matmul(
                 self.log2_filterbank, spec.squeeze(0)
             )  # [n_mels, n_frames]
-            spec = spec.unsqueeze(0).unsqueeze(1)  # [1, 1, n_mels, n_frames]
+            spec = spec.unsqueeze(0)  # [1, n_mels, n_frames]
 
         elif freq_scale == "mel":
-            spec = self.mel_transform(tensor).unsqueeze(1)  # [1, 1, n_mels, T]
+            spec = self.mel_transform(tensor)  # [1, n_mels, T]
 
         elif freq_scale == "linear":
             spec = self.linear_transform(tensor)
@@ -436,15 +473,11 @@ class Audio:
                 size=(self.cfg.audio.spec_height, spec.shape[-1]),
                 mode="area",
             )
+            spec = spec.squeeze(1)  # [1, F, T]
 
-        spec = spec.squeeze(1)
-
-        if decibels:
-            spec = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(spec)
-            spec **= db_power
-
-        # Switching to numpy lowers VRAM usage
-        return spec[0].cpu().numpy()
+        result = spec[0].cpu().numpy()
+        del spec, tensor
+        return result
 
     def _normalize(self, specs):
         """Normalize values between 0 and 1."""
