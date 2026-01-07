@@ -199,7 +199,8 @@ class Audio:
             logging.error(f"Caught exception in audio load of {path}: {e}")
 
         self.cached = None  # important to set this after choose-channel too
-        return self.signal, self.cfg.audio.sampling_rate
+        self.sampling_rate = self.cfg.audio.sampling_rate  # in case resampling needed
+        return self.signal, self.sampling_rate
 
     def get_spectrograms(
         self,
@@ -380,6 +381,14 @@ class Audio:
 
         signal = signal.reshape((1, signal.shape[0]))
         tensor = torch.from_numpy(signal).to(self.device)
+
+        if self.sampling_rate != self.cfg.audio.sampling_rate:
+            # This happens in complex cases when getting different spectrograms from the same recording.
+            signal = ta.functional.resample(
+                signal, self.sampling_rate, self.cfg.audio.sampling_rate
+            )
+            self.signal = signal.cpu().numpy()
+            self.sampling_rate = self.cfg.audio.sampling_rate
 
         if freq_scale == "log":
             spec = self.linear_transform(tensor)  # [1, n_freqs, n_frames]
