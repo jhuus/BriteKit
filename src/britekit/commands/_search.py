@@ -78,7 +78,7 @@ def search(
         )
         quit()
 
-    target_spec = specs[0].cpu().numpy()
+    target_spec = specs[0]
     audio_file_name = os.path.basename(input_path)
     _, ext = os.path.splitext(audio_file_name)
     audio_file_name = audio_file_name[: -(len(ext))]

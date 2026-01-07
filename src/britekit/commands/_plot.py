@@ -38,7 +38,6 @@ def _plot_recording(
             logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
             quit()
 
-        specs = specs.cpu().numpy()
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
         plot_spec(
             specs[0], image_path, show_dims=not ndims, spec_duration=recording_seconds
@@ -55,7 +54,6 @@ def _plot_recording(
             logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
             quit()
 
-        specs = specs.cpu().numpy()
         for i, spec in enumerate(specs):
             image_path = os.path.join(
                 output_path, f"{Path(input_path).stem}-{offsets[i]:.1f}.jpeg"
@@ -547,7 +545,7 @@ def plot_test(
             if specs is not None and len(specs) == 1:
                 spec_name = f"{recording}-{start_time:.2f}.jpeg"
                 spec_path = os.path.join(curr_output_dir, spec_name)
-                plot_spec(specs[0].cpu().numpy(), spec_path)
+                plot_spec(specs[0], spec_path)
 
 
 @click.command(
