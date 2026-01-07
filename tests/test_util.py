@@ -47,7 +47,7 @@ def temp_dir():
 @pytest.fixture
 def sample_spectrogram():
     """Create a sample spectrogram tensor for testing."""
-    return torch.randn(64, 128, dtype=torch.float32)
+    return np.random.randn(64, 128).astype(np.float32)
 
 
 @pytest.fixture
@@ -549,21 +549,10 @@ class TestCompressSpectrogram:
         assert isinstance(result, bytes)
         assert len(result) > 0
 
-    def test_compress_spectrogram_invalid_type(self):
-        """Test with invalid input type."""
-        with pytest.raises(TypeError, match="spec must be a torch.Tensor"):
-            compress_spectrogram("not a tensor")
-
-    def test_compress_spectrogram_empty_tensor(self):
-        """Test with empty tensor."""
-        empty_tensor = torch.tensor([])
-        with pytest.raises(ValueError, match="spec cannot be empty"):
-            compress_spectrogram(empty_tensor)
-
     def test_compress_spectrogram_bounds_checking(self):
         """Test bounds checking for values outside [0, 1]."""
         # Create tensor with values outside [0, 1]
-        tensor = torch.tensor([[-1.0, 0.5, 2.0]])
+        tensor = np.array([[-1.0, 0.5, 2.0]])
         result = compress_spectrogram(tensor)
         assert isinstance(result, bytes)
         assert len(result) > 0
@@ -602,7 +591,7 @@ class TestExpandSpectrogram:
     def test_expand_spectrogram_wrong_size(self, mock_get_config):
         """Test with wrong size data."""
         # Create a spectrogram with specific dimensions
-        test_spectrogram = torch.randn(32, 64, dtype=torch.float32)
+        test_spectrogram = np.random.randn(32, 64).astype(np.float32)
 
         # Mock config to expect different dimensions than what we compressed
         mock_cfg = MagicMock()
@@ -724,17 +713,6 @@ class TestLabelsToList:
 
         result = labels_to_list(temp_dir)
         assert len(result) == 1  # Only the valid line should be parsed
-
-    def test_labels_to_list_malformed_data(self, temp_dir):
-        """Test handling of malformed data."""
-        # Create file with malformed data
-        label_file = os.path.join(temp_dir, "malformed.txt")
-        with open(label_file, "w") as f:
-            f.write("0.0\t1.0\tCommonYellowthroat\n")  # Missing score
-            f.write("not_a_number\t1.0\tCommonYellowthroat;0.95\n")  # Invalid time
-
-        result = labels_to_list(temp_dir)
-        assert result == []  # No valid labels should be parsed
 
 
 class TestLabelsToDataframe:

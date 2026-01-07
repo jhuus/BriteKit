@@ -2,33 +2,30 @@
 
 from typing import Optional
 
-import torch
+import numpy as np
 
 
 def to_mel(f):
     """
     Convert Hz to mel scale.
-    Accepts float or torch.Tensor input.
+    Accepts float or numpy input.
     """
-    if isinstance(f, torch.Tensor):
-        return 2595.0 * torch.log10(1.0 + f / 700.0)
-    else:
-        return 2595.0 * torch.log10(torch.tensor(1.0 + f / 700.0))
+
+    # Clip to avoid zero or negative input
+    x = np.clip(1.0 + f / 700.0, 1e-10, None)
+    return 2595.0 * np.log10(x)
 
 
 def from_mel(m):
     """
     Convert mel scale to Hz.
-    Accepts float or torch.Tensor input.
+    Accepts float or numpy input.
     """
-    if isinstance(m, torch.Tensor):
-        return 700.0 * (10.0 ** (m / 2595.0) - 1.0)
-    else:
-        return 700.0 * (10.0 ** (torch.tensor(m / 2595.0)) - 1.0)
+    return 700.0 * (10.0 ** (m / 2595.0) - 1.0)
 
 
 def band_limited_energy(
-    spec: torch.Tensor,
+    spec: np.ndarray,
     sr: int,
     freq_range: tuple,
     is_mel: bool = True,
@@ -50,19 +47,16 @@ def band_limited_energy(
         torch.Tensor: Scalar tensor representing total energy in the band.
     """
     n_freqs = spec.shape[0]
-    device = spec.device
 
     if is_mel:
         if f_max is None:
             f_max = sr / 2
         # Mel frequency bin centers
-        mel_points = torch.linspace(
-            to_mel(f_min), to_mel(f_max), n_freqs, device=device
-        )
+        mel_points = np.linspace(to_mel(f_min), to_mel(f_max), n_freqs)
         freqs = from_mel(mel_points)
     else:
         # Linear frequency bins (e.g., for linear STFT)
-        freqs = torch.linspace(0, sr / 2, n_freqs, device=device)
+        freqs = np.linspace(0, sr / 2, n_freqs)
 
     # Mask for band-limited range
     min_freq, max_freq = freq_range
@@ -70,4 +64,6 @@ def band_limited_energy(
 
     # Sum over selected bins and return the log
     energy = spec[band_mask].sum()
-    return torch.log10(energy).item()
+
+    # Clip to avoid zero or negative input
+    return np.log10(np.clip(energy, 1e-10, None))

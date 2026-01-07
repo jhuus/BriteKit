@@ -239,8 +239,7 @@ class Audio:
         Note:
             Returns (None, None) if no audio signal is loaded.
         """
-        import torch
-        import torch.nn.functional as F
+        import numpy as np
 
         if self.signal is None or start_times is None:
             return None, None
@@ -277,16 +276,16 @@ class Audio:
                 spec = self.cached[:, start_sample:end_sample]
                 if spec.shape[1] < self.cfg.audio.spec_width:
                     pad_width = self.cfg.audio.spec_width - spec.shape[1]
-                    spec = F.pad(spec, (0, pad_width), mode="constant", value=0)
+                    spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
 
                 specs.append(spec)
 
-        # Handle empty specs list to prevent torch.stack error
+        # Handle empty specs list to prevent error
         if not specs:
-            return torch.empty(0), torch.empty(0)
+            return np.empty(0), np.empty(0)
 
-        unnormalized_specs = torch.stack(specs, dim=0).to(self.device)
-        normalized_specs = unnormalized_specs.clone().to(self.device)
+        unnormalized_specs = np.stack(specs, axis=0)
+        normalized_specs = unnormalized_specs.copy()
         self._normalize(normalized_specs)
         return normalized_specs, unnormalized_specs
 
@@ -415,7 +414,8 @@ class Audio:
             spec = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(spec)
             spec **= db_power
 
-        return spec[0]
+        # Switching to numpy lowers VRAM usage
+        return spec[0].cpu().numpy()
 
     def _normalize(self, specs):
         """Normalize values between 0 and 1."""
@@ -436,10 +436,11 @@ class Audio:
         and right channels symmetrically, and finally retuning the hyperparameters.
         """
         from . import audio_util
+        import numpy as np
 
         # if one channel is null, use the other
-        left_sum = left_signal.sum().item()
-        right_sum = right_signal.sum().item()
+        left_sum = left_signal.sum()
+        right_sum = right_signal.sum()
         if left_sum == 0 and right_sum != 0:
             return right_signal
         elif left_sum != 0 and right_sum == 0:
@@ -472,11 +473,11 @@ class Audio:
         right_spec = right_specs[0]
 
         # calculate sum and median per channel
-        left_sum = left_spec.sum().item()
-        right_sum = right_spec.sum().item()
+        left_sum = left_spec.sum()
+        right_sum = right_spec.sum()
 
-        left_median = left_spec.median().item()
-        right_median = right_spec.median().item()
+        left_median = np.median(left_spec)
+        right_median = np.median(right_spec)
 
         # calculate energy in defined band per channel
         cfg = self.cfg.audio
@@ -490,7 +491,7 @@ class Audio:
             f_max=cfg.max_freq,
         )
         right_energy = audio_util.band_limited_energy(
-            left_spec,
+            right_spec,
             sr=cfg.sampling_rate,
             freq_range=(band_min_freq, band_max_freq),
             f_min=cfg.min_freq,

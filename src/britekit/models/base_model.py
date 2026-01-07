@@ -332,16 +332,16 @@ class BaseModel(pl.LightningModule):
                 else:
                     seg_scores = torch.softmax(seg_logits, dim=1)
 
-                seg_parts.append(seg_scores.detach().cpu())
+                seg_parts.append(seg_scores)
 
                 # frame scores (SED)
                 if frame_logits is not None:
                     frame_scores = torch.sigmoid(frame_logits)
-                    frame_parts.append(frame_scores.detach().cpu())
+                    frame_parts.append(frame_scores)
 
         segment_scores = torch.cat(seg_parts, dim=0)
         frame_scores = torch.cat(frame_parts, dim=0) if frame_parts else None
-        return segment_scores, frame_scores
+        return segment_scores.cpu().numpy(), frame_scores.cpu().numpy()
 
     def get_embeddings(self, specs, device=None):
         """Get embeddings for use in searching and clustering"""
@@ -354,7 +354,7 @@ class BaseModel(pl.LightningModule):
 
             # If already 2D (e.g., [B, D]), just return
             if feats.ndim == 2:
-                return feats.cpu().detach().numpy()
+                return feats.cpu().numpy()
 
             # 3D (SED) or 4D (CNN feature map)
             if feats.ndim == 3:  # [B, C, T]
@@ -366,7 +366,7 @@ class BaseModel(pl.LightningModule):
             else:
                 raise ValueError(f"Unexpected feature shape: {feats.shape}")
 
-            return pooled.cpu().detach().numpy()  # [B, D]
+            return pooled.cpu().numpy()  # [B, D]
 
     def get_sed_scores(self, specs, device=None):
         """
@@ -387,9 +387,7 @@ class BaseModel(pl.LightningModule):
             segment_scores = 1 / (1 + torch.exp(-segment_logits))
             frame_scores = torch.sigmoid(frame_logits)
 
-        segment_scores = segment_scores.cpu().detach().numpy()
-        frame_scores = frame_scores.cpu().detach().numpy()
-        return segment_scores, frame_scores
+        return segment_scores.cpu().numpy(), frame_scores.cpu().numpy()
 
     # ==================================================================
     # Utilities & helpers

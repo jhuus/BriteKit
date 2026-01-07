@@ -115,18 +115,15 @@ class Predictor:
                 - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models.
                   Shape is (num_frames, num_classes). None if not using SED models.
         """
-        import torch
-
         frame_maps = []
         if self.ov:
-            scores = self._get_openvino_scores(specs.cpu().numpy())
+            scores = self._get_openvino_scores(specs)
         else:
             scores = []
             for model in self.models:
-                with torch.inference_mode():
-                    segment_scores, frame_scores = model.predict(specs, self.device)
+                segment_scores, frame_scores = model.predict(specs, self.device)
 
-                scores.append(segment_scores.cpu().numpy())
+                scores.append(segment_scores)
 
                 if frame_scores is not None and start_times is not None:
                     # SED model, so combine all frame scores into one array
@@ -134,11 +131,11 @@ class Predictor:
                         audio_duration = self.audio.seconds()
 
                     frame_map = self.to_global_frames(
-                        frame_scores.cpu(),
+                        frame_scores,
                         start_times,
                         audio_duration,
                     )
-                    frame_maps.append(frame_map.cpu().numpy())
+                    frame_maps.append(frame_map)
 
         # return the average score across models in the ensemble,
         # and the corresponding start_times (spectrogram start times) in the recording
@@ -179,7 +176,6 @@ class Predictor:
 
         # Validate audio duration
         audio_duration = self.audio.seconds()
-        print(f"{audio_duration=:.2f}")
         if audio_duration <= 0:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None, None, []
@@ -192,7 +188,7 @@ class Predictor:
             return None, None, []
 
         specs = specs**self.cfg.infer.audio_power
-        specs = specs.unsqueeze(1)  # (N,H,W) -> (N,1,H,W)
+        specs = np.expand_dims(specs, axis=1) # (N,H,W) -> (N,1,H,W)
         avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
 
         return avg_score, avg_frame_map, start_times
@@ -506,65 +502,55 @@ class Predictor:
         """
         Map overlapping per-spectrogram frame scores onto a global frame grid.
         Use mean rather than max or weighted values.
-
         Args:
         - frame_scores: (num_specs, num_classes, T_spec) scores in [0, 1].
         - offsets_sec: start time (s) for each spectrogram within the recording.
         - recording_duration_sec: total recording length in seconds.
-
         Returns:
-            global_frames: (num_classes, T_global) tensor of scores in [0, 1].
+            global_frames: (T_global, num_classes) array of scores in [0, 1].
         """
-        import torch
+        import numpy as np
 
-        with torch.inference_mode():
-            assert (
-                frame_scores.dim() == 3
-            ), "frame_scores must be (num_specs, num_classes, T_spec)"
-            num_specs, num_classes, T_spec = frame_scores.shape
-            device = frame_scores.device
-            fps = self.cfg.train.sed_fps
+        assert (
+            frame_scores.ndim == 3
+        ), "frame_scores must be (num_specs, num_classes, T_spec)"
+        num_specs, num_classes, T_spec = frame_scores.shape
 
-            # Validate fps
-            if fps <= 0:
-                raise InferenceError(f"Invalid fps value: {fps}")
+        fps = self.cfg.train.sed_fps
+        if fps <= 0:
+            raise InferenceError(f"Invalid fps value: {fps}")
 
-            # Global grid length (frames)
-            T_global: int = int(round(fps * recording_duration_sec))
+        # Global grid length (frames)
+        T_global = int(round(fps * recording_duration_sec))
 
-            # Map spectrogram offsets (seconds) to global frame indices
-            starts = torch.tensor(
-                [int(round(o * fps)) for o in offsets_sec],
-                device=device,
-                dtype=torch.int64,
-            )
+        # Handle edge cases
+        if num_specs == 0 or T_global == 0:
+            return np.zeros((0, num_classes), dtype=np.float32)
 
-            # Prepare accumulation buffers
-            global_scores = torch.zeros((T_global, num_classes), device=device)
-            weights = torch.zeros((T_global,), device=device)
+        # Map spectrogram offsets (seconds) to global frame indices
+        starts = np.rint(np.array(offsets_sec) * fps).astype(np.int64)
 
-            # Accumulate
-            assert global_scores is not None
-            for k in range(num_specs):
-                start: int = int(starts[k].item())
-                # Skip chunks entirely outside the global range
-                if start >= T_global or start + T_spec <= 0:
-                    continue
+        # Prepare accumulation buffers (float64 for precision)
+        global_scores = np.zeros((T_global, num_classes), dtype=np.float64)
+        weights = np.zeros((T_global,), dtype=np.float64)
 
-                g0: int = int(max(0, start))
-                g1: int = int(min(T_global, start + T_spec))
-                t0: int = int(g0 - start)
-                t1: int = int(t0 + (g1 - g0))
+        # Accumulate
+        for k in range(num_specs):
+            start = starts[k]
 
-                chunk = frame_scores[k, :, t0:t1].T  # shape (local_T, num_classes)
-                assert weights is not None
-                global_scores[g0:g1, :] += chunk
-                weights[g0:g1] += 1.0
+            # Skip chunks entirely outside the global range
+            if start >= T_global or start + T_spec <= 0:
+                continue
 
-            # Finalize
-            assert weights is not None
-            denom = torch.clamp(weights, min=1e-12).unsqueeze(1)  # (T_global, 1)
-            return global_scores / denom
+            g0, g1 = max(0, start), min(T_global, start + T_spec)
+            t0 = g0 - start
+            indices = np.arange(g0, g1)
+            np.add.at(global_scores, indices, frame_scores[k, :, t0 : t0 + (g1 - g0)].T)
+            np.add.at(weights, indices, 1.0)
+
+        # Finalize
+        denom = np.clip(weights, 1e-12, None)[:, np.newaxis]
+        return (global_scores / denom).astype(np.float32)
 
     # =============================================================================
     # Private Helper Methods

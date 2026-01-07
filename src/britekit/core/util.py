@@ -453,16 +453,12 @@ def compress_spectrogram(spec) -> bytes:
         Compressed spectrogram
     """
     import numpy as np
-    import torch
 
-    if not isinstance(spec, torch.Tensor):
-        raise TypeError("spec must be a torch.Tensor")
-
-    if spec.numel() == 0:
-        raise ValueError("spec cannot be empty")
+    if not isinstance(spec, np.ndarray):
+        raise TypeError("spec must be a numpy array")
 
     try:
-        bytes_spec = spec.cpu().numpy() * 255
+        bytes_spec = spec * 255
         # Fix: Add bounds checking
         bytes_spec = np.clip(bytes_spec, 0, 255)
         np_bytes = bytes_spec.astype(np.uint8)

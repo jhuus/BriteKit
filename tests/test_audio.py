@@ -16,7 +16,6 @@ def test_audio_main():
     _audio.load(str(Path(recording_path) / "CommonYellowthroat.mp3"))
 
     specs, _ = _audio.get_spectrograms([0])
-    specs = specs.cpu().numpy()
     assert len(specs) == 1
     assert specs[0].shape == (cfg.audio.spec_height, cfg.audio.spec_width)
 
@@ -38,7 +37,6 @@ def test_low_band():
 
     _audio.load(str(Path(recording_path) / "RuffedGrouse.mp3"))
     specs, _ = _audio.get_spectrograms([0])
-    specs = specs.cpu().numpy()
     assert len(specs) == 1
     assert specs[0].shape == (cfg.audio.spec_height, cfg.audio.spec_width)
 
