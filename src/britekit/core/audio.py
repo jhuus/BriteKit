@@ -58,6 +58,9 @@ class Audio:
         else:
             self.device = device
 
+        self.linear_transform_cache: dict[tuple, Any] = {}
+        self.mel_transform_cache: dict[tuple, Any] = {}
+        self.log2_filterbank_cache: dict[tuple, Any] = {}
         self.cached = None
         self.path = None
         self.signal: Any = None
@@ -83,6 +86,7 @@ class Audio:
         Args:
         - cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
         """
+        import torch
         import torchaudio as ta
 
         if cfg is None:
@@ -90,13 +94,17 @@ class Audio:
         else:
             self.cfg = cfg
 
+        self.cached = None  # can not trust that cache is suitable
         if self.signal is None:
-            self.original_sampling_rate = self.cfg.audio.sampling_rate
-
-        # error if sampling_rate changes on subsequent calls
-        assert (
-            self.cfg.audio.sampling_rate == self.original_sampling_rate
-        ), "sampling_rate cannot change when reusing an audio object"
+            self.sampling_rate = self.cfg.audio.sampling_rate
+        elif self.sampling_rate != self.cfg.audio.sampling_rate:
+            signal = ta.functional.resample(
+                torch.from_numpy(self.signal),
+                self.sampling_rate,
+                self.cfg.audio.sampling_rate,
+            )
+            self.signal = signal.cpu().numpy()
+            self.sampling_rate = self.cfg.audio.sampling_rate
 
         # convert window length from seconds to frames;
         # defining it in seconds retains temporal and frequency
@@ -107,35 +115,55 @@ class Audio:
         if self.cfg.audio.decibels:
             self.cfg.audio.power = 2
 
-        self.linear_transform = ta.transforms.Spectrogram(
-            n_fft=2 * self.win_length,
-            win_length=self.win_length,
-            hop_length=int(
-                self.cfg.audio.spec_duration
-                * self.cfg.audio.sampling_rate
-                / self.cfg.audio.spec_width
-            ),
-            power=self.cfg.audio.power,
-        ).to(self.device)
-
-        self.log2_filterbank = self._make_log2_filterbank()
-
-        # previous transforms are needed in choose_channel, but mel may not be needed
-        if self.cfg.audio.freq_scale == "mel":
-            self.mel_transform = ta.transforms.MelSpectrogram(
-                sample_rate=self.cfg.audio.sampling_rate,
+        # cache transforms and filterbanks for performance
+        key = (
+            self.sampling_rate,
+            self.win_length,
+            self.cfg.audio.spec_duration,
+            self.cfg.audio.spec_height,
+            self.cfg.audio.spec_width,
+        )
+        if key in self.linear_transform_cache:
+            self.linear_transform = self.linear_transform_cache[key]
+        else:
+            self.linear_transform = ta.transforms.Spectrogram(
                 n_fft=2 * self.win_length,
                 win_length=self.win_length,
                 hop_length=int(
                     self.cfg.audio.spec_duration
-                    * self.cfg.audio.sampling_rate
+                    * self.sampling_rate
                     / self.cfg.audio.spec_width
                 ),
-                f_min=self.cfg.audio.min_freq,
-                f_max=self.cfg.audio.max_freq,
-                n_mels=self.cfg.audio.spec_height,
                 power=self.cfg.audio.power,
             ).to(self.device)
+            self.linear_transform_cache[key] = self.linear_transform
+
+        if key in self.log2_filterbank_cache:
+            self.log2_filterbank = self.log2_filterbank_cache[key]
+        else:
+            self.log2_filterbank = self._make_log2_filterbank()
+            self.log2_filterbank_cache[key] = self.log2_filterbank
+
+        # previous transforms are needed in choose_channel, but mel may not be needed
+        if self.cfg.audio.freq_scale == "mel":
+            if key in self.mel_transform_cache:
+                self.mel_transform = self.mel_transform_cache[key]
+            else:
+                self.mel_transform = ta.transforms.MelSpectrogram(
+                    sample_rate=self.sampling_rate,
+                    n_fft=2 * self.win_length,
+                    win_length=self.win_length,
+                    hop_length=int(
+                        self.cfg.audio.spec_duration
+                        * self.sampling_rate
+                        / self.cfg.audio.spec_width
+                    ),
+                    f_min=self.cfg.audio.min_freq,
+                    f_max=self.cfg.audio.max_freq,
+                    n_mels=self.cfg.audio.spec_height,
+                    power=self.cfg.audio.power,
+                ).to(self.device)
+                self.mel_transform_cache[key] = self.mel_transform
 
     def load(self, path):
         """
@@ -381,14 +409,6 @@ class Audio:
 
         signal = signal.reshape((1, signal.shape[0]))
         tensor = torch.from_numpy(signal).to(self.device)
-
-        if self.sampling_rate != self.cfg.audio.sampling_rate:
-            # This happens in complex cases when getting different spectrograms from the same recording.
-            signal = ta.functional.resample(
-                signal, self.sampling_rate, self.cfg.audio.sampling_rate
-            )
-            self.signal = signal.cpu().numpy()
-            self.sampling_rate = self.cfg.audio.sampling_rate
 
         if freq_scale == "log":
             spec = self.linear_transform(tensor)  # [1, n_freqs, n_frames]
