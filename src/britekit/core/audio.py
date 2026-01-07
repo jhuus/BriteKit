@@ -62,6 +62,7 @@ class Audio:
         self.path = None
         self.signal: Any = None
         self.set_config(cfg)
+        self.sampling_rate = self.cfg.audio.sampling_rate  # in case resampling needed
 
     def set_config(self, cfg: Optional[BaseConfig] = None):
         """
@@ -199,7 +200,6 @@ class Audio:
             logging.error(f"Caught exception in audio load of {path}: {e}")
 
         self.cached = None  # important to set this after choose-channel too
-        self.sampling_rate = self.cfg.audio.sampling_rate  # in case resampling needed
         return self.signal, self.sampling_rate
 
     def get_spectrograms(
