@@ -292,7 +292,7 @@ class Audio:
             )
 
         assert self.cached is not None
-        samples_per_sec = int(self.cfg.audio.spec_width / self.cfg.audio.spec_duration)
+        samples_per_sec = self.sampling_rate / self.linear_transform.hop_length
         specs = []
         for i, offset in enumerate(start_times):
             start_sample = int(offset * samples_per_sec)
@@ -303,7 +303,9 @@ class Audio:
 
             if start_sample < self.cached.shape[1]:
                 spec = self.cached[:, start_sample:end_sample]
-                if spec.shape[1] < self.cfg.audio.spec_width:
+                if spec.shape[1] > self.cfg.audio.spec_width:
+                    spec = spec[:, :self.cfg.audio.spec_width]
+                elif spec.shape[1] < self.cfg.audio.spec_width:
                     pad_width = self.cfg.audio.spec_width - spec.shape[1]
                     spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
 
