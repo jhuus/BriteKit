@@ -421,7 +421,9 @@ class Audio:
                 end = min(start + max_chunk_samples, signal.shape[0])
                 chunk_signal = signal[start:end]
                 if chunk_signal.shape[0] < max_chunk_samples:
-                    chunk_signal = np.pad(chunk_signal, (0, max_chunk_samples - chunk_signal.shape[0]))
+                    chunk_signal = np.pad(
+                        chunk_signal, (0, max_chunk_samples - chunk_signal.shape[0])
+                    )
 
                 chunk_spec = self._compute_spectrogram_chunk(chunk_signal, freq_scale)
                 chunks.append(chunk_spec)
