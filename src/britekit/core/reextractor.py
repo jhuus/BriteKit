@@ -37,6 +37,7 @@ class Reextractor:
         db_path: Optional[str] = None,
         class_name: Optional[str] = None,
         classes_path: Optional[str] = None,
+        offset: float = 0.,
         check: bool = False,
         spec_group: str = "default",
     ):
@@ -44,6 +45,7 @@ class Reextractor:
         self.db_path = db_path
         self.class_name = class_name
         self.classes_path = classes_path
+        self.offset = offset
         self.check = check
         self.spec_group = spec_group
 
@@ -153,7 +155,10 @@ class Reextractor:
                 )
                 if recording.path:
                     audio_obj.load(recording.path)
-                    offsets = [segment.offset for segment in segments]
+                    offsets = []
+                    for segment in segments:
+                        offsets.append(max(0, segment.offset + self.offset))
+
                     spectrograms, _ = audio_obj.get_spectrograms(offsets)
                     if spectrograms is not None:
                         for i, spec in enumerate(spectrograms):
@@ -163,29 +168,4 @@ class Reextractor:
                                 compressed_spec, specgroup_id, segment.id
                             )
                 else:
-                    # Assume all segments for this recording have audio
-                    for segment in segments:
-                        # Unzip then make a copy so it is writeable
-                        audio_blob = np.frombuffer(
-                            zlib.decompress(segment.audio), np.float32
-                        ).copy()
-                        if segment.sampling_rate != cfg.audio.sampling_rate:
-                            audio_blob = self._resample(
-                                audio_blob,
-                                segment.sampling_rate,
-                                cfg.audio.sampling_rate,
-                            )
-
-                        # If embedded audio is longer than needed, adjust offset so only relevant central audio is used
-                        seconds = len(audio_blob) / cfg.audio.sampling_rate
-                        fudge_factor = 0.001  # consider lengths the same if difference less than this
-                        offset = 0.0
-                        if seconds > cfg.audio.spec_duration - fudge_factor:
-                            offset = round(
-                                (seconds - cfg.audio.spec_duration) / 2, 1
-                            )  # round to nearest tenth of a second
-
-                        audio_obj.signal = audio_blob
-                        spectrograms, _ = audio_obj.get_spectrograms([offset])
-                        compressed_spec = util.compress_spectrogram(spectrograms[0])
-                        db.insert_specvalue(compressed_spec, specgroup_id, segment.id)
+                    logging.warning(f"No recording path specified for recording {recording.ID}")

@@ -18,6 +18,7 @@ def reextract(
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
     classes_path: Optional[str] = None,
+    offset: float = 0.,
     check: bool = False,
     spec_group: str = "default",
 ):
@@ -36,6 +37,7 @@ def reextract(
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
     - class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
     - classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
+    - offset (float): Add to spectrogram offsets. Used when changing the spectrogram duration. Default is 0.
     - check (bool): If True, only check that all recording paths are accessible without updating database.
     - spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
     """
@@ -52,7 +54,7 @@ def reextract(
         db_path = str(Path(cfg.train.train_db).resolve())
 
     start_time = time.time()
-    Reextractor(db_path, class_name, classes_path, check, spec_group).run()
+    Reextractor(db_path, class_name, classes_path, offset, check, spec_group).run()
 
     with TrainingDatabase(cfg.train.train_db) as db:
         db.optimize()
@@ -93,6 +95,13 @@ def reextract(
     help="Path to CSV listing classes to reextract. Alternative to --name. If this and --name are omitted, do all classes.",
 )
 @click.option(
+    "--offset",
+    "offset",
+    type=float,
+    default=0.0,
+    help="Add to spectrogram offsets. Used when changing the spectrogram duration. Default is 0.",
+)
+@click.option(
     "--check",
     "check",
     is_flag=True,
@@ -110,8 +119,9 @@ def _reextract_cmd(
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
     classes_path: Optional[str] = None,
+    offset: float = 0.,
     check: bool = False,
     spec_group: str = "default",
 ):
     util.set_logging()
-    reextract(cfg_path, db_path, class_name, classes_path, check, spec_group)
+    reextract(cfg_path, db_path, class_name, classes_path, offset, check, spec_group)
