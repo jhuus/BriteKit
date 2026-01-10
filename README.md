@@ -34,7 +34,7 @@
 -----
 
 ## Introduction
-BriteKit (Bioacoustic Recognizer Technology Kit) is a Python package that facilitates the development of bioacoustic recognizers using deep learning.
+BriteKit (Bioacoustic Recognizer Toolkit) is a Python package that facilitates the development of bioacoustic recognizers using deep learning.
 It provides a command-line interface (CLI) as well as a Python API, to support functions such as:
 - downloading recordings from Xeno-Canto, iNaturalist, and YouTube (optionally using Google Audioset metadata)
 - managing training data in a SQLite database
