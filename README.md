@@ -1,4 +1,4 @@
-![](images/BriteKit-Logo-Colour.png)
+![](images/BriteKit-Logo-Tagline-Colour.png)
 
 ## Getting Started
 
