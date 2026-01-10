@@ -1,7 +1,4 @@
 ![](images/BriteKit-Logo-Colour.png)
-# BriteKit
-
------
 
 ## Getting Started
 
