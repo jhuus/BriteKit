@@ -236,9 +236,13 @@ class Predictor:
 
         frame_maps = []
         for i, model in enumerate(self.models):
-            start_times = self._get_start_times(
-                audio_duration, start_seconds + i * increment, overlap=0
-            )
+            # add increment, but never start past the first segment
+            curr_start = (start_seconds + i * increment) % self.cfg.audio.spec_duration
+            start_times = self._get_start_times(audio_duration, curr_start, overlap=0)
+            if i > 0:
+                # extra overlap at the beginning
+                start_times = [start_seconds] + start_times
+
             specs, _ = self.audio.get_spectrograms(start_times)
             if specs is None or len(specs) == 0:
                 # maybe recording is too short given the increment
