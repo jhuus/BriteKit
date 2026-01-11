@@ -239,7 +239,7 @@ class Predictor:
             # add increment, but never start past the first segment
             curr_start = (start_seconds + i * increment) % self.cfg.audio.spec_duration
             start_times = self._get_start_times(audio_duration, curr_start, overlap=0)
-            if i > 0:
+            if len(start_times) > 0 and start_times[0] > start_seconds:
                 # extra overlap at the beginning
                 start_times = [start_seconds] + start_times
 
