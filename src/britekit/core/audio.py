@@ -67,7 +67,7 @@ class Audio:
         self.set_config(cfg)
         self.sampling_rate = self.cfg.audio.sampling_rate  # in case resampling needed
 
-    def set_config(self, cfg: Optional[BaseConfig] = None):
+    def set_config(self, cfg: Optional[BaseConfig] = None, resample: bool = True):
         """
         Set or update the audio configuration for spectrogram generation.
 
@@ -85,6 +85,7 @@ class Audio:
 
         Args:
         - cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
+        - resample (bool): If true and sampling rate has changed, resample the audio.
         """
         import torch
         import torchaudio as ta
@@ -100,9 +101,11 @@ class Audio:
         self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
 
         self.cached = None  # can not trust that cache is suitable
-        if self.signal is None:
-            self.sampling_rate = self.cfg.audio.sampling_rate
-        elif self.sampling_rate != self.cfg.audio.sampling_rate:
+        if (
+            resample
+            and self.signal is not None
+            and self.sampling_rate != self.cfg.audio.sampling_rate
+        ):
             logging.debug(
                 "Audio::set_config resample from %d to %d",
                 self.sampling_rate,
@@ -115,7 +118,8 @@ class Audio:
                 self.cfg.audio.sampling_rate,
             )
             self.signal = signal.cpu().numpy()
-            self.sampling_rate = self.cfg.audio.sampling_rate
+
+        self.sampling_rate = self.cfg.audio.sampling_rate
 
         # force power scale when converting to decibels
         if self.cfg.audio.decibels:
