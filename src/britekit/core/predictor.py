@@ -197,6 +197,70 @@ class Predictor:
 
         return avg_score, avg_frame_map, start_times
 
+    def get_overlapping_scores(self, recording_path: str, increment: float):
+        """
+        This is a variant of get_recording_scores that overlaps spectrograms differently,
+        and is intended for models with SED classifier heads only. Each model processes
+        non-overlapping spectrograms. The first one gets spectrograms starting at offset 0.
+        The second one gets spectrograms starting at increment, the third starts at 2*increment,
+        etc. Since each model processes non-overlapping spectrograms, this achieves overlapped
+        processing with much better performance than get_recording_scores, in which each model
+        processes the same overlapping spectrograms.
+
+        Args:
+        - recording_path (str): Path to the audio recording file.
+        - increment (float): Amount of increment.
+
+        Returns:
+            tuple: A tuple containing:
+                - avg_score (np.ndarray): Average scores across all models in the ensemble.
+                  Shape is (num_spectrograms, num_classes).
+                - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models.
+                  Shape is (num_frames, num_classes). None if not using SED models.
+                - start_times (list[float]): Start time in seconds for each spectrogram.
+        """
+        if not os.path.exists(recording_path):
+            raise InferenceError(f'Recording "{recording_path}" not found')
+
+        if not os.path.isfile(recording_path):
+            raise InferenceError(f'Recording "{recording_path}" is not a file')
+
+        self.audio.load(recording_path)
+
+        audio_duration = self.audio.seconds()
+        if audio_duration <= 0:
+            logging.error(f"Invalid audio duration: {audio_duration} seconds")
+            return None, None, []
+
+        frame_maps = []
+        for i, model in enumerate(self.models):
+            start_times = self._get_start_times(
+                audio_duration, i * increment, overlap=0
+            )
+            specs, _ = self.audio.get_spectrograms(start_times)
+            if specs is None or len(specs) == 0:
+                # maybe recording is too short given the increment
+                continue
+
+            specs = specs**self.cfg.infer.audio_power
+            specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
+            _, frame_scores = model.predict(specs, self.device)
+            if frame_scores is None:
+                logging.error(f"No frame scores generated for {recording_path}")
+                return None, None, []
+
+            frame_map = self.to_global_frames(
+                frame_scores,
+                start_times,
+                audio_duration,
+            )
+            frame_maps.append(frame_map)
+
+        if len(frame_maps) == 0:
+            return None, None, []
+
+        return np.mean(frame_maps, axis=0)
+
     def get_segment_labels(
         self, scores, start_times: list[float]
     ) -> dict[str, list[Label]]:
@@ -429,12 +493,13 @@ class Predictor:
     def get_specs(self):
         return self.normalized_specs, self.unnormalized_specs
 
-    def show_scores(self, scores):
+    def show_scores(self, scores, frame_map):
         """
         Given an array of raw segment-level scores, log them by descending score.
 
         Args:
         - scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
+        - frame_map (np.ndarray, optional): Array of scores of shape (num_frames, num_species).
         """
         assert self.class_names is not None
 
@@ -443,6 +508,13 @@ class Predictor:
             return labels
 
         names = self._get_names()
+
+        # if there is a frame_map, convert it to scores
+        if frame_map is not None:
+            # TODO: need a better way to get num_frames
+            num_frames = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
+            scores = frame_map[:num_frames, :].max(axis=0)
+            scores = scores[None, :]  # make the shape (1, num_classes)
 
         # ensure labels are sorted by name/code before start_time,
         # which is useful when inspecting label files during testing
@@ -560,7 +632,7 @@ class Predictor:
     # Private Helper Methods
     # =============================================================================
 
-    def _get_start_times(self, audio_duration, start_seconds):
+    def _get_start_times(self, audio_duration, start_seconds, overlap=None):
         """
         Return start offset per spectrogram.
 
@@ -568,7 +640,10 @@ class Predictor:
         - start_seconds (float): where to start processing the audio (offset in seconds)
         """
 
-        increment = max(0.5, self.cfg.audio.spec_duration - self.cfg.infer.overlap)
+        if overlap is None:
+            overlap = self.cfg.infer.overlap
+
+        increment = max(0.5, self.cfg.audio.spec_duration - overlap)
         end_offset = max(start_seconds, audio_duration - increment)
         start_times = util.get_range(start_seconds, end_offset, increment)
 

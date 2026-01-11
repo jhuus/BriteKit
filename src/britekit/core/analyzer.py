@@ -54,7 +54,7 @@ class Analyzer:
         rtype,
         start_seconds,
         thread_num,
-        debug_mode=False,
+        show=False,
     ):
         """
         This runs on its own thread and processes all recordings in the given list.
@@ -64,6 +64,8 @@ class Analyzer:
         - output_path (str): Where to write the output.
         - rtype (str): Output format: "audacity", "csv" or "both".
         - start_seconds (float): Where to start processing each recording, in seconds from start.
+        - thread_num (int): Thread number:
+        - show (bool): If true, show the top scores for the first spectrogram, then stop.
         """
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
@@ -71,8 +73,8 @@ class Analyzer:
             scores, frame_map, offsets = predictor.get_recording_scores(
                 recording_path, start_seconds
             )
-            if debug_mode:
-                predictor.show_scores(scores)  # log the scores for debugging
+            if show:
+                predictor.show_scores(scores, frame_map)  # log the scores for debugging
 
             recording_name = Path(recording_path).stem
             if rtype in {"audacity", "both"}:
@@ -87,7 +89,7 @@ class Analyzer:
                 )
                 self.dataframes.append(dataframe)
 
-            if debug_mode:
+            if show:
                 break
 
         if thread_num == 1:
@@ -140,7 +142,7 @@ class Analyzer:
         output_path: str,
         rtype: str = "audacity",
         start_seconds: float = 0,
-        debug_mode: bool = False,
+        show: bool = False,
     ):
         """
         Run inference.
@@ -150,7 +152,7 @@ class Analyzer:
         - output_path (str): Output directory.
         - rtype (str): Output format: "audacity", "csv" or "both".
         - start_seconds (float): Where to start processing each recording, in seconds.
-        - debug_mode (bool): If true, log scores for the first spectrogram, then stop.
+        - show (bool): If true, show scores for the first spectrogram, then stop.
         For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.
         """
         import pandas as pd
@@ -174,7 +176,7 @@ class Analyzer:
                 rtype,
                 start_seconds,
                 1,
-                debug_mode,
+                show,
             )
         else:
             recordings_per_thread = self._split_list(recording_paths, num_threads)
@@ -188,7 +190,7 @@ class Analyzer:
                         rtype,
                         start_seconds,
                         i + 1,
-                        debug_mode,
+                        show,
                     ),
                 )
                 thread.start()
