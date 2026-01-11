@@ -197,7 +197,9 @@ class Predictor:
 
         return avg_score, avg_frame_map, start_times
 
-    def get_overlapping_scores(self, recording_path: str, increment: float):
+    def get_overlapping_scores(
+        self, recording_path: str, increment: float, start_seconds: float = 0
+    ):
         """
         This is a variant of get_recording_scores that overlaps spectrograms differently,
         and is intended for models with SED classifier heads only. Each model processes
@@ -235,7 +237,7 @@ class Predictor:
         frame_maps = []
         for i, model in enumerate(self.models):
             start_times = self._get_start_times(
-                audio_duration, i * increment, overlap=0
+                audio_duration, start_seconds + i * increment, overlap=0
             )
             specs, _ = self.audio.get_spectrograms(start_times)
             if specs is None or len(specs) == 0:
@@ -496,6 +498,7 @@ class Predictor:
     def show_scores(self, scores, frame_map):
         """
         Given an array of raw segment-level scores, log them by descending score.
+        If frame_map is specified, use that. Otherwise use scores.
 
         Args:
         - scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
@@ -504,9 +507,6 @@ class Predictor:
         assert self.class_names is not None
 
         labels: dict[str, list] = {}  # name -> [(score, start_time, end_time)]
-        if scores is None or len(scores) == 0:
-            return labels
-
         names = self._get_names()
 
         # if there is a frame_map, convert it to scores
@@ -515,6 +515,9 @@ class Predictor:
             num_frames = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
             scores = frame_map[:num_frames, :].max(axis=0)
             scores = scores[None, :]  # make the shape (1, num_classes)
+
+        if scores is None or len(scores) == 0:
+            return labels
 
         # ensure labels are sorted by name/code before start_time,
         # which is useful when inspecting label files during testing
