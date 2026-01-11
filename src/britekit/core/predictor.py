@@ -189,7 +189,11 @@ class Predictor:
 
         specs = specs**self.cfg.infer.audio_power
         specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
+        logging.debug("Predictor::get_recording_scores start call to get_block_scores.")
         avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
+        logging.debug(
+            "Predictor::get_recording_scores finish call to get_block_scores."
+        )
 
         return avg_score, avg_frame_map, start_times
 
