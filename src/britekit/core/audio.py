@@ -94,10 +94,21 @@ class Audio:
         else:
             self.cfg = cfg
 
+        # convert window length from seconds to frames;
+        # defining it in seconds retains temporal and frequency
+        # resolution when sampling rate changes
+        self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
+
         self.cached = None  # can not trust that cache is suitable
         if self.signal is None:
             self.sampling_rate = self.cfg.audio.sampling_rate
         elif self.sampling_rate != self.cfg.audio.sampling_rate:
+            logging.debug(
+                "Audio::set_config resample from %d to %d",
+                self.sampling_rate,
+                self.cfg.audio.sampling_rate,
+            )
+
             signal = ta.functional.resample(
                 torch.from_numpy(self.signal),
                 self.sampling_rate,
@@ -106,14 +117,18 @@ class Audio:
             self.signal = signal.cpu().numpy()
             self.sampling_rate = self.cfg.audio.sampling_rate
 
-        # convert window length from seconds to frames;
-        # defining it in seconds retains temporal and frequency
-        # resolution when sampling rate changes
-        self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
-
         # force power scale when converting to decibels
         if self.cfg.audio.decibels:
             self.cfg.audio.power = 2
+
+        logging.debug(
+            "Audio::set_config sr=%d, win=%d, duration=%.2f, height=%d, width=%d",
+            self.sampling_rate,
+            self.win_length,
+            self.cfg.audio.spec_duration,
+            self.cfg.audio.spec_height,
+            self.cfg.audio.spec_width,
+        )
 
         # cache transforms and filterbanks for performance
         key = (
@@ -123,6 +138,7 @@ class Audio:
             self.cfg.audio.spec_height,
             self.cfg.audio.spec_width,
         )
+
         if key in self.linear_transform_cache:
             self.linear_transform = self.linear_transform_cache[key]
         else:
@@ -194,10 +210,12 @@ class Audio:
 
         if path == self.path:
             # already loaded this recording
+            logging.debug("Audio::load skip load of %s", path)
             return self.signal, self.cfg.audio.sampling_rate
 
         try:
             # Load (channels, samples), float32
+            logging.debug("Audio::load processing %s", path)
             self.path = path
             waveform, sr = ta.load(path)
 
@@ -283,6 +301,7 @@ class Audio:
 
         # Get one spectrogram for the whole recording, then split it up
         if self.cached is None:
+            logging.debug("Audio::get_spectrograms generate spectrogram for recording")
             self.cached = self._get_raw_spectrogram(
                 self.signal,
                 freq_scale=freq_scale,
@@ -290,6 +309,8 @@ class Audio:
                 top_db=top_db,
                 db_power=db_power,
             )
+        else:
+            logging.debug("Audio::get_spectrograms reuse cached spectrogram")
 
         assert self.cached is not None
         samples_per_sec = self.sampling_rate / self.linear_transform.hop_length
@@ -304,7 +325,7 @@ class Audio:
             if start_sample < self.cached.shape[1]:
                 spec = self.cached[:, start_sample:end_sample]
                 if spec.shape[1] > self.cfg.audio.spec_width:
-                    spec = spec[:, :self.cfg.audio.spec_width]
+                    spec = spec[:, : self.cfg.audio.spec_width]
                 elif spec.shape[1] < self.cfg.audio.spec_width:
                     pad_width = self.cfg.audio.spec_width - spec.shape[1]
                     spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
