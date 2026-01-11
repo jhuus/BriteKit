@@ -7,7 +7,6 @@ import uuid
 
 import numpy as np
 import pytorch_lightning as pl
-from sklearn import metrics
 from timm.optim import create_optimizer_v2
 import torch
 from torch import nn
@@ -187,6 +186,8 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        from sklearn import metrics
+
         x, y = batch["input"], batch["segment_labels"]
         seg_logits, _ = self(x)
         loss = self.loss_fn(seg_logits, y)
@@ -208,6 +209,8 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def test_step(self, batch, batch_idx):
+        from sklearn import metrics
+
         x, y = batch
         seg_logits, _ = self(x)
         loss = self.loss_fn(seg_logits, y)

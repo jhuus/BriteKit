@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
+# Defer some imports to improve initialization performance.
 from typing import Any, List, Optional
-
-import torch
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError, ModelError
@@ -83,6 +82,8 @@ def load_new_model(
 
 def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = None):
     # defer these imports to improve --help performance
+    import torch
+
     from britekit.models.timm_model import TimmModel
     from britekit.models.bknet import BKNetModel
     from britekit.models.dla import DlaModel
