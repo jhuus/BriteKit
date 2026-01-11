@@ -18,7 +18,7 @@ def reextract(
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
     classes_path: Optional[str] = None,
-    offset: float = 0.,
+    offset: float = 0.0,
     check: bool = False,
     spec_group: str = "default",
 ):
@@ -119,7 +119,7 @@ def _reextract_cmd(
     db_path: Optional[str] = None,
     class_name: Optional[str] = None,
     classes_path: Optional[str] = None,
-    offset: float = 0.,
+    offset: float = 0.0,
     check: bool = False,
     spec_group: str = "default",
 ):

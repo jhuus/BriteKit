@@ -4,9 +4,7 @@
 import logging
 import os
 from typing import Optional
-import zlib
 
-from britekit.core.config_loader import get_config
 from britekit.core import util
 from britekit.training_db.training_db import TrainingDatabase
 from britekit.training_db.training_data_provider import TrainingDataProvider
@@ -37,7 +35,7 @@ class Reextractor:
         db_path: Optional[str] = None,
         class_name: Optional[str] = None,
         classes_path: Optional[str] = None,
-        offset: float = 0.,
+        offset: float = 0.0,
         check: bool = False,
         spec_group: str = "default",
     ):
@@ -62,10 +60,7 @@ class Reextractor:
 
     # Perform the re-extract
     def run(self, quiet=False):
-        import numpy as np
         import pandas as pd
-
-        cfg = get_config()
 
         with TrainingDatabase(self.db_path) as db:
             if self.class_name is None and self.classes_path is None:
@@ -168,4 +163,6 @@ class Reextractor:
                                 compressed_spec, specgroup_id, segment.id
                             )
                 else:
-                    logging.warning(f"No recording path specified for recording {recording.ID}")
+                    logging.warning(
+                        f"No recording path specified for recording {recording.ID}"
+                    )
