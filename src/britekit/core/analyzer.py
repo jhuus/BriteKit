@@ -72,7 +72,7 @@ class Analyzer:
                 recording_path, start_seconds
             )
             if debug_mode:
-                predictor.log_scores(scores)  # log the scores for debugging
+                predictor.show_scores(scores)  # log the scores for debugging
 
             recording_name = Path(recording_path).stem
             if rtype in {"audacity", "both"}:

@@ -425,7 +425,7 @@ class Predictor:
     def get_specs(self):
         return self.normalized_specs, self.unnormalized_specs
 
-    def log_scores(self, scores):
+    def show_scores(self, scores):
         """
         Given an array of raw segment-level scores, log them by descending score.
 
