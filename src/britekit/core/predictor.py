@@ -181,6 +181,7 @@ class Predictor:
             return None, None, []
 
         start_times = self._get_start_times(audio_duration, start_seconds)
+        logging.debug("Predictor::get_recording_scores start_times=%s", start_times)
         specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
         self.normalized_specs = specs
 
@@ -189,10 +190,10 @@ class Predictor:
 
         specs = specs**self.cfg.infer.audio_power
         specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
-        logging.debug("Predictor::get_recording_scores start call to get_block_scores.")
+        logging.debug("Predictor::get_recording_scores start call to get_block_scores")
         avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
         logging.debug(
-            "Predictor::get_recording_scores finish call to get_block_scores."
+            "Predictor::get_recording_scores finish call to get_block_scores"
         )
 
         return avg_score, avg_frame_map, start_times
