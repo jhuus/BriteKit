@@ -387,12 +387,11 @@ def render_config_reference() -> str:
     mod = importlib.import_module("britekit.core.base_config")
 
     dataclass_names = [
-        "Audio",
-        "Training",
-        "Inference",
-        "Miscellaneous",
+        "AudioConfig",
+        "TrainingConfig",
+        "InferenceConfig",
+        "MiscConfig",
         "BaseConfig",
-        "FunctionConfig",
     ]
 
     parts: List[str] = [md_h2("Configuration Reference")]

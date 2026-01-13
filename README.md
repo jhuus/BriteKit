@@ -64,7 +64,7 @@ Once BriteKit is installed, initialize a working environment using the `init` co
 britekit init --dest=<directory path>
 ```
 This creates the directories needed and installs sample files. If you omit `--dest`, it will create
-directories under the current working directory.
+directories under the current working directory, which is the most common use case.
 ## Configuration
 Configuration parameters are documented [here](config-reference.md). After running `britekit init`, the file `yaml/base_config.yaml` contains all parameters in YAML format.
 Most CLI commands have a `--config` argument that allows you to specify the path to a YAML file that overrides selected parameters. For example, when running the [train](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-train) command,
@@ -95,12 +95,12 @@ Once you have a collection of recordings, the steps to prepare it for training a
 1. Extract spectrograms from recordings and insert them into the training database.
 2. Curate the training spectrograms.
 3. Create a pickle file from the training data.
-Then provide the path to the pickle file when running training.
+4. Provide the path to the pickle file when running training.
 
-Suppose we have a folder called `recordings/cow`. To generate spectrograms and insert them into the training database, we could type `britekit extract-all --name Cow --dir recordings/cow`. This will create a SQLite database in `data/training.db` and populate it with spectrograms using the default configuration.
+Suppose we have a folder called `recordings/cow`. To generate spectrograms and insert them into the training database, we could type `britekit extract-all --name Cow --dir recordings/cow`. This will create a SQLite database in `data/training.db` and populate it with spectrograms using the default configuration, assigning the class name "Cow".
 To browse the database, you can use [DB Browser for SQLite](https://sqlitebrowser.org/), or a similar application.
 That will reveal the following tables:
-- Class: classes that the recognizer will be trained to identify, e.g. American Robin
+- Class: classes that the recognizer will be trained to identify, e.g. species of bird, mammal or amphibian
 - Category: categories such as Bird, Mammal or Amphibian
 - Source: sources of recordings, e.g. Xeno-Canto or iNaturalist.
 - Recording: individual recordings
@@ -120,11 +120,11 @@ audio:
   spec_height: 192
   spec_width: 256
 ```
-The FFT window length is specified as a fraction of a second: .08 seconds in this example. That way the real window length does not vary if you change the sampling rate. As a rule of thumb, the sampling rate should be about 2.1 times the maximum frequency. Before training your first model, it is advisable to examine some spectrogram images and choose settings that seem reasonable as a starting point. For example, the frequency range needed for your application may be greater or less than the defaults.
+The FFT window length is specified as a fraction of a second: .08 seconds in this example. That way the real window length does not vary if you change the sampling rate. As a rule of thumb, the sampling rate should be about 2.1 times the maximum frequency. Using the theoretically correct value of 2.0 can sometimes lead to implementation artifacts in the highest frequencies. Before training your first model, it is advisable to examine some spectrogram images and choose settings that seem reasonable as a starting point. For example, the frequency range needed for your application may be greater or less than the defaults.
 
 The SpecGroup table allows you to easily experiment with different spectrogram settings. Running [extract-all](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-extract-all) or [extract-by-image](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-extract-by-image) creates spectrograms assigned to the default SpecGroup, if none is specified. Once you have curated some training data, use the [reextract](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-reextract) command to create another set of spectrograms, assigned to a different SpecGroup. That way you can keep spectrograms with different settings for easy experimentation.
 ## Training
-The [pickle](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-pickle) command creates a binary pickle file (`data/training.pkl` by default), which is the source of training data for the [train](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-train) command. Reading a binary file is much faster than querying the database, so this speeds up the training process. Also, this provides a simple way to select a SpecGroup, and/or a subset of classes for training. For training, you should always provide a config file to override some defaults. Here is an expanded version of the earlier example:
+The [pickle-train](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-pickle-train) command creates a binary pickle file (`data/training.pkl` by default), which is the source of training data for the [train](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-train) command. Reading a binary file is much faster than querying the database, so this speeds up the training process. Also, this provides a simple way to select a SpecGroup, and/or a subset of classes for training. For training, you should always provide a config file to override some defaults. Here is an expanded version of the earlier example:
 ```
 train:
   train_pickle: "data/low_freq.pkl"
@@ -139,9 +139,10 @@ train:
 The `model_type` parameter can be "timm.x" for any model x supported by [timm](https://github.com/huggingface/pytorch-image-models). However, many bioacoustic recognizers benefit from a smaller model than typical timm models. Therefore BriteKit provides a set of scalable models, such as "effnet.3" and "effnet.4", where larger numbers indicate larger models. The scalable models are:
 | Model | Original Name | Comments | Original Paper |
 |---|---|---|---|
+| bknet | GENet | A custom implementation of the timm gernet, which is an implementation of GENet. Fast, useful for all but the smallest models. | [here](https://arxiv.org/abs/2006.14090) |
 | dla | DLA | Slow and not good for large models, but works well for some very small models. | [here](https://arxiv.org/abs/1707.06484) |
 | effnet | EfficientNetV2 | Medium speed, widely used, useful for all sizes. | [here](https://arxiv.org/abs/2104.00298) |
-| gernet | GerNet | Fast, useful for all but the smallest models. | [here](https://arxiv.org/abs/2006.14090) |
+| gernet | GENet | Scalable configurations of the timm gernet model. Fast, useful for all but the smallest models. | [here](https://arxiv.org/abs/2006.14090) |
 | hgnet |  HgNetV2| Fast, useful for all but the smallest models. | not published |
 | vovnet | VovNet  | Medium-fast, useful for all sizes. | [here](https://arxiv.org/abs/1904.09730) |
 
@@ -161,7 +162,7 @@ Specifying `head_type="effnet"` is sometimes helpful for other models such as DL
 You can specify `val_portion` > 0 to run validation on a portion of the training data, or `num_folds` > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0/version_x etc. Otherwise it is under logs/version_x. Output from the first training run is saved in version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to view graphs such as the learning rate in a web browser.
 
 ## Testing
-To run a test, you need to annotate a set of test recordings, analyze them with your model or ensemble, and then run the [rpt-test](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-rpt-test) command. Annotations must be saved in a CSV file with a defined format. For initial testing and tuning it is best to annotate each relevant sound (per-segment), but for later usage you may wish to use per-block (e.g. minute) or per-recording annotations. Per-recording annotations are defined in a CSV file with these columns:
+To run a test, you need to annotate a set of test recordings, analyze them with your model or ensemble, and then run the [rpt-test](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-rpt-test) command (although test annotations are also used by the [calibrate](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-calibrate), [ensemble](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-ensemble), [plot-test](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-plot-test), [rpt-ann](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-rpt-ann), [rpt-epochs](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-rpt-epochs) and [tune](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-tune) commands). Annotations must be saved in a CSV file with a defined format. For initial testing and tuning it is best to annotate each relevant sound (per-segment), but for later usage you may wish to use per-block (e.g. minute) or per-recording annotations. Per-recording annotations are defined in a CSV file with these columns:
 | Column | Description |
 |---|---|
 | recording | Just the stem of the recording name, e.g. XC12345, not XC12345.mp3. |
@@ -247,13 +248,50 @@ Use the [calibrate](https://github.com/jhuus/BriteKit/blob/master/command-refere
 -----
 
 ## Spectrograms
-TBD
+### Height and Width
+When choosing spectrogram height and width, keep the following considerations in mind:
+1. Some models requires image height and width to be multiples of 32.
+2. If the width is not divisible by the duration in seconds, temporal alignment issues may arise.
+3. If the sampling rate is not divisible by the width-per-second, temporal alignment issues may arise.
+
+Temporal alignment is usually only a problem when issues 2 and 3 are very pronounced. Small deviations are usually not a problem.
+### Window Length
+As described earlier, BriteKit differs from most packages in specifying FFT window length in fractional seconds. For example, a window length of 2048 with a sampling rate of 32000 would be specified as .064 (2048/32000). If it was specified as 2048 and you later changed the sampling rate, the effective window length would also change, which might not be what you intended.
+
+Shorter window lengths give better temporal resolution and longer ones give better frequency resolution. This is easy to see by plotting a few examples. Window length is therefore an important tuning parameter, and the optimal value depends on the application.
+### Frequency Scales
+BriteKit supports three frequency scales: mel, linear and log, with mel as the default. The mel scale is very close to linear up to 1 KHz and very close to log above that. Implementations differ from theory, so it is always best to look at a few samples before choosing a scale. For example, mel scale with a frequency range of 0-200 Hz should be linear in theory, but is not useful due to implementation issues.
+### Amplitude Scales
+By default, spectrograms use a magnitude scale. Squaring the magnitudes gives a power scale, and taking 10*log10(power) gives a decibel scale. BriteKit normalizes all spectrogram values to the range [0, 1], since neural networks work best with values in a narrow range. This plot shows the different normalized amplitude scales:
+
+![](images/amplitude_scales.png)
+
+Compared to the magnitude scale, the power scale reduces most values, which makes spectrograms look much fainter. The decibel scale increases most values, so spectrograms look very bright and quiet sounds become visible. Taking the square of the magnitude gives a result between the magnitude and decibel scales. In BriteKit this can be achieved by tuning the audio_power parameter, where a value of 0.5 will yield a square root as shown above. In practice, a magnitude scale with a tuned audio_power usually works best.
 ## Backbones and Classifier Heads
-TBD
+Image classifiers are constructed as layers, which are grouped into a "backbone" and a "classifier head". Most of the layers form the backbone, with just the last few forming the classifier head. The backbone converts the input to a simplified representation that can then be classified by the head. Traditionally, image classifier heads used a design called MLP or multi-layer perceptron, named after the [very first neural network](https://bpb-us-e2.wpmucdn.com/websites.umass.edu/dist/a/27637/files/2016/03/rosenblatt-1957.pdf). For spectrogram classification, [SED (sound event detection) heads](https://arxiv.org/abs/1903.00765) have proven to be effective.
+
+The backbone outputs a feature map, which has time in the horizontal dimension and features in the vertical dimension. Compared to the input spectrogram, the time dimension is coarser, and frequencies are replaced with features. Typically a spectrogram has 64 to 128 samples per second, while the backbone output has only 4. MLP heads use matrix multiplication to process the whole feature map at once. SED heads process the input frames as a time series, and output a score for each one. For example, with 3-second spectrograms and 4 frames per second, an MLP head outputs 1 score and a SED head outputs 12. The BriteKit Predictor class therefore returns two values: a score array and a frame map. The frame map is null when MLP heads are used, and it contains individual frame scores for SED heads.
+
 ## Metrics (PR-AUC and ROC-AUC)
-TBD
+In the context of a bioacoustic recognizer with a given score threshold, precision is the proportion of predictions that are correct. Recall is the proportion of actual sounds that are detected. For example, suppose a recording has 100 segments containing American Crow sounds, and suppose a recognizer flags 80 segments as containing American Crow. If 60 of those flagged segments actually contain crow sounds, precision is 75% (60/80). And since 60 of the 100 actual crow segments were detected, recall is 60% (60/100). Note that raising the threshold typically increases precision but decreases recall, meaning fewer false alarms but more missed detections.
+
+Using metrics that depend on a threshold causes problems though. For example, when comparing two models at a threshold, if one has higher recall but lower precision, how do you decide which is better? Therefore it's better to use threshold-independent metrics, the most popular of which are PR-AUC and ROC-AUC.
+
+PR-AUC is the area under the precision-recall curve, as in this example:
+
+![](images/PR-AUC.png)
+
+Conceptually, the precision and recall are calculated at each threshold, the curve is constructed and then the area is computed. In practice a different algorithm is used, but it results in the same value.
+
+ROC-AUC is the area under the receiver operating charactistic curve. Like the PR curve, it uses recall on one axis, but it replaces precision with 1 - FPR, like this:
+
+![](images/ROC-AUC.png)
+
+Both PR-AUC and ROC-AUC can be calculated using macro-averaging or micro-averaging. Macro-averaging weighs all classes equally and micro-average weighs them based on the number of samples they have in the ground truth annotations.
+
+ROC-AUC has the nice property that it equals the probability that a randomly selected positive example will be scored higher than a randomly selected negative example. Also, ROC-AUC has lower variance than PR-AUC. So for initial tuning, it is usually best to use ROC-AUC. However, once ROC-AUC has been more or less maximized, it can be helpful to tune PR-AUC. PR-AUC is very sensitive to high-scoring false positives, and tuning it can help to reduce those.
 ## Data Augmentation
-TBD
+To reduce model overfitting, it is critical to augment your data during training. (More content required here.)
 ## Development Environment
 These instructions have been tested in Linux only. To create a BriteKit development environment, install hatch at the user level (not in a virtual environment), and verify it's installed:
 ```
