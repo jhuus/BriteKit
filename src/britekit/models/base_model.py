@@ -152,10 +152,8 @@ class BaseModel(pl.LightningModule):
 
         if self.use_sed:
             segment_logits, frame_logits = x
-            actual = frame_logits.shape[-1]
             target = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
-            if actual != target:
-                frame_logits = F.interpolate(frame_logits, size=target, mode="linear")
+            frame_logits = F.interpolate(frame_logits, size=target, mode="linear")
             return segment_logits, frame_logits
         else:
             return x, None
