@@ -63,6 +63,7 @@ def ensemble(
     metric: str = "micro_roc",
     annotations_path: str = "",
     recordings_path: Optional[str] = None,
+    greedy: bool = False,
 ) -> None:
     """
     Find the best ensemble of a given size from a group of checkpoints.
@@ -136,7 +137,44 @@ def ensemble(
         best_ensemble = None
         count = 1
         total_combinations = math.comb(len(ckpt_paths), ensemble_size)
-        if total_combinations <= num_tries:
+        if greedy:
+            # Use a greedy algorithm. That is, find the best single checkpoint, then loop,
+            # adding the checkpoint that improves the ensemble the most at each stage until
+            # the requested size is reached.
+            logging.info("Using greedy algorithm")
+            current_ensemble: list = []
+            remaining_ckpts = set(ckpt_paths)
+
+            for i in range(ensemble_size):
+                best_addition = None
+                best_addition_score = 0
+
+                for candidate in remaining_ckpts:
+                    test_ensemble = current_ensemble + [candidate]
+                    scores = _eval_ensemble(
+                        test_ensemble,
+                        dataframe_dict,
+                        annotations_path,
+                        recordings_path,
+                        inference_output_dir,
+                    )
+                    logging.info(
+                        f"Step {i + 1}/{ensemble_size}, testing {Path(candidate).name}: score = {scores[metric]:.4f}"
+                    )
+                    if scores[metric] > best_addition_score:
+                        best_addition_score = scores[metric]
+                        best_addition = candidate
+
+                assert best_addition is not None
+                current_ensemble.append(best_addition)
+                remaining_ckpts.remove(best_addition)
+                logging.info(
+                    f"Added {Path(best_addition).name}, ensemble score = {best_addition_score:.4f}"
+                )
+
+            best_ensemble = tuple(current_ensemble)
+            best_score = best_addition_score
+        elif total_combinations <= num_tries:
             # Exhaustive search
             logging.info("Doing exhaustive search")
             for ensemble in itertools.combinations(ckpt_paths, ensemble_size):
@@ -255,6 +293,12 @@ def ensemble(
     required=False,
     help="Recordings directory. Default is directory containing annotations file.",
 )
+@click.option(
+    "--greedy",
+    "greedy",
+    is_flag=True,
+    help="If specified, use a greedy algorithm, which runs faster.",
+)
 def _ensemble_cmd(
     cfg_path: Optional[str],
     ckpt_path: str,
@@ -263,6 +307,7 @@ def _ensemble_cmd(
     metric: str,
     annotations_path: str,
     recordings_path: Optional[str],
+    greedy: bool,
 ) -> None:
     util.set_logging()
     ensemble(
@@ -273,4 +318,5 @@ def _ensemble_cmd(
         metric,
         annotations_path,
         recordings_path,
+        greedy,
     )
