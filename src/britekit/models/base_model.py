@@ -122,8 +122,18 @@ class BaseModel(pl.LightningModule):
             self.training_date = checkpoint["training_date"]
             self.training_cfg = checkpoint["training_cfg"]
 
-            self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
             self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
+            self.cfg.audio.spec_height = self.training_cfg["audio"]["spec_height"]
+            self.cfg.audio.spec_width = self.training_cfg["audio"]["spec_width"]
+            self.cfg.audio.win_length = self.training_cfg["audio"]["win_length"]
+            self.cfg.audio.max_freq = self.training_cfg["audio"]["max_freq"]
+            self.cfg.audio.min_freq = self.training_cfg["audio"]["min_freq"]
+            self.cfg.audio.sampling_rate = self.training_cfg["audio"]["sampling_rate"]
+            self.cfg.audio.freq_scale = self.training_cfg["audio"]["freq_scale"]
+            self.cfg.audio.power = self.training_cfg["audio"]["power"]
+            self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
+
+            self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
         else:
             raise ValueError("Checkpoint metadata not found.")
 

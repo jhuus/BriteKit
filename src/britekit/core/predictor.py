@@ -192,9 +192,7 @@ class Predictor:
         specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
         logging.debug("Predictor::get_recording_scores start call to get_block_scores")
         avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
-        logging.debug(
-            "Predictor::get_recording_scores finish call to get_block_scores"
-        )
+        logging.debug("Predictor::get_recording_scores finish call to get_block_scores")
 
         return avg_score, avg_frame_map, start_times
 
@@ -516,7 +514,6 @@ class Predictor:
 
         # if there is a frame_map, convert it to scores
         if frame_map is not None:
-            # TODO: need a better way to get num_frames
             num_frames = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
             scores = frame_map[:num_frames, :].max(axis=0)
             scores = scores[None, :]  # make the shape (1, num_classes)
