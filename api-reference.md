@@ -5,10 +5,11 @@
 - [Extractor](#extractor)
 - [OccurrenceDataProvider](#occurrencedataprovider)
 - [OccurrenceDatabase](#occurrencedatabase)
+- [OccurrencePickleProvider](#occurrencepickleprovider)
+- [OccurrencePickler](#occurrencepickler)
 - [PerBlockTester](#perblocktester)
 - [PerRecordingTester](#perrecordingtester)
 - [PerSegmentTester](#persegmenttester)
-- [Pickler](#pickler)
 - [Predictor](#predictor)
 - [Trainer](#trainer)
 - [TrainingDataProvider](#trainingdataprovider)
@@ -26,7 +27,7 @@ Basic inference logic using Predictor class, with multi-threading and multi-reco
 
 **run**  
 ```python
-Analyzer.run(self, input_path: str, output_path: str, rtype: str = 'audacity', start_seconds: float = 0, debug_mode: bool = False)
+Analyzer.run(self, input_path: str, output_path: str, rtype: str = 'audacity', start_seconds: float = 0, show: bool = False)
 ```
 Run inference.
 
@@ -35,7 +36,7 @@ Args:
 - output_path (str): Output directory.
 - rtype (str): Output format: "audacity", "csv" or "both".
 - start_seconds (float): Where to start processing each recording, in seconds.
-- debug_mode (bool): If true, log scores for the first spectrogram, then stop.
+- show (bool): If true, show scores for the first spectrogram, then stop.
 For example, '71' and '1:11' have the same meaning, and cause the first 71 seconds to be ignored. Default = 0.
 
 ### Audio
@@ -117,7 +118,7 @@ Returns:
 
 **set_config**  
 ```python
-Audio.set_config(self, cfg: Optional[britekit.core.base_config.BaseConfig] = None)
+Audio.set_config(self, cfg: Optional[britekit.core.base_config.BaseConfig] = None, resample: bool = True)
 ```
 Set or update the audio configuration for spectrogram generation.
 
@@ -135,6 +136,7 @@ so we downsample rather than upsampling.
 
 Args:
 - cfg (Optional[BaseConfig]): Configuration object. If None, uses default config.
+- resample (bool): If true and sampling rate has changed, resample the audio.
 
 **signal_len**  
 ```python
@@ -267,6 +269,21 @@ Returns:
 
 
 
+**find_counties**  
+```python
+OccurrenceDataProvider.find_counties(self, region_code: str)
+```
+Return list of counties for a given region code.
+
+Args:
+- region_code (str): Region code, e.g. "CA", "CA-ON" or "CA-ON-OT".
+
+Returns:
+
+- List of matching county objects.
+
+
+
 **find_county**  
 ```python
 OccurrenceDataProvider.find_county(self, latitude: float, longitude: float)
@@ -283,9 +300,9 @@ Returns:
 
 
 
-**max_occurrence**  
+**max_occurrences**  
 ```python
-OccurrenceDataProvider.max_occurrence(self, county_prefix: str, class_name: str, area_weight: bool = False)
+OccurrenceDataProvider.max_occurrences(self, county_prefix: str, class_name: str, area_weight: bool = False)
 ```
 Given a county code prefix and class name, return the average maximum occurrence value.
 This is used for regional groupings,e.g. county_prefix = "CA" returns the average for Canada
@@ -416,6 +433,88 @@ Insert a county record and return the ID.
 OccurrenceDatabase.insert_occurrences(self, county_id, class_id, value)
 ```
 Insert an occurrence record for a given county and class.
+
+### OccurrencePickleProvider
+**Class**  
+```python
+OccurrencePickleProvider(pickle_path=None)
+```
+**Public methods & properties**
+
+**find_counties**  
+```python
+OccurrencePickleProvider.find_counties(self, region_code: str)
+```
+Return list of counties for a given region code.
+
+Args:
+- region_code (str): Region code, e.g. "CA", "CA-ON" or "CA-ON-OT".
+
+Returns:
+
+- List of matching county objects.
+
+
+
+**find_county**  
+```python
+OccurrencePickleProvider.find_county(self, latitude: float, longitude: float)
+```
+Return county info for a given latitude/longitude, or None if not found.
+
+Args:
+- latitude (float): Latitude.
+- longitude (float): Longitude.
+
+Returns:
+
+- County object, or None if not found.
+
+
+
+**occurrence_value**  
+```python
+OccurrencePickleProvider.occurrence_value(self, class_name: str, smoothed: bool = True, region_code: Optional[str] = None, latitude: Optional[float] = None, longitude: Optional[float] = None, week_num: Optional[int] = None)
+```
+Given a class name, region code or latitude/longitude, and optional week number,
+return the occurrence value for the given class/location/week.
+Given a week and multiple counties, return the average value across counties.
+If no week is given, return the max value.
+
+Args:
+- class_name (str): Class name
+- smoothed (bool): If true, use the max of adjacent week's values for each week.
+- region_code (str, optional): Region code. If omitted, latitude/longitude must be intovided.
+- latitude (float, optional): Latitude
+- longitude (float, optional): Longitude
+- week_num (int, optional):
+
+Returns:
+
+- - location_found (bool): True iff region/lat/lon map to a known county or counties
+- - class_found (bool): True iff class_name is in occurrence database
+- - occurrence (float): If location_found and class_found, occurrence value for given class/location/week, else None
+
+
+
+### OccurrencePickler
+**Class**  
+```python
+OccurrencePickler(db_path: str, output_path: str)
+```
+Create a pickle file from an occurrence database, for fast access during inference.
+
+Attributes:
+    db_path (str): path to database.
+    output_path (str): output_path.
+
+**Public methods & properties**
+
+**pickle**  
+```python
+OccurrencePickler.pickle(self, quiet=False)
+```
+Create the pickle file as specified.
 
 ### PerBlockTester
 **Class**  
@@ -755,6 +854,12 @@ Note:
     Uses both manual threshold evaluation and scikit-learn's precision_recall_curve
     for comprehensive coverage.
 
+**get_recording_info**  
+```python
+PerSegmentTester.get_recording_info(self)
+```
+Create a dict with the duration in seconds of every recording
+
 **get_segments**  
 ```python
 PerSegmentTester.get_segments(self, start_time, end_time, min_seconds=0.3)
@@ -777,6 +882,12 @@ Returns:
 Note:
     Uses self.segment_len and self.overlap to calculate segment boundaries.
     Returns an empty list if no valid segments are found.
+
+**init_y_true**  
+```python
+PerSegmentTester.init_y_true(self)
+```
+Create a dataframe representing the ground truth data, with recordings segmented into 3-second segments
 
 **initialize**  
 ```python
@@ -831,35 +942,31 @@ Note:
     If calibrate=True, only calibration analysis is performed and the method returns early.
     All output files will be written to self.output_dir.
 
-### Pickler
-**Class**  
-```python
-Pickler(db_path: str, output_path: str, classes_path: Optional[str] = None, max_per_class: Optional[int] = None, spec_group: Optional[str] = None)
-```
-Create a pickle file from selected training records, for input to training.
-
-Attributes:
-    db_path (str): path to database.
-    output_path (str): output_path.
-    classes_path (Optional, str): path to CSV file listing classes.
-    max_per_class (int, optional): maximum spectrograms to output per class.
-
-**Public methods & properties**
-
-**pickle**  
-```python
-Pickler.pickle(self, quiet=False)
-```
-Create the pickle file as specified.
-
 ### Predictor
 **Class**  
 ```python
-Predictor(model_path: str, device: Optional[str] = None)
+Predictor(model_path: str, device: Optional[str] = None, cfg: Optional[britekit.core.base_config.BaseConfig] = None)
 ```
 Given a recording and a model or ensemble of models, provide methods to return scores in several formats.
 
 **Public methods & properties**
+
+**get_block_scores**  
+```python
+Predictor.get_block_scores(self, specs, start_times=None, audio_duration=None)
+```
+Get scores in array format from the loaded models for the given block of spectrograms.
+
+Args:
+- specs: Spectrograms.
+- start_times: Start time per spectrogram, in seconds from start of recording.
+  This is optional and used with SED models only.
+
+Returns:
+
+- `tuple` *(A tuple containing:)* — - avg_score (np.ndarray): Average scores across all models in the ensemble. Shape is (num_spectrograms, num_classes). - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models. Shape is (num_frames, num_classes). None if not using SED models.
+
+
 
 **get_dataframe**  
 ```python
@@ -914,9 +1021,31 @@ Returns:
 
 
 
-**get_raw_scores**  
+**get_overlapping_scores**  
 ```python
-Predictor.get_raw_scores(self, recording_path: str, start_seconds: float = 0)
+Predictor.get_overlapping_scores(self, recording_path: str, increment: float, start_seconds: float = 0)
+```
+This is a variant of get_recording_scores that overlaps spectrograms differently,
+and is intended for models with SED classifier heads only. Each model processes
+non-overlapping spectrograms. The first one gets spectrograms starting at offset 0.
+The second one gets spectrograms starting at increment, the third starts at 2*increment,
+etc. Since each model processes non-overlapping spectrograms, this achieves overlapped
+processing with much better performance than get_recording_scores, in which each model
+processes the same overlapping spectrograms.
+
+Args:
+- recording_path (str): Path to the audio recording file.
+- increment (float): Amount of increment.
+
+Returns:
+
+- `tuple` *(A tuple containing:)* — - avg_score (np.ndarray): Average scores across all models in the ensemble. Shape is (num_spectrograms, num_classes). - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models. Shape is (num_frames, num_classes). None if not using SED models. - start_times (list[float]): Start time in seconds for each spectrogram.
+
+
+
+**get_recording_scores**  
+```python
+Predictor.get_recording_scores(self, recording_path: str, start_seconds: float = 0)
 ```
 Get scores in array format from the loaded models for the given recording.
 
@@ -947,33 +1076,26 @@ Returns:
 
 
 
-**log_scores**  
+**get_specs**  
 ```python
-Predictor.log_scores(self, scores)
+Predictor.get_specs(self)
+```
+**save_manifest**  
+```python
+Predictor.save_manifest(self, output_path: str, cfg=None)
+```
+Save a YAML file summarizing the inference configuration.
+
+**show_scores**  
+```python
+Predictor.show_scores(self, scores, frame_map)
 ```
 Given an array of raw segment-level scores, log them by descending score.
+If frame_map is specified, use that. Otherwise use scores.
 
 Args:
 - scores (np.ndarray): Array of scores of shape (num_spectrograms, num_species).
-
-**save_audacity_labels**  
-```python
-Predictor.save_audacity_labels(self, scores, frame_map, start_times: list[float], file_path: str) -> None
-```
-Given an array of raw scores, convert to Audacity labels and save in the given file.
-
-Args:
-- scores (np.ndarray): Segment-level scores of shape (num_spectrograms, num_species).
-- frame_map (np.ndarray, optional): Frame-level scores of shape (num_frames, num_species).
-    If provided, uses frame-level labels; otherwise uses segment-level labels.
-- start_times (list[float]): Start time in seconds for each spectrogram.
-- file_path (str): Output path for the Audacity label file.
-
-Returns:
-
-- `None` *(Writes the labels directly to the specified file.)*
-
-
+- frame_map (np.ndarray, optional): Array of scores of shape (num_frames, num_species).
 
 **to_global_frames**  
 ```python
@@ -981,15 +1103,13 @@ Predictor.to_global_frames(self, frame_scores, offsets_sec: Sequence[float], rec
 ```
 Map overlapping per-spectrogram frame scores onto a global frame grid.
 Use mean rather than max or weighted values.
-
 Args:
 - frame_scores: (num_specs, num_classes, T_spec) scores in [0, 1].
 - offsets_sec: start time (s) for each spectrogram within the recording.
 - recording_duration_sec: total recording length in seconds.
-
 Returns:
 
-- `global_frames` *((num_classes, T_global) tensor of scores in [0, 1].)*
+- `global_frames` *((T_global, num_classes) array of scores in [0, 1].)*
 
 
 
@@ -1597,8 +1717,10 @@ Returns:
 - - segment_id (int): ID of the Segment record.
 - - specvalue_id (int): ID of the SpecValue record.
 - - value (bytes): The spectrogram itself.
+- - embedding (bytes): The embedding, if include_embedding=True.
+- - recording_id (int): ID of the corresponding recording record.
+- - filename (str): Name of the audio file.
 - - offset (float): Number of seconds from the start of the recording to the start of the segment.
-- - recording_id (int): ID of the corresponding Recording record.
 
 
 

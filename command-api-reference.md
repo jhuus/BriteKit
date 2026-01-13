@@ -66,7 +66,7 @@ Args:
 ### analyze
 **Function**  
 ```python
-analyze(cfg_path: Optional[str] = None, input_path: str = '', output_path: str = '', rtype: str = 'both', start_seconds: float = 0, min_score: Optional[float] = None, num_threads: Optional[int] = None, overlap: Optional[float] = None, segment_len: Optional[float] = None, debug_mode: bool = False)
+analyze(cfg_path: Optional[str] = None, input_path: str = '', output_path: str = '', rtype: str = 'both', start_seconds: float = 0, min_score: Optional[float] = None, num_threads: Optional[int] = None, overlap: Optional[float] = None, segment_len: Optional[float] = None, show: bool = False)
 ```
 Run inference on audio recordings to detect and classify sounds.
 
@@ -86,7 +86,27 @@ Args:
 - overlap (float, optional): Spectrogram overlap in seconds for sliding window analysis.
 - segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
     fixed-length; otherwise they are variable-length.
-- debug_mode (bool): If specified, log the top scores for the first spectrogram, then stop.
+- show (bool): If true, show the top scores for the first spectrogram, then stop.
+
+### analyze_db
+**Function**  
+```python
+analyze_db(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, classes_path: Optional[str] = None, spec_group: str = 'default', output_path: str = '', plot: bool = False, max_score: float = 0.95)
+```
+Run inference on segments in a training database.
+
+Running inference on a training database can be used to identify bad or difficult
+training segments, or to identify classes that are likely to be mistaken for each other.
+
+Args:
+- cfg_path (str): Path to YAML configuration file defining model and inference settings.
+- db_path (str): Path to database to analyze.
+- class_name (str): Optional class name. By default, do all classes.
+- classes_path (str): Optional path to CSV listing classes to process. By default, do all classes.
+- spec_group (str): Spectrogram group name. Defaults to 'default'.
+- output_path (str): Path to output directory where results will be saved.
+- plot (bool): If specified, plot spectrograms per class by ascending score.
+- max_score (float): Save details and plot only if score less than this (default = 0.95).
 
 ### audioset
 **Function**  
@@ -214,7 +234,7 @@ Args:
 ### dedup_seg
 **Function**  
 ```python
-dedup_seg(cfg_path: Optional[str] = None, db_path: Optional[str] = None, output_path: str = '', class_name: str = '', delete: bool = False, spec_group: str = 'default', threshold: float = 0.99) -> None
+dedup_seg(cfg_path: Optional[str] = None, db_path: Optional[str] = None, output_path: str = '', class_name: str = '', delete: bool = False, spec_group: str = 'default', threshold: float = 0.99, no_plot: bool = False) -> None
 ```
 Find and optionally delete duplicate segments in the training database.
 
@@ -228,6 +248,7 @@ Args:
 - delete (bool): If True, remove duplicate segments from the database. If False, only report them.
 - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
 - threshold (float): Treat as duplicates if cosine similarity >= threshold (default = 0.99).
+- no_plot (bool): If specified, do not plot spectrograms.
 
 ### del_cat
 **Function**  
@@ -358,7 +379,7 @@ Args:
 ### ensemble
 **Function**  
 ```python
-ensemble(cfg_path: Optional[str] = None, ckpt_path: str = '', ensemble_size: int = 3, num_tries: int = 100, metric: str = 'micro_roc', annotations_path: str = '', recordings_path: Optional[str] = None) -> None
+ensemble(cfg_path: Optional[str] = None, ckpt_path: str = '', ensemble_size: int = 3, num_tries: int = 100, metric: str = 'micro_roc', annotations_path: str = '', recordings_path: Optional[str] = None, greedy: bool = False) -> None
 ```
 Find the best ensemble of a given size from a group of checkpoints.
 
@@ -509,10 +530,22 @@ Args:
 Examples:
     britekit init --dest .
 
-### pickle
+### pickle_occurrence
 **Function**  
 ```python
-pickle(cfg_path: Optional[str] = None, classes_path: Optional[str] = None, db_path: Optional[str] = None, output_path: Optional[str] = None, root_dir: str = '', max_per_class: Optional[int] = None, spec_group: Optional[str] = None) -> None
+pickle_occurrence(cfg_path: Optional[str] = None, db_path: Optional[str] = None, output_path: Optional[str] = None, root_dir: str = '') -> None
+```
+Convert an occurrence database to a pickle file for use in inference.
+
+Args:
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- db_path (str, optional): Path to the occurrence database. Defaults to "data/occurrence.db".
+- output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+
+### pickle_train
+**Function**  
+```python
+pickle_train(cfg_path: Optional[str] = None, classes_path: Optional[str] = None, db_path: Optional[str] = None, output_path: Optional[str] = None, root_dir: str = '', max_per_class: Optional[int] = None, spec_group: Optional[str] = None) -> None
 ```
 Convert database spectrograms to a pickle file for use in training.
 
@@ -591,10 +624,29 @@ Args:
 - overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
 - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
 
+### plot_test
+**Function**  
+```python
+plot_test(cfg_path: Optional[str] = None, ndims: bool = False, annotations_path: str = '', output_path: str = '', class_name: Optional[str] = None, power: Optional[float] = None)
+```
+Plot spectrograms for a class or all classes based on test annotations.
+
+Given a test annotations CSV file, for each selected class, plot a spectrogram at
+each segment where the class is present. Optionally restrict to a given class.
+If all classes, create an output directory per class.
+
+Args:
+- cfg_path (str, optional): Path to YAML file defining configuration overrides.
+- ndims (bool): If True, do not show time and frequency dimensions on the spectrogram plots.
+- annotations_path (str): Path to the annotations CSV. The recordings should be in the same directory.
+- output_path (str): Directory where spectrogram images will be saved.
+- class_name (str, optional): Optional class name. If omitted, do all annotated classes.
+- power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+
 ### reextract
 **Function**  
 ```python
-reextract(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, classes_path: Optional[str] = None, check: bool = False, spec_group: str = 'default')
+reextract(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, classes_path: Optional[str] = None, offset: float = 0.0, check: bool = False, spec_group: str = 'default')
 ```
 Re-generate spectrograms from audio recordings and update the training database.
 
@@ -610,6 +662,7 @@ Args:
 - db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
 - class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
 - classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
+- offset (float): Add to spectrogram offsets. Used when changing the spectrogram duration. Default is 0.
 - check (bool): If True, only check that all recording paths are accessible without updating database.
 - spec_group (str): Spectrogram group name for storing the extracted spectrograms. Defaults to 'default'.
 
@@ -735,7 +788,7 @@ Args:
 ### train
 **Function**  
 ```python
-train(cfg_path: Optional[str] = None)
+train(cfg_path: Optional[str] = None, seed: Optional[int] = None)
 ```
 Train a bioacoustic recognition model using the specified configuration.
 
@@ -750,6 +803,7 @@ automatically. The final trained model can be used for inference and evaluation.
 Args:
 - cfg_path (str, optional): Path to YAML file defining configuration overrides.
     If not specified, uses default configuration.
+- seed (int, optional): Integer seed.
 
 ### tune
 **Function**  

@@ -5,7 +5,8 @@
 | [britekit add-class](#britekit-add-class) | Add a class record to a database. |
 | [britekit add-src](#britekit-add-src) | Add a source (e.g. 'Xeno-Canto') record to a database. |
 | [britekit add-stype](#britekit-add-stype) | Add a soundtype record to a database. |
-| [britekit analyze](#britekit-analyze) | Run inference. |
+| [britekit analyze](#britekit-analyze) | Run inference on audio recordings. |
+| [britekit analyze-db](#britekit-analyze-db) | Run inference on a training database. |
 | [britekit audioset](#britekit-audioset) | Download recordings from Google Audioset. |
 | [britekit calibrate](#britekit-calibrate) | Calibrate an ensemble based on per-segment test results. |
 | [britekit ckpt-avg](#britekit-ckpt-avg) | Average the weights of several checkpoints. |
@@ -28,10 +29,12 @@
 | [britekit find-lr](#britekit-find-lr) | Suggest a learning rate. |
 | [britekit inat](#britekit-inat) | Download recordings from iNaturalist. |
 | [britekit init](#britekit-init) | Create default directory structure including sample files. |
-| [britekit pickle](#britekit-pickle) | Convert database records to a pickle file for use in training. |
+| [britekit pickle-occurrence](#britekit-pickle-occurrence) | Convert an occurrence database to a pickle file for use in inference. |
+| [britekit pickle-train](#britekit-pickle-train) | Convert a training database to a pickle file for use in training. |
 | [britekit plot-db](#britekit-plot-db) | Plot spectrograms from a database. |
 | [britekit plot-dir](#britekit-plot-dir) | Plot spectrograms from a directory of recordings. |
 | [britekit plot-rec](#britekit-plot-rec) | Plot spectrograms from a specific recording. |
+| [britekit plot-test](#britekit-plot-test) | Plot spectrograms for a class or all classes based on test annotations. |
 | [britekit reextract](#britekit-reextract) | Re-generate the spectrograms in a database, and add them to the database. |
 | [britekit rpt-ann](#britekit-rpt-ann) | Summarize annotations in a per-segment test. |
 | [britekit rpt-db](#britekit-rpt-db) | Generate a database summary report. |
@@ -138,8 +141,33 @@ Options:
   --seg FLOAT             Optional segment length in seconds. If specified,
                           labels are fixed-length. Otherwise they are variable-
                           length.
-  --debug                 If specified, log the top scores for the first
+  --show                  If specified, show the top scores for the first
                           spectrogram, then stop.
+  --debug                 If specified, turn on debug logging.
+  --help                  Show this message and exit.
+```
+### britekit analyze-db
+```
+Usage: britekit analyze-db [OPTIONS]
+
+  Run inference on segments in a training database.
+
+  Running inference on a training database can be used to identify bad or
+  difficult training segments, or to identify classes that are likely to be
+  mistaken for each other.
+
+Options:
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  -d, --db TEXT           Path to the training database.
+  --name TEXT             Class name. Default is all classes.
+  --classes FILE          Path to CSV containing class names. Default is all
+                          classes.
+  --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
+  -o, --output DIRECTORY  Path to output directory.  [required]
+  --plot                  If specified, plot spectrograms per class by ascending
+                          score.
+  --max FLOAT             Save details and plot only if score less than this
+                          (default = 0.95).
   --help                  Show this message and exit.
 ```
 ### britekit audioset
@@ -298,7 +326,17 @@ Options:
   --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
   --threshold FLOAT       Treat as duplicates if cosine similarity >= threshold.
                           Default = 0.99.
+  --name TEXT             Class name  [required]
+  --noplot                If specified, do not plot spectrograms.
   --help                  Show this message and exit.
+/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1193: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
+  parser = self.make_parser(ctx)
+/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1186: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
+  self.parse_args(ctx, args)
+/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1002: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
+  pieces = self.collect_usage_pieces(ctx)
+/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1104: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
+  self.format_options(ctx, formatter)
 ```
 ### britekit del-cat
 ```
@@ -361,7 +399,7 @@ Usage: britekit del-seg [OPTIONS]
 
 Options:
   -d, --db TEXT  Path to the training database.
-  --class TEXT   Class name.  [required]
+  --name TEXT    Class name.  [required]
   --csv FILE     Path to CSV file containing two columns (recording and offset)
                  to identify segments to delete. Exactly one of --csv and --dir
                  must be specified.
@@ -461,6 +499,8 @@ Options:
                                   ground truth).  [required]
   -r, --recordings DIRECTORY      Recordings directory. Default is directory
                                   containing annotations file.
+  --greedy                        If specified, use a greedy algorithm, which
+                                  runs faster.
   --help                          Show this message and exit.
 ```
 ### britekit extract-all
@@ -610,9 +650,21 @@ Options:
   --dest DIRECTORY  Root directory to copy under (default is working directory).
   --help            Show this message and exit.
 ```
-### britekit pickle
+### britekit pickle-occurrence
 ```
-Usage: britekit pickle [OPTIONS]
+Usage: britekit pickle-occurrence [OPTIONS]
+
+  Convert an occurrence database to a pickle file for use in inference.
+
+Options:
+  -c, --cfg PATH     Path to YAML file defining config overrides.
+  -d, --db TEXT      Path to the training database.
+  -o, --output TEXT  Output file path. Default is "data/training.pkl".
+  --help             Show this message and exit.
+```
+### britekit pickle-train
+```
+Usage: britekit pickle-train [OPTIONS]
 
   Convert database spectrograms to a pickle file for use in training.
 
@@ -702,6 +754,28 @@ Options:
                           more detail.
   --help                  Show this message and exit.
 ```
+### britekit plot-test
+```
+Usage: britekit plot-test [OPTIONS]
+
+  Plot spectrograms for a class or all classes based on test annotations.
+
+  Given a test annotations CSV file, for each selected class, plot a spectrogram
+  at each segment where the class is present. Optionally restrict to a given
+  class. If all classes, create an output directory per class.
+
+Options:
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  --ndims                 If specified, do not show seconds on x-axis and
+                          frequencies on y-axis.
+  -a, --annotations FILE  Path to CSV file containing annotations or ground
+                          truth).  [required]
+  -o, --output DIRECTORY  Path to output directory.  [required]
+  --name TEXT             Class name. Default is all classes.
+  --power FLOAT           Raise spectrograms to this power. Lower values show
+                          more detail.
+  --help                  Show this message and exit.
+```
 ### britekit reextract
 ```
 Usage: britekit reextract [OPTIONS]
@@ -725,6 +799,8 @@ Options:
                   classes.
   --classes FILE  Path to CSV listing classes to reextract. Alternative to
                   --name. If this and --name are omitted, do all classes.
+  --offset FLOAT  Add to spectrogram offsets. Used when changing the spectrogram
+                  duration. Default is 0.
   --check         If specified, just check if all specified recordings are
                   accessible and do not update the database.
   --sgroup TEXT   Spectrogram group name. Defaults to 'default'.
@@ -888,6 +964,7 @@ Usage: britekit train [OPTIONS]
 
 Options:
   -c, --cfg PATH  Path to YAML file defining config overrides.
+  --seed INTEGER  Integer seed.
   --help          Show this message and exit.
 ```
 ### britekit tune
