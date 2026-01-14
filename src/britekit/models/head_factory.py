@@ -38,7 +38,6 @@ class ChannelReducer(nn.Module):
 class BiTemporalSEDHead(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
         super().__init__()
-        self.pool = nn.AdaptiveAvgPool2d((1, None))
 
         self.reduce = nn.Sequential(
             nn.Conv1d(in_channels, hidden_channels, kernel_size=1, bias=False),
@@ -61,7 +60,7 @@ class BiTemporalSEDHead(nn.Module):
         self.frame_head = nn.Conv1d(hidden_channels, num_classes, kernel_size=1)
 
     def forward(self, x):
-        x = self.pool(x).squeeze(2)  # [B, C, T]
+        x = x.mean(dim=2)  # [B, C, F, T] -> [B, C, T]
         x = self.reduce(x)  # [B, H, T]
 
         # Bidirectional
@@ -97,9 +96,6 @@ class ScalableSEDHead(nn.Module):
         smoother_ks: int = 5,
     ):
         super().__init__()
-        # Reduce frequency, keep time
-        self.freq_pool = nn.AdaptiveAvgPool2d((1, None))  # [B,C,F,T] -> [B,C,1,T]
-        self.squeeze = lambda z: z.squeeze(2)  # -> [B,C,T]
 
         # Channel reducer (controls size/cost of the head)
         self.reduce = ChannelReducer(
@@ -139,7 +135,7 @@ class ScalableSEDHead(nn.Module):
                 self.smoother.weight.fill_(1.0 / smoother_ks)
 
     def forward(self, x):  # x: [B, C, F, T]
-        x = self.squeeze(self.freq_pool(x))  # [B, C, T]
+        x = x.mean(dim=2)  # [B, C, F, T] -> [B, C, T]
         x = self.reduce(x)  # [B, H, T]
         x = self.temporal(x)  # [B, H, T]
 
@@ -156,9 +152,6 @@ class ScalableSEDHead(nn.Module):
 class BasicSEDHead(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
         super().__init__()
-        self.pool = nn.AdaptiveAvgPool2d((1, None))  # [B, C, F, T] → [B, C, 1, T]
-        self.squeeze = lambda x: x.squeeze(2)  # → [B, C, T]
-
         self.temporal_attention = nn.Conv1d(in_channels, 1, kernel_size=1)
         self.frame_classifier = nn.Sequential(
             nn.Conv1d(in_channels, hidden_channels, kernel_size=3, padding=1),
@@ -168,8 +161,7 @@ class BasicSEDHead(nn.Module):
         )
 
     def forward(self, x):
-        x = self.pool(x)  # [B, C, 1, T]
-        x = self.squeeze(x)  # [B, C, T]
+        x = x.mean(dim=2)  # [B, C, F, T] -> [B, C, T]
 
         frame_logits = self.frame_classifier(x)  # [B, C, T]
         attn = torch.softmax(self.temporal_attention(x), dim=-1)  # [B, 1, T]
