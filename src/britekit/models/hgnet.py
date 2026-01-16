@@ -70,7 +70,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [16, 24],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [24, 24, 48, 1, False, True, 3, 2],
         "stage2": [48, 32, 96, 1, True, True, 3, 2],
@@ -82,7 +82,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [24, 32],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [32, 32, 64, 1, False, True, 3, 2],
         "stage2": [64, 48, 128, 1, True, True, 3, 2],
@@ -94,7 +94,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [24, 40],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [40, 48, 96, 1, False, True, 3, 2],
         "stage2": [96, 64, 160, 1, True, True, 3, 3],
@@ -106,7 +106,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [32, 48],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [48, 64, 128, 1, False, True, 3, 2],
         "stage2": [128, 80, 192, 1, True, True, 3, 3],
@@ -118,7 +118,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [32, 64],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [64, 72, 144, 1, False, True, 3, 2],
         "stage2": [144, 112, 256, 1, True, True, 3, 3],
@@ -130,7 +130,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [24, 32],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [32, 72, 160, 1, False, True, 3, 2],
         "stage2": [160, 112, 304, 1, True, True, 3, 3],
@@ -142,7 +142,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [16, 16],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [16, 16, 64, 1, False, False, 3, 3],
         "stage2": [64, 32, 256, 1, True, False, 3, 3],
@@ -154,7 +154,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [24, 32],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [32, 32, 64, 1, False, False, 3, 3],
         "stage2": [64, 48, 256, 1, True, False, 3, 3],
@@ -166,7 +166,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [32, 40],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [40, 40, 80, 1, False, False, 3, 3],
         "stage2": [80, 64, 288, 1, True, False, 3, 3],
@@ -178,7 +178,7 @@ MODEL_REGISTRY = {
     {
         "stem_type": "v2",
         "stem_chs": [32, 48],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [48, 64, 128, 1, False, False, 5, 3],
         "stage2": [128, 96, 320, 1, True, False, 3, 3],
@@ -186,167 +186,83 @@ MODEL_REGISTRY = {
         "stage4": [640, 256, 1280, 1, True, True, 5, 3],
     },
     "hgnet.11":
-    # ~7.2M parameters (~4.6M with basic head)
+    # Backbone is 4.0M
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 144, 1, False, True, 5, 4],
-        "stage2": [144, 112, 256, 1, True, True, 3, 4],
-        "stage3": [256, 176, 704, 1, True, True, 3, 5],
-        "stage4": [704, 416, 1216, 1, True, True, 3, 5],
-    },
-    "hgnet.11.1":
-    # Variant A: larger kernels, fewer layers (potentially faster)
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [56, 72, 144, 1, False, True, 5, 3],
         "stage2": [144, 112, 256, 1, True, True, 5, 3],
         "stage3": [256, 176, 704, 1, True, True, 5, 4],
         "stage4": [704, 416, 1216, 1, True, True, 5, 4],
     },
-    "hgnet.11.2":
-    # Variant B: standard blocks in early stages (potentially more accurate)
+    "hgnet.12":
+    # Backbone is 5.0M
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [56, 72, 144, 1, False, False, 3, 3],
         "stage2": [144, 112, 256, 1, True, False, 3, 3],
         "stage3": [256, 176, 704, 1, True, True, 5, 5],
         "stage4": [704, 416, 1216, 1, True, True, 5, 5],
     },
-    "hgnet.11.3":
-    # Variant C: redistribute depth to middle stages (potentially more accurate)
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 144, 1, False, True, 5, 3],
-        "stage2": [144, 112, 256, 1, True, True, 3, 5],
-        "stage3": [256, 176, 704, 1, True, True, 3, 6],
-        "stage4": [704, 416, 1216, 1, True, True, 3, 4],
-    },
-    "hgnet.11.4":
-    # Variant D: multiple blocks in stage 3 (potentially more accurate)
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 144, 1, False, True, 5, 4],
-        "stage2": [144, 112, 256, 1, True, True, 3, 4],
-        "stage3": [256, 176, 704, 2, True, True, 3, 4],
-        "stage4": [704, 416, 1216, 1, True, True, 3, 5],
-    },
-    "hgnet.11.5":
-    # Variant E: wider channels in stages 3-4
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 144, 1, False, True, 5, 4],
-        "stage2": [144, 112, 288, 1, True, True, 3, 4],
-        "stage3": [288, 192, 768, 1, True, True, 3, 5],
-        "stage4": [768, 448, 1280, 1, True, True, 3, 5],
-    },
-    "hgnet.11.6":
-    # Variant F: more depth everywhere
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 144, 1, False, True, 5, 5],
-        "stage2": [144, 112, 256, 1, True, True, 3, 5],
-        "stage3": [256, 176, 704, 1, True, True, 3, 6],
-        "stage4": [704, 416, 1216, 1, True, True, 3, 6],
-    },
-    "hgnet.11.7":
-    # Variant G: standard blocks early + wider middle
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 160, 1, False, False, 3, 3],
-        "stage2": [160, 128, 320, 1, True, False, 3, 3],
-        "stage3": [320, 192, 704, 1, True, True, 5, 5],
-        "stage4": [704, 416, 1216, 1, True, True, 5, 5],
-    },
-    "hgnet.11.8":
-    # Variant H: two blocks in stages 2 and 3
-    {
-        "stem_type": "v2",
-        "stem_chs": [32, 56],
-        "agg": "ese",
-        # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [56, 72, 144, 1, False, True, 5, 4],
-        "stage2": [144, 112, 256, 2, True, True, 3, 3],
-        "stage3": [256, 176, 704, 2, True, True, 3, 4],
-        "stage4": [704, 416, 1216, 1, True, True, 3, 5],
-    },
-    "hgnet.12":
+    "hgnet.13":
     # ~7.9M parameters (~5.2M with basic head)
     {
         "stem_type": "v2",
         "stem_chs": [32, 60],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [60, 80, 160, 1, False, True, 5, 4],
         "stage2": [160, 128, 272, 1, True, True, 3, 4],
         "stage3": [272, 192, 736, 1, True, True, 3, 5],
         "stage4": [736, 448, 1280, 1, True, True, 3, 5],
     },
-    "hgnet.13":
+    "hgnet.14":
     # ~8.3M parameters (~5.5M with basic head)
     {
         "stem_type": "v2",
         "stem_chs": [32, 64],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [64, 80, 160, 1, False, True, 5, 4],
         "stage2": [160, 128, 288, 1, True, True, 3, 4],
         "stage3": [288, 192, 768, 1, True, True, 3, 5],
         "stage4": [768, 448, 1344, 1, True, True, 3, 5],
     },
-    "hgnet.14":
+    "hgnet.15":
     # ~9.0M parameters (~6.1M with basic head)
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [56, 72, 152, 1, False, True, 5, 4],
         "stage2": [152, 112, 288, 1, True, True, 3, 5],
         "stage3": [288, 192, 800, 1, True, True, 5, 5],
         "stage4": [800, 480, 1408, 1, True, True, 5, 5],
     },
-    "hgnet.15":
+    "hgnet.16":
     # ~9.6M parameters (~6.6M with basic head)
     {
         "stem_type": "v2",
         "stem_chs": [32, 48],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [48, 64, 144, 1, False, True, 5, 4],
         "stage2": [144, 96, 288, 1, True, True, 3, 5],
         "stage3": [288, 192, 832, 1, True, True, 5, 5],
         "stage4": [832, 512, 1472, 1, True, True, 5, 5],
     },
-    "hgnet.16":
+    "hgnet.17":
     # ~10.8M parameters (~7.5M with basic head)
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
-        "agg": "ese",
+        "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
         "stage1": [56, 72, 160, 1, False, True, 5, 4],
         "stage2": [160, 112, 320, 1, True, True, 3, 5],
