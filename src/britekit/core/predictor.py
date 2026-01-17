@@ -208,7 +208,6 @@ class Predictor:
             return None, None, []
 
         start_times = self._get_start_times(audio_duration, start_seconds)
-        logging.debug("Predictor::get_recording_scores start_times=%s", start_times)
         specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
         self.normalized_specs = specs
 

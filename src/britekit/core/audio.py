@@ -298,6 +298,8 @@ class Audio:
         if spec_duration is not None and spec_duration <= 0:
             return None, None
 
+        logging.debug("Audio::get_spectrograms start_times=%s", start_times)
+
         if spec_duration is None:
             # this is not the same as spec_duration=self.cfg.audio.spec_duration in the parameter list,
             # since self.cfg.audio.spec_duration can be modified after the parameter list is evaluated
