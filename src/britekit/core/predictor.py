@@ -278,7 +278,7 @@ class Predictor:
             specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
 
             if self.ov:
-                _, frame_scores = self._get_openvino_scores(specs)
+                _, frame_scores = self._get_openvino_scores_single(model, specs)
             else:
                 _, frame_scores = model.predict(specs, self.device)
 
@@ -821,6 +821,51 @@ class Predictor:
                 frame_scores_list.append(np.concatenate(model_frame_scores, axis=0))
 
         return scores, frame_scores_list if frame_scores_list else None
+
+    def _get_openvino_scores_single(self, model, specs):
+        """Run OpenVINO inference on a single model. Used by get_overlapping_scores."""
+        import numpy as np
+        import torch
+
+        block_size = self.cfg.infer.openvino_block_size
+        num_blocks = (specs.shape[0] + block_size - 1) // block_size
+
+        try:
+            output_layer = model.output(0)
+            has_frame_output = len(model.outputs) > 1
+            if has_frame_output:
+                frame_output_layer = model.output(1)
+        except Exception as e:
+            raise InferenceError(f"Failed to get model output layer: {str(e)}")
+
+        model_scores = []
+        model_frame_scores = []
+
+        for i in range(num_blocks):
+            start_idx = i * block_size
+            end_idx = min((i + 1) * block_size, specs.shape[0])
+            block = specs[start_idx:end_idx]
+
+            if block.shape[0] < block_size:
+                pad_shape = (block_size - block.shape[0], *block.shape[1:])
+                padding = np.zeros(pad_shape, dtype=block.dtype)
+                block = np.concatenate((block, padding), axis=0)
+
+            infer_result = model(block)
+            result = infer_result[output_layer]
+            result = torch.sigmoid(torch.tensor(result)).cpu().numpy()
+            model_scores.append(result[: end_idx - start_idx])
+
+            if has_frame_output:
+                frame_result = infer_result[frame_output_layer]
+                frame_result = torch.sigmoid(torch.tensor(frame_result)).cpu().numpy()
+                model_frame_scores.append(frame_result[: end_idx - start_idx])
+
+        scores = np.concatenate(model_scores, axis=0)
+        frame_scores = (
+            np.concatenate(model_frame_scores, axis=0) if model_frame_scores else None
+        )
+        return scores, frame_scores
 
     def _get_names(self) -> list[str]:
         """Return list of names as specifed by cfg.infer.label_field"""
