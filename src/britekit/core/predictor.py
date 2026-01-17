@@ -72,6 +72,19 @@ class Predictor:
             self.ov = None
 
         self._load_models(model_path)
+        if self.ov:
+            # Load one ckpt file to get class names and codes,
+            # since onnx files don't contain metadata.
+            found = False
+            for file_path in sorted(os.listdir(model_path)):
+                full_path = os.path.join(model_path, file_path)
+                if full_path.endswith(".ckpt"):
+                    self._load_model(full_path)
+                    found = True
+                    break
+
+            if not found:
+                raise Exception("No ckpt file found (needed to provide metadata for onnx files).")
 
     def get_embeddings(self, spec_array):
         """
@@ -540,8 +553,8 @@ class Predictor:
 
         # Add class list
         model: BaseModel = self.models[0]
-        names = model.train_class_names
-        codes = model.train_class_codes
+        names = self.class_names
+        codes = self.class_codes
 
         info: Dict[str, Any] = {}
         classes = []
@@ -563,10 +576,13 @@ class Predictor:
         for i, model in enumerate(self.models):
             key = f"model {i + 1}"
             info[key] = {}
-            info[key]["identifier"] = model.identifier
-            info[key]["training_date"] = model.training_date
-            info[key]["audio"] = model.training_cfg["audio"]
-            info[key]["train"] = model.training_cfg["train"]
+            if self.ov:
+                info[key]["note"] = "No metadata available when using OpenVINO"
+            else:
+                info[key]["identifier"] = model.identifier
+                info[key]["training_date"] = model.training_date
+                info[key]["audio"] = model.training_cfg["audio"]
+                info[key]["train"] = model.training_cfg["train"]
 
         # Write the manifest
         info_str = yaml.dump(info, sort_keys=False)
@@ -664,16 +680,11 @@ class Predictor:
             raise InferenceError(f'Model path "{model_path}" not found')
 
         if os.path.isfile(model_path):
-            if self.ov:
-                if model_path.endswith(".onnx"):
-                    self.models.append(self._load_model(model_path))
-                else:
-                    raise InferenceError(
-                        f'"{model_path}" does not end with .onnx when using openvino'
-                    )
-            elif model_path.endswith(".ckpt"):
+            if model_path.endswith(".ckpt"):
                 self.models.append(self._load_model(model_path).to(self.device))
             else:
+                # Cannot specify an onnx file directly, since need a ckpt
+                # file to get class names and codes, so need a directory for onnx
                 raise InferenceError(f'"{model_path}" does not end with .ckpt')
         else:
             for file_path in sorted(os.listdir(model_path)):
