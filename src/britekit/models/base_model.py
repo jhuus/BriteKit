@@ -2,6 +2,7 @@
 
 import contextlib
 from datetime import datetime
+import logging
 from typing import List, Optional, Any
 import uuid
 
@@ -134,6 +135,15 @@ class BaseModel(pl.LightningModule):
             self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
 
             self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
+
+            logging.debug(
+                "BaseModel::on_load_checkpoint sr=%d, win=%d, duration=%.2f, height=%d, width=%d",
+                self.cfg.audio.sampling_rate,
+                self.cfg.audio.win_length,
+                self.cfg.audio.spec_duration,
+                self.cfg.audio.spec_height,
+                self.cfg.audio.spec_width,
+            )
         else:
             raise ValueError("Checkpoint metadata not found.")
 
