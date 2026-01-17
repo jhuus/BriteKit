@@ -84,7 +84,9 @@ class Predictor:
                     break
 
             if not found:
-                raise Exception("No ckpt file found (needed to provide metadata for onnx files).")
+                raise Exception(
+                    "No ckpt file found (needed to provide metadata for onnx files)."
+                )
 
     def get_embeddings(self, spec_array):
         """
@@ -130,7 +132,19 @@ class Predictor:
         """
         frame_maps = []
         if self.ov:
-            scores = self._get_openvino_scores(specs)
+            scores, ov_frame_scores = self._get_openvino_scores(specs)
+            if ov_frame_scores is not None and start_times is not None:
+                # SED model with OpenVINO, process frame scores
+                if audio_duration is None:
+                    audio_duration = self.audio.seconds()
+
+                for frame_scores in ov_frame_scores:
+                    frame_map = self.to_global_frames(
+                        frame_scores,
+                        start_times,
+                        audio_duration,
+                    )
+                    frame_maps.append(frame_map)
         else:
             scores = []
             for model in self.models:
@@ -262,7 +276,12 @@ class Predictor:
 
             specs = specs**self.cfg.infer.audio_power
             specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
-            _, frame_scores = model.predict(specs, self.device)
+
+            if self.ov:
+                _, frame_scores = self._get_openvino_scores(specs)
+            else:
+                _, frame_scores = model.predict(specs, self.device)
+
             if frame_scores is None:
                 logging.error(f"No frame scores generated for {recording_path}")
                 return None, None, []
@@ -558,6 +577,7 @@ class Predictor:
 
         info: Dict[str, Any] = {}
         classes = []
+        assert names is not None and codes is not None
         for i, name in enumerate(names):
             classes.append({"name": name, "code": codes[i]})
         info["classes"] = classes
@@ -751,15 +771,21 @@ class Predictor:
         import torch
 
         scores = []
+        frame_scores_list = []
         block_size = self.cfg.infer.openvino_block_size
         num_blocks = (specs.shape[0] + block_size - 1) // block_size
 
         for model in self.models:
             try:
                 output_layer = model.output(0)
+                # Check if model has a second output for frame-level scores (SED)
+                has_frame_output = len(model.outputs) > 1
+                if has_frame_output:
+                    frame_output_layer = model.output(1)
             except Exception as e:
                 raise InferenceError(f"Failed to get model output layer: {str(e)}")
             model_scores = []
+            model_frame_scores = []
 
             for i in range(num_blocks):
                 # slice the input into blocks of size block_size
@@ -774,16 +800,27 @@ class Predictor:
                     block = np.concatenate((block, padding), axis=0)
 
                 # run inference on the block
-                result = model(block)[output_layer]
+                infer_result = model(block)
+                result = infer_result[output_layer]
                 result = torch.sigmoid(torch.tensor(result)).cpu().numpy()
 
                 # trim the padded scores to match the original block size
                 model_scores.append(result[: end_idx - start_idx])
 
+                # get frame-level scores if available
+                if has_frame_output:
+                    frame_result = infer_result[frame_output_layer]
+                    frame_result = (
+                        torch.sigmoid(torch.tensor(frame_result)).cpu().numpy()
+                    )
+                    model_frame_scores.append(frame_result[: end_idx - start_idx])
+
             # combine scores for the model
             scores.append(np.concatenate(model_scores, axis=0))
+            if has_frame_output:
+                frame_scores_list.append(np.concatenate(model_frame_scores, axis=0))
 
-        return scores
+        return scores, frame_scores_list if frame_scores_list else None
 
     def _get_names(self) -> list[str]:
         """Return list of names as specifed by cfg.infer.label_field"""
