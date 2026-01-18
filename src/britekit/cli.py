@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import logging
+
 import click
 
 try:
@@ -58,6 +60,8 @@ from .commands._tune import _tune_cmd
 from .commands._wav2mp3 import _wav2mp3_cmd
 from .commands._xeno import _xeno_cmd
 from .commands._youtube import _youtube_cmd
+
+logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
 
 
 @click.group()
