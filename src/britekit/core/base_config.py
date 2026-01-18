@@ -163,6 +163,7 @@ class InferenceConfig:
 @dataclass
 class MiscConfig:
     force_cpu: bool = False  # If true, use CPU (for performance comparisons)
+    max_models: Optional[int] = None  # If specified, limit ensemble size accordingly
     # Use an ensemble of all checkpoints in this folder for inference
     ckpt_folder: str = "data/ckpt"
     # Folder with one or more checkpoints for embeddings and search

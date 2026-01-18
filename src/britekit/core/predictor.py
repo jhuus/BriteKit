@@ -718,6 +718,12 @@ class Predictor:
                 elif full_path.endswith(".ckpt"):
                     self.models.append(self._load_model(full_path).to(self.device))
 
+                if (
+                    self.cfg.misc.max_models is not None
+                    and len(self.models) == self.cfg.misc.max_models
+                ):
+                    break
+
         if not self.models:
             raise InferenceError(f'No models loaded from "{model_path}"')
 
