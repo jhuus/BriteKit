@@ -62,6 +62,8 @@ from .commands._xeno import _xeno_cmd
 from .commands._youtube import _youtube_cmd
 
 logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
+logging.getLogger("pyinaturalist").setLevel(logging.ERROR)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
 
 
 @click.group()
