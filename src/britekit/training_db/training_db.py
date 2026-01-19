@@ -856,6 +856,24 @@ class TrainingDatabase:
         except sqlite3.Error as e:
             raise DatabaseError(f"Error in TrainingDatabase::get_class_count: {e}")
 
+    def update_class(self, id: int, field: str, value):
+        """
+        Update a record in the Class table.
+
+        Args:
+        - id (int): ID that identifies the record to update
+        - field (str): Name of column to update.
+        - value: New value.
+        """
+        try:
+            sql = f"""
+                UPDATE Class SET {field} = ? WHERE ID = ?
+            """
+            self.cursor.execute(sql, (value, id))
+            self.conn.commit()
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Error in TrainingDatabase::update_class: {e}")
+
     # ------------------------------- #
     # SoundType
     # ------------------------------- #
