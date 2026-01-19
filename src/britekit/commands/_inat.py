@@ -73,21 +73,28 @@ def inat(
     id_map: Dict[str, int] = {}  # map media IDs to observation IDs
     logging.info(f"Response contains {len(response['results'])} results")
     num_downloads = 0
-    for result in response["results"]:
+    for i, result in enumerate(response["results"]):
         if num_downloads >= max_downloads:
             break
 
         if result["quality_grade"] == "needs_id":
+            logging.info(f"Skipping result {i + 1} (needs ID)")
             continue
 
         for sound in result["sounds"]:
             if sound["file_url"] is None:
+                logging.info(f"Skipping result {i + 1} (no audio available)")
                 continue
 
+            logging.info(f"Downloading {sound["file_url"]}")
             media_id = _download(sound["file_url"], output_dir, no_prefix)
             if media_id is not None and result["id"] is not None:
                 num_downloads += 1
                 id_map[media_id] = result["id"]
+
+    logging.info(f"Downloaded {num_downloads} recordings")
+    if num_downloads == 0:
+        return
 
     csv_path = os.path.join(output_dir, "inat.csv")
     with open(csv_path, "w") as csv_file:
