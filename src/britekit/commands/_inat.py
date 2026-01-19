@@ -86,7 +86,7 @@ def inat(
                 logging.info(f"Skipping result {i + 1} (no audio available)")
                 continue
 
-            logging.info(f"Downloading {sound["file_url"]}")
+            logging.info(f"Downloading {sound['file_url']}")
             media_id = _download(sound["file_url"], output_dir, no_prefix)
             if media_id is not None and result["id"] is not None:
                 num_downloads += 1
