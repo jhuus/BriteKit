@@ -97,8 +97,9 @@ class TrainingDataProvider:
 
         # this is much faster than getting the count once per class
         results = self.db.get_all_segment_counts()
-        for r in results:
-            segment_count.append(r.count)
+        segment_counts_by_name = {r.class_name: r.count for r in results}
+        for name in names:
+            segment_count.append(segment_counts_by_name.get(name, 0))
 
         summary_df = pd.DataFrame()
         summary_df["name"] = names
