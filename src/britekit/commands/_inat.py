@@ -44,6 +44,7 @@ def inat(
     output_dir: str = "",
     max_downloads: int = 500,
     no_prefix: bool = False,
+    include_unverified: bool = False,
 ) -> None:
     """
     Download audio recordings from iNaturalist observations.
@@ -60,14 +61,20 @@ def inat(
     - max_downloads (int): Maximum number of recordings to download. Default is 500.
     - name (str): Species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
     - no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
+    - include_unverified (bool): If true, include recordings that have not been verified. By default they are excluded.
     """
     import pyinaturalist
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
+    """
     response: Dict[str, Any] = pyinaturalist.get_observations(
         taxon_name=f"{name}", identified=True, sounds=True, photos=False, page="all"
+    )
+    """
+    response: Dict[str, Any] = pyinaturalist.get_observations(
+        taxon_name=f"{name}", sounds=True, page="all"
     )
 
     id_map: Dict[str, int] = {}  # map media IDs to observation IDs
@@ -77,14 +84,21 @@ def inat(
         if num_downloads >= max_downloads:
             break
 
-        if result["quality_grade"] == "needs_id":
-            logging.info(f"Skipping result {i + 1} (needs ID)")
-            continue
-
         for sound in result["sounds"]:
             if sound["file_url"] is None:
-                logging.info(f"Skipping result {i + 1} (no audio available)")
+                logging.info(f"Skipping {sound['file_url']} (no audio available)")
                 continue
+
+            if result["quality_grade"] == "needs_id":
+                if include_unverified:
+                    logging.info(
+                        f"Warning: result {i + 1} has not been verified ({sound['file_url']})"
+                    )
+                else:
+                    logging.info(
+                        f"Skipping result {i + 1}, since it has not been verified ({sound['file_url']})"
+                    )
+                    continue
 
             logging.info(f"Downloading {sound['file_url']}")
             media_id = _download(sound["file_url"], output_dir, no_prefix)
@@ -132,11 +146,18 @@ def inat(
     is_flag=True,
     help="By default, filenames use an 'N' prefix and recording number. Specify this flag to skip the prefix.",
 )
+@click.option(
+    "--nover",
+    "include_unverified",
+    is_flag=True,
+    help="If specified, include recordings that have not been verified. By default they are excluded.",
+)
 def _inat_cmd(
     name: str,
     output_dir: str,
     max_downloads: int,
     no_prefix: bool,
+    include_unverified: bool,
 ) -> None:
     util.set_logging()
-    inat(name, output_dir, max_downloads, no_prefix)
+    inat(name, output_dir, max_downloads, no_prefix, include_unverified)
