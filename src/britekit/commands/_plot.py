@@ -406,7 +406,7 @@ def plot_rec(
     "input_path",
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
     required=True,
-    help="Path to input directory.",
+    help="Path to input file.",
 )
 @click.option(
     "-o",
