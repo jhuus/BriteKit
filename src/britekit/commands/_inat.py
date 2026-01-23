@@ -68,11 +68,6 @@ def inat(
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    """
-    response: Dict[str, Any] = pyinaturalist.get_observations(
-        taxon_name=f"{name}", identified=True, sounds=True, photos=False, page="all"
-    )
-    """
     response: Dict[str, Any] = pyinaturalist.get_observations(
         taxon_name=f"{name}", sounds=True, page="all"
     )
