@@ -688,7 +688,8 @@ def inference_output_to_dataframe(input_path: str):
         csv_files = glob.glob(os.path.join(input_path, "*.csv"))
         if len(csv_files) > 1:
             for csv_file in csv_files:
-                if csv_file.endswith("_labels.csv"):
+                stem = Path(csv_file).stem
+                if stem == "scores" or stem.endswith("_labels"):
                     df = pd.read_csv(csv_file)
                     return df
 
