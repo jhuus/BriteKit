@@ -780,6 +780,10 @@ class Predictor:
         block_size = self.cfg.infer.openvino_block_size
         num_blocks = (specs.shape[0] + block_size - 1) // block_size
 
+        # Platt scaling parameters
+        w = self.cfg.infer.scaling_coefficient
+        b = self.cfg.infer.scaling_intercept
+
         for model in self.models:
             try:
                 output_layer = model.output(0)
@@ -807,7 +811,7 @@ class Predictor:
                 # run inference on the block
                 infer_result = model(block)
                 result = infer_result[output_layer]
-                result = torch.sigmoid(torch.tensor(result)).cpu().numpy()
+                result = torch.sigmoid(torch.tensor(result) * w + b).cpu().numpy()
 
                 # trim the padded scores to match the original block size
                 model_scores.append(result[: end_idx - start_idx])
@@ -816,7 +820,7 @@ class Predictor:
                 if has_frame_output:
                     frame_result = infer_result[frame_output_layer]
                     frame_result = (
-                        torch.sigmoid(torch.tensor(frame_result)).cpu().numpy()
+                        torch.sigmoid(torch.tensor(frame_result) * w + b).cpu().numpy()
                     )
                     model_frame_scores.append(frame_result[: end_idx - start_idx])
 
@@ -834,6 +838,10 @@ class Predictor:
 
         block_size = self.cfg.infer.openvino_block_size
         num_blocks = (specs.shape[0] + block_size - 1) // block_size
+
+        # Platt scaling parameters
+        w = self.cfg.infer.scaling_coefficient
+        b = self.cfg.infer.scaling_intercept
 
         try:
             output_layer = model.output(0)
@@ -858,12 +866,14 @@ class Predictor:
 
             infer_result = model(block)
             result = infer_result[output_layer]
-            result = torch.sigmoid(torch.tensor(result)).cpu().numpy()
+            result = torch.sigmoid(torch.tensor(result) * w + b).cpu().numpy()
             model_scores.append(result[: end_idx - start_idx])
 
             if has_frame_output:
                 frame_result = infer_result[frame_output_layer]
-                frame_result = torch.sigmoid(torch.tensor(frame_result)).cpu().numpy()
+                frame_result = (
+                    torch.sigmoid(torch.tensor(frame_result) * w + b).cpu().numpy()
+                )
                 model_frame_scores.append(frame_result[: end_idx - start_idx])
 
         scores = np.concatenate(model_scores, axis=0)

@@ -325,6 +325,12 @@ class BaseModel(pl.LightningModule):
         # Move _iter_blocks outside to avoid redefinition
         seg_parts, frame_parts = [], []
 
+        logging.debug(
+            "BaseModel::predict multi_label=%s, scaling_coefficient=%.3f, scaling_intercept=%.3f",
+            self.multi_label,
+            self.cfg.infer.scaling_coefficient,
+            self.cfg.infer.scaling_intercept,
+        )
         with torch.inference_mode():
             for x_block in self._iter_blocks(x, block_size):
                 xb = self._ensure_tensor(x_block, device)
@@ -393,27 +399,6 @@ class BaseModel(pl.LightningModule):
                 raise ValueError(f"Unexpected feature shape: {feats.shape}")
 
             return pooled.cpu().numpy()  # [B, D]
-
-    def get_sed_scores(self, specs, device=None):
-        """
-        Get segment-scores and frame-scores from a model with a SED head.
-        """
-        assert self.use_sed, "get_sed_scores called on a non-SED model"
-        if device is None:
-            device = util.get_device()
-
-        self.backbone.to(device)
-        self.backbone.eval()
-        self.head.to(device)
-        self.head.eval()
-
-        with torch.no_grad():
-            specs = self._ensure_tensor(specs, device)
-            segment_logits, frame_logits = self(specs)
-            segment_scores = 1 / (1 + torch.exp(-segment_logits))
-            frame_scores = torch.sigmoid(frame_logits)
-
-        return segment_scores.cpu().numpy(), frame_scores.cpu().numpy()
 
     # ==================================================================
     # Utilities & helpers
