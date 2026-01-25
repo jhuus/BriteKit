@@ -349,6 +349,7 @@ class BaseModel(pl.LightningModule):
                         device=seg_logits.device,
                         dtype=seg_logits.dtype,
                     )
+
                     seg_scores = torch.sigmoid(seg_logits * w + b)
                 else:
                     seg_scores = torch.softmax(seg_logits, dim=1)
@@ -357,7 +358,11 @@ class BaseModel(pl.LightningModule):
 
                 # frame scores (SED)
                 if frame_logits is not None:
-                    frame_scores = torch.sigmoid(frame_logits)
+                    if self.multi_label:
+                        frame_scores = torch.sigmoid(frame_logits * w + b)
+                    else:
+                        frame_scores = torch.softmax(frame_logits, dim=1)
+
                     frame_parts.append(frame_scores)
 
         segment_scores = torch.cat(seg_parts, dim=0)
