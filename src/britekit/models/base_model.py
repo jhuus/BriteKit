@@ -14,7 +14,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
-from britekit.core.config_loader import get_config
+from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core import util
 from britekit.models.head_factory import is_sed
 
@@ -408,6 +408,9 @@ class BaseModel(pl.LightningModule):
         if self.backbone:
             for _, p in self.backbone.named_parameters():
                 p.requires_grad = False
+
+    def set_config(self, cfg: BaseConfig):
+        self.cfg = cfg
 
     def _calc_loss(self, seg_logits, frame_logits, seg_labels):
         segment_loss = self.loss_fn(seg_logits, seg_labels)

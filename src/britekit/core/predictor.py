@@ -734,6 +734,7 @@ class Predictor:
         if model_path.endswith(".ckpt"):
             try:
                 model = model_loader.load_from_checkpoint(model_path).eval()
+                model.set_config(self.cfg)
                 if self.class_names is None:
                     self.class_names = model.train_class_names
                     self.class_codes = model.train_class_codes
