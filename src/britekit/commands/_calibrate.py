@@ -14,7 +14,6 @@ from britekit.core import util
 
 
 def calibrate(
-    cfg_path: Optional[str] = None,
     annotations_path: str = "",
     label_dir: str = "",
     output_path: str = "",
@@ -35,7 +34,6 @@ def calibrate(
     prediction scores to better reflect true probabilities.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
     - annotations_path (str): Path to CSV file containing ground truth annotations.
     - label_dir (str): Directory containing model prediction labels (Audacity format).
     - output_path (str): Directory where calibration reports will be saved.
@@ -83,14 +81,6 @@ def calibrate(
     name="calibrate",
     short_help="Calibrate an ensemble based on per-segment test results.",
     help=util.cli_help_from_doc(calibrate.__doc__),
-)
-@click.option(
-    "-c",
-    "--cfg",
-    "cfg_path",
-    type=click.Path(exists=True),
-    required=False,
-    help="Path to YAML file defining config overrides.",
 )
 @click.option(
     "-a",
@@ -144,7 +134,6 @@ def calibrate(
     help="Use this intercept in the calibration plot.",
 )
 def _calibrate_cmd(
-    cfg_path: str,
     annotations_path: str,
     label_dir: str,
     output_path: str,
@@ -155,7 +144,6 @@ def _calibrate_cmd(
 ):
     util.set_logging()
     calibrate(
-        cfg_path,
         annotations_path,
         label_dir,
         output_path,
