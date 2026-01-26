@@ -373,7 +373,11 @@ class BaseModel(pl.LightningModule):
 
         segment_scores = torch.cat(seg_parts, dim=0)
         frame_scores = torch.cat(frame_parts, dim=0) if frame_parts else None
-        return segment_scores.cpu().numpy(), frame_scores.cpu().numpy()
+
+        if frame_scores is None:
+            return segment_scores.cpu().numpy(), None
+        else:
+            return segment_scores.cpu().numpy(), frame_scores.cpu().numpy()
 
     def get_embeddings(self, specs, device=None):
         """Get embeddings for use in searching and clustering"""
