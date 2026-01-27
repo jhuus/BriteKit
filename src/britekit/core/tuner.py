@@ -189,6 +189,7 @@ class Tuner:
 
         param_def = self.param_space[start_index]
         values = self._get_values(param_def)
+        logging.info(f"For parameter {param_def["name"]}, values = {values}")
 
         for value in values:
             params[param_def["name"]] = value
@@ -224,6 +225,7 @@ class Tuner:
         total_combinations = 1
         for i in range(len(self.param_space)):
             values.append(self._get_values(self.param_space[i]))
+            logging.info(f"For parameter {param_def["name"]}, values = {values}")
             total_combinations *= len(values[-1])
 
         if total_combinations <= self.num_trials:
