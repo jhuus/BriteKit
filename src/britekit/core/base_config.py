@@ -79,7 +79,10 @@ class TrainingConfig:
     # SED-specific parameters
     sed_fps: int = 4  # Frames per second from SED heads
     frame_loss_weight: float = 0.5  # Segment_loss_weight = 1 - frame_loss_weight
-    offpeak_weight: float = 0.002  # Loss penalty weight for SED models
+    offpeak_weight: float = 0.002  # Offpeak loss penalty weight for SED models
+    absence_penalty_eps: float = 0.2  # Absence penalty epsilon for SED models
+    absence_penalty_tau: float = 7.0  # Absence penalty tau for SED models
+    absence_penalty_weight: float = 0.02  # Absence penalty weight for SED models
 
     # Data augmentation
     augment: bool = True  # Use data augmentation?
