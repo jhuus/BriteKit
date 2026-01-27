@@ -82,7 +82,7 @@ class TrainingConfig:
     offpeak_weight: float = 0.002  # Offpeak loss penalty weight for SED models
     absence_penalty_eps: float = 0.2  # Absence penalty epsilon for SED models
     absence_penalty_tau: float = 7.0  # Absence penalty tau for SED models
-    absence_penalty_weight: float = 0.02  # Absence penalty weight for SED models
+    absence_penalty_weight: float = 0.0  # Absence penalty weight for SED models
 
     # Data augmentation
     augment: bool = True  # Use data augmentation?
