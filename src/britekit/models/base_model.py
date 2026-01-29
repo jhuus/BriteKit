@@ -96,7 +96,9 @@ class BaseModel(pl.LightningModule):
 
         # Loss function
         if self.multi_label:
-            self.loss_fn: Any = nn.BCEWithLogitsLoss()
+            self.loss_fn: Any = nn.BCEWithLogitsLoss(
+                weight=torch.ones(self.num_classes)
+            )
         else:
             self.loss_fn = nn.CrossEntropyLoss()
 
@@ -413,6 +415,20 @@ class BaseModel(pl.LightningModule):
         if self.backbone:
             for _, p in self.backbone.named_parameters():
                 p.requires_grad = False
+
+    def set_class_weights(self, class_weights):
+        """Set class weights on the loss function."""
+        import torch
+
+        if class_weights is None:
+            return
+
+        weights_tensor = torch.tensor(class_weights, dtype=torch.float32)
+
+        if self.multi_label:
+            self.loss_fn = nn.BCEWithLogitsLoss(weight=weights_tensor)
+        else:
+            self.loss_fn = nn.CrossEntropyLoss(weight=weights_tensor)
 
     def set_config(self, cfg: BaseConfig):
         self.cfg = cfg

@@ -63,6 +63,9 @@ class TrainingConfig:
     compile: bool = False  # Compile the model?
     mixed_precision: bool = False  # Use mixed precision?
 
+    use_class_weights: bool = True  # Should loss function weight classes by spec count?
+    weight_exponent: float = 0.5  # Exponent to soften the class weights
+
     pos_label_smoothing: float = 0.08  # Positive side of asymmetric label smoothing
     neg_label_smoothing: float = 0.01  # Negative side of asymmetric label smoothing
 

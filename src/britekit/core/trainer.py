@@ -106,6 +106,8 @@ class Trainer:
                     dm.num_train_specs,
                 )
 
+            model.set_class_weights(dm.class_weights())
+
             if self.cfg.train.compile:
                 model = torch.compile(model)
 

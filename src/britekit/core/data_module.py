@@ -172,6 +172,23 @@ class DataModule(LightningDataModule):
             data["spec_class_indexes"],
         )
 
+    def class_weights(self):
+        import numpy as np
+
+        if self.cfg.train.use_class_weights:
+            import sklearn.utils.class_weight
+
+            class_weights = sklearn.utils.class_weight.compute_class_weight(
+                "balanced",
+                classes=np.arange(self.num_train_classes),
+                y=self.flattened_labels,
+            )
+            class_weights = class_weights**self.cfg.train.weight_exponent
+        else:
+            class_weights = np.ones(self.num_train_classes)
+
+        return class_weights
+
     def prepare_fold(self, fold_index: int):
         """
         Prepare train/validation split for a specific fold.
