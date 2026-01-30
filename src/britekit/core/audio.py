@@ -61,7 +61,8 @@ class Audio:
         self.linear_transform_cache: dict[tuple, Any] = {}
         self.mel_transform_cache: dict[tuple, Any] = {}
         self.log2_filterbank_cache: dict[tuple, Any] = {}
-        self.cached = None
+
+        self.have_signal = False
         self.path = None
         self.signal: Any = None
         self.set_config(cfg)
@@ -100,7 +101,6 @@ class Audio:
         # resolution when sampling rate changes
         self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
 
-        self.cached = None  # can not trust that cache is suitable
         if (
             resample
             and self.signal is not None
@@ -120,10 +120,6 @@ class Audio:
             self.signal = signal.cpu().numpy()
 
         self.sampling_rate = self.cfg.audio.sampling_rate
-
-        # force power scale when converting to decibels
-        if self.cfg.audio.decibels:
-            self.cfg.audio.power = 2
 
         logging.debug(
             "Audio::set_config sr=%d, win=%d, duration=%.2f, height=%d, width=%d",
@@ -205,51 +201,39 @@ class Audio:
         Note:
             If loading fails, signal will be None and an error will be logged.
         """
-        import torchaudio as ta  # faster than librosa
+        import librosa
         import numpy as np
 
         if not path or not isinstance(path, str):
             logging.error(f"Invalid path provided: {path}")
             return None, self.cfg.audio.sampling_rate
 
-        if path == self.path:
-            # already loaded this recording
-            logging.debug("Audio::load skip load of %s", path)
-            return self.signal, self.cfg.audio.sampling_rate
-
         try:
-            # Load (channels, samples), float32
-            logging.debug("Audio::load processing %s", path)
+            self.have_signal = True
             self.path = path
-            waveform, sr = ta.load(path)
+            logging.debug("Audio::load processing %s", path)
 
-            # Resample if needed
-            if sr != self.cfg.audio.sampling_rate:
-                waveform = ta.functional.resample(
-                    waveform, sr, self.cfg.audio.sampling_rate
+            if self.cfg.audio.choose_channel:
+                self.signal, _ = librosa.load(
+                    path, sr=self.cfg.audio.sampling_rate, mono=False
                 )
 
-            # Handle channels
-            waveform = waveform.numpy()
-            if waveform.ndim == 2 and waveform.shape[0] == 2:
-                # stereo recording
-                if self.cfg.audio.choose_channel:
-                    self.cached = None  # important to set this before choose-channel
-                    waveform = self._choose_channel(waveform[0], waveform[1])
-                else:
-                    waveform = waveform.mean(axis=0)
+                if len(self.signal.shape) == 2:
+                    self.signal = self._choose_channel(self.signal[0], self.signal[1])
+            else:
+                self.signal, _ = librosa.load(
+                    path, sr=self.cfg.audio.sampling_rate, mono=True
+                )
 
-            # Ensure 1D float32
-            self.signal = np.asarray(waveform, dtype=np.float32)
-            if self.signal.ndim == 2:
-                self.signal = self.signal.squeeze(0)  # (1, len) -> (len,)
+            # Ensure float32
+            self.signal = np.asarray(self.signal, dtype=np.float32)
 
         except Exception as e:
+            self.have_signal = False
             self.signal = None
             self.path = None
             logging.error(f"Caught exception in audio load of {path}: {e}")
 
-        self.cached = None  # important to set this after choose-channel too
         return self.signal, self.sampling_rate
 
     def get_spectrograms(
@@ -292,7 +276,7 @@ class Audio:
         """
         import numpy as np
 
-        if self.signal is None or start_times is None:
+        if not self.have_signal:
             return None, None
 
         if spec_duration is not None and spec_duration <= 0:
@@ -305,44 +289,41 @@ class Audio:
             # since self.cfg.audio.spec_duration can be modified after the parameter list is evaluated
             spec_duration = self.cfg.audio.spec_duration
 
-        # Get one spectrogram for the whole recording, then split it up
-        if self.cached is None:
-            logging.debug("Audio::get_spectrograms generate spectrogram for recording")
-            self.cached = self._get_raw_spectrogram(
-                self.signal,
-                freq_scale=freq_scale,
-                decibels=decibels,
-                top_db=top_db,
-                db_power=db_power,
-            )
-        else:
-            logging.debug("Audio::get_spectrograms reuse cached spectrogram")
+        if freq_scale is None:
+            freq_scale = self.cfg.audio.freq_scale
 
-        assert self.cached is not None
-        samples_per_sec = self.sampling_rate / self.linear_transform.hop_length
         specs = []
+        sr = self.cfg.audio.sampling_rate
         for i, offset in enumerate(start_times):
-            start_sample = int(offset * samples_per_sec)
-            end_sample = int((offset + spec_duration) * samples_per_sec)
-            end_sample = min(end_sample, self.cached.shape[1])
-            if end_sample - start_sample < samples_per_sec:
-                break  # require at least one second of audio in a spectrogram
+            if int(offset * sr) < len(self.signal):
+                # Slice signal first, then generate spectrogram (like HawkEars)
+                start_sample = int(offset * sr)
+                end_sample = int((offset + spec_duration) * sr)
+                signal_slice = self.signal[start_sample:end_sample]
 
-            if start_sample < self.cached.shape[1]:
-                spec = self.cached[:, start_sample:end_sample]
-                if spec.shape[1] > self.cfg.audio.spec_width:
-                    spec = spec[:, : self.cfg.audio.spec_width]
-                elif spec.shape[1] < self.cfg.audio.spec_width:
-                    pad_width = self.cfg.audio.spec_width - spec.shape[1]
-                    spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
-
+                spec = self._get_raw_spectrogram(signal_slice, freq_scale=freq_scale)
+                spec = spec[: self.cfg.audio.spec_height, : self.cfg.audio.spec_width]
+                if spec.shape[1] < self.cfg.audio.spec_width:
+                    spec = np.pad(
+                        spec,
+                        ((0, 0), (0, self.cfg.audio.spec_width - spec.shape[1])),
+                        "constant",
+                        constant_values=0,
+                    )
                 specs.append(spec)
+            else:
+                specs.append(None)
 
         # Handle empty specs list to prevent error
-        if not specs:
+        if not specs or all(s is None for s in specs):
             return np.empty(0), np.empty(0)
 
-        unnormalized_specs = np.stack(specs, axis=0)
+        # Filter out None values and stack
+        valid_specs = [s for s in specs if s is not None]
+        if not valid_specs:
+            return np.empty(0), np.empty(0)
+
+        unnormalized_specs = np.stack(valid_specs, axis=0)
         normalized_specs = unnormalized_specs.copy()
         self._normalize(normalized_specs)
         return normalized_specs, unnormalized_specs
@@ -366,7 +347,7 @@ class Audio:
         Returns:
             int: Number of samples in the signal, or 0 if no signal is loaded.
         """
-        return 0 if self.signal is None else len(self.signal)
+        return 0 if not self.have_signal else len(self.signal)
 
     # =============================================================================
     # Private Helper Methods
@@ -418,9 +399,10 @@ class Audio:
         top_db: Optional[float] = None,
         db_power: Optional[float] = None,
     ):
+        """Generate spectrogram from signal slice (HawkEars approach)."""
         import torch
         import torchaudio as ta
-        import numpy as np
+        import torch.nn.functional as F
 
         if freq_scale is None:
             freq_scale = self.cfg.audio.freq_scale
@@ -436,30 +418,31 @@ class Audio:
         if db_power is None:
             db_power = self.cfg.audio.db_power
 
-        # Process in chunks to avoid CUDA memory errors on long recordings.
-        # 5 minutes at 32kHz = 9.6M samples.
-        max_chunk_samples = 5 * 60 * self.cfg.audio.sampling_rate
+        signal = signal.reshape((1, signal.shape[0]))
+        tensor = torch.from_numpy(signal).to(self.device)
 
-        if signal.shape[0] <= max_chunk_samples:
-            # Short signal: process all at once
-            spec = self._compute_spectrogram_chunk(signal, freq_scale)
+        if freq_scale == "mel":
+            spec = self.mel_transform(tensor).cpu().numpy()[0]
         else:
-            # Long signal: process in chunks and concatenate
-            chunks = []
-            for start in range(0, signal.shape[0], max_chunk_samples):
-                end = min(start + max_chunk_samples, signal.shape[0])
-                chunk_signal = signal[start:end]
-                if chunk_signal.shape[0] < max_chunk_samples:
-                    chunk_signal = np.pad(
-                        chunk_signal, (0, max_chunk_samples - chunk_signal.shape[0])
-                    )
-
-                chunk_spec = self._compute_spectrogram_chunk(chunk_signal, freq_scale)
-                chunks.append(chunk_spec)
-                del chunk_spec
-                torch.cuda.empty_cache()
-
-            spec = np.concatenate(chunks, axis=1)
+            # Linear or log scale - use linear transform then filter/interpolate
+            spec = self.linear_transform(tensor)
+            freqs = torch.fft.rfftfreq(
+                2 * self.win_length, d=1 / self.cfg.audio.sampling_rate
+            )
+            mask = (freqs >= self.cfg.audio.min_freq) & (
+                freqs <= self.cfg.audio.max_freq
+            )
+            spec = spec[:, mask, :]  # [channel, selected_freq_bins, time_frames]
+            spec = spec.unsqueeze(1)
+            # Use bilinear interpolation (like HawkEars)
+            spec = F.interpolate(
+                spec,
+                size=(self.cfg.audio.spec_height, self.cfg.audio.spec_width),
+                mode="bilinear",
+                align_corners=False,
+            )
+            spec = spec.squeeze(1)
+            spec = spec.cpu().numpy()[0]
 
         if decibels:
             # Apply dB conversion on CPU (already numpy)
@@ -469,46 +452,6 @@ class Audio:
             spec = spec[0].numpy()
 
         return spec
-
-    def _compute_spectrogram_chunk(self, signal, freq_scale):
-        """Compute spectrogram for a single chunk of audio, returning numpy array."""
-        import torch
-        import torch.nn.functional as F
-
-        signal = signal.reshape((1, signal.shape[0]))
-        tensor = torch.from_numpy(signal).to(self.device)
-
-        if freq_scale == "log":
-            spec = self.linear_transform(tensor)  # [1, n_freqs, n_frames]
-            spec = torch.matmul(
-                self.log2_filterbank, spec.squeeze(0)
-            )  # [n_mels, n_frames]
-            spec = spec.unsqueeze(0)  # [1, n_mels, n_frames]
-
-        elif freq_scale == "mel":
-            spec = self.mel_transform(tensor)  # [1, n_mels, T]
-
-        elif freq_scale == "linear":
-            spec = self.linear_transform(tensor)
-            freqs = torch.fft.rfftfreq(
-                2 * self.win_length, d=1 / self.cfg.audio.sampling_rate
-            )
-            mask = (freqs >= self.cfg.audio.min_freq) & (
-                freqs <= self.cfg.audio.max_freq
-            )
-            spec = spec[:, mask, :].unsqueeze(1)  # [1, 1, F_sel, T]
-
-            # downsample frequency to spec_height (energy-preserving)
-            spec = F.interpolate(
-                spec,
-                size=(self.cfg.audio.spec_height, spec.shape[-1]),
-                mode="area",
-            )
-            spec = spec.squeeze(1)  # [1, F, T]
-
-        result = spec[0].cpu().numpy()
-        del spec, tensor
-        return result
 
     def _normalize(self, specs):
         """Normalize values between 0 and 1."""
@@ -520,95 +463,50 @@ class Audio:
             if max > 0:
                 specs[i] = specs[i] / max
 
+            # Clip to [0, 1] (like HawkEars)
+            specs[i] = specs[i].clip(0, 1)
+
     def _choose_channel(self, left_signal, right_signal):
         """
         Stereo recordings sometimes have one clean channel and one noisy one;
         so rather than just merge them, use heuristics to pick the cleaner one.
-        This heuristic was developed by training an sklearn DecisionTreeClassifier,
-        converting the tree to if/else statements, changing it to treat the left
-        and right channels symmetrically, and finally retuning the hyperparameters.
+        Simple heuristic: choose the channel with less total energy (less noise).
         """
-        from . import audio_util
         import numpy as np
-
-        # if one channel is null, use the other
-        left_sum = left_signal.sum()
-        right_sum = right_signal.sum()
-        if left_sum == 0 and right_sum != 0:
-            return right_signal
-        elif left_sum != 0 and right_sum == 0:
-            return left_signal
 
         recording_seconds = int(len(left_signal) / self.cfg.audio.sampling_rate)
         check_seconds = min(recording_seconds, self.cfg.audio.check_seconds)
         if check_seconds == 0:
-            return left_signal  # make an arbitrary choice
+            # make an arbitrary choice, unless a channel is null
+            left_sum = np.sum(left_signal)
+            right_sum = np.sum(right_signal)
+            if left_sum == 0 and right_sum != 0:
+                return right_signal
+            elif left_sum != 0 and right_sum == 0:
+                return left_signal
+            else:
+                return left_signal
 
         self.signal = left_signal
-        left_specs, _ = self.get_spectrograms(
-            [0],
-            spec_duration=check_seconds,
-            freq_scale="log",
-            decibels=True,
-            top_db=80,
-            db_power=1,
-        )
+        left_specs, _ = self.get_spectrograms([0], spec_duration=check_seconds)
         left_spec = left_specs[0]
         self.signal = right_signal
-        right_specs, _ = self.get_spectrograms(
-            [0],
-            spec_duration=check_seconds,
-            freq_scale="log",
-            decibels=True,
-            top_db=80,
-            db_power=1,
-        )
+        right_specs, _ = self.get_spectrograms([0], spec_duration=check_seconds)
         right_spec = right_specs[0]
 
-        # calculate sum and median per channel
         left_sum = left_spec.sum()
         right_sum = right_spec.sum()
 
-        left_median = np.median(left_spec)
-        right_median = np.median(right_spec)
+        if left_sum == 0 and right_sum > 0:
+            # left channel is null
+            return right_signal
+        elif right_sum == 0 and left_sum > 0:
+            # right channel is null
+            return left_signal
 
-        # calculate energy in defined band per channel
-        cfg = self.cfg.audio
-        band_min_freq = min(cfg.max_freq, max(cfg.min_freq, cfg.energy_min_freq))
-        band_max_freq = max(cfg.min_freq, min(cfg.max_freq, cfg.energy_max_freq))
-        left_energy = audio_util.band_limited_energy(
-            left_spec,
-            sr=cfg.sampling_rate,
-            freq_range=(band_min_freq, band_max_freq),
-            f_min=cfg.min_freq,
-            f_max=cfg.max_freq,
-        )
-        right_energy = audio_util.band_limited_energy(
-            right_spec,
-            sr=cfg.sampling_rate,
-            freq_range=(band_min_freq, band_max_freq),
-            f_min=cfg.min_freq,
-            f_max=cfg.max_freq,
-        )
-
-        # set parameters based on the low-energy channel
-        if left_energy <= right_energy:
-            low_energy, high_energy = left_signal, right_signal
-            sum_ratio = 1 if right_sum == 0 else left_sum / right_sum
-            median_ratio = 1 if right_median == 0 else left_median / right_median
+        if left_sum > right_sum:
+            # more noise in the left channel
+            return right_signal
         else:
-            low_energy, high_energy = right_signal, left_signal
-            sum_ratio = 1 if left_sum == 0 else right_sum / left_sum
-            median_ratio = 1 if left_median == 0 else right_median / left_median
-
-        # apply the heuristic
-        if median_ratio <= cfg.median_threshold:
-            if sum_ratio <= 1 / cfg.sum_threshold:
-                return high_energy
-            else:
-                return low_energy
-        else:
-            if sum_ratio <= cfg.sum_threshold:
-                return low_energy
-            else:
-                return high_energy
+            # more noise in the right channel
+            return left_signal
