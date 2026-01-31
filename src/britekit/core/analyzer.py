@@ -202,7 +202,12 @@ class Analyzer:
 
         if rtype in {"csv", "both"}:
             file_path = os.path.join(output_path, "scores.csv")
-            df = pd.concat(self.dataframes, ignore_index=True)
+            non_empty_dfs = [df for df in self.dataframes if not df.empty]
+            df = (
+                pd.concat(non_empty_dfs, ignore_index=True)
+                if non_empty_dfs
+                else pd.DataFrame()
+            )
 
             # remove the excluded classes
             for name in self.exclude_set:

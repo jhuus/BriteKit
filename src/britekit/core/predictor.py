@@ -331,15 +331,18 @@ class Predictor:
         # ensure labels are sorted by name/code before start_time,
         # which is useful when inspecting label files during testing
         num_classes = scores.shape[1]
+        spec_duration = self.cfg.audio.spec_duration
         for i in range(num_classes):
-            indexes = np.where(scores[:, i] >= self.cfg.infer.min_score)[0]
+            if self.cfg.infer.min_score == 0:
+                indexes = np.arange(scores.shape[0])
+            else:
+                indexes = np.where(scores[:, i] >= self.cfg.infer.min_score)[0]
+
             if len(indexes) > 0:
-                labels[names[i]] = []
-                for index in indexes:
-                    start_time = start_times[index]
-                    end_time = start_time + self.cfg.audio.spec_duration
-                    score = scores[index][i]
-                    labels[names[i]].append(Label(score, start_time, end_time))
+                labels[names[i]] = [
+                    Label(scores[j, i], start_times[j], start_times[j] + spec_duration)
+                    for j in indexes
+                ]
 
         return labels
 

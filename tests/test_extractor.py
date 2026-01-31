@@ -42,5 +42,5 @@ def test_extract_all(db: TrainingDatabase):
 
     assert db.get_recording_count() == 2
     assert db.get_segment_count() == 4
-    assert db.get_segment_class_count() == 3
-    assert db.get_specvalue_count() == 3
+    assert db.get_segment_class_count() == 4
+    assert db.get_specvalue_count() == 4
