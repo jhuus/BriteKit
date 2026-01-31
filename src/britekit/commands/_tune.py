@@ -163,10 +163,13 @@ def tune(
             "micro_pr",
             "macro_roc",
             "micro_roc",
+            "combo_pr",
+            "combo_roc",
         ]
     ),
     default="micro_roc",
-    help="Metric used to compare runs. Macro-averaging uses annotated classes only, but micro-averaging uses all classes.",
+    help="Metric used to compare runs. Macro-averaging uses annotated classes only, but micro-averaging "
+    "uses all classes. The combo metrics are averages of micro and macro.",
 )
 @click.option(
     "-r",
@@ -227,7 +230,7 @@ def _tune_cmd(
     skip_training: bool,
     classes_path: Optional[str],
 ):
-    util.set_logging()
+    util.set_logging(timestamp=True)
     tune(
         cfg_path,
         param_path,

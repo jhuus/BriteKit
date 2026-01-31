@@ -83,6 +83,8 @@ class Tuner:
             "micro_pr": "micro_pr_auc_trained",
             "macro_roc": "macro_roc_auc",
             "micro_roc": "micro_roc_auc_trained",
+            "combo_pr": "combined_pr_auc_trained",
+            "combo_roc": "combined_roc_auc_trained",
         }
 
         if metric not in metric_dict:
@@ -344,7 +346,7 @@ class Tuner:
             else:
                 score = roc_stats[self.metric]
 
-        util.set_logging()  # restore console output
+        util.set_logging(timestamp=True)  # restore console output
         return score
 
     def _write_reports(self):
