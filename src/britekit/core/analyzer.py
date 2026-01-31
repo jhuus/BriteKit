@@ -203,16 +203,19 @@ class Analyzer:
         if rtype in {"csv", "both"}:
             file_path = os.path.join(output_path, "scores.csv")
             non_empty_dfs = [df for df in self.dataframes if not df.empty]
-            df = (
-                pd.concat(non_empty_dfs, ignore_index=True)
-                if non_empty_dfs
-                else pd.DataFrame()
-            )
+            if non_empty_dfs:
+                df = pd.concat(non_empty_dfs, ignore_index=True)
+            else:
+                df = pd.DataFrame(
+                    columns=["recording", "name", "start_time", "end_time", "score"]
+                )
 
-            # remove the excluded classes
-            for name in self.exclude_set:
-                df = df[df["name"] != name]
+            if not df.empty:
+                # remove the excluded classes
+                for name in self.exclude_set:
+                    df = df[df["name"] != name]
 
-            # sort and save
-            sorted_df = df.sort_values(by=["recording", "name", "start_time"])
-            sorted_df.to_csv(file_path, index=False, float_format="%.3f")
+                # sort and save
+                df = df.sort_values(by=["recording", "name", "start_time"])
+
+            df.to_csv(file_path, index=False, float_format="%.3f")
