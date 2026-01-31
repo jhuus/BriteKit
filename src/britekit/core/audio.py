@@ -296,7 +296,7 @@ class Audio:
         sr = self.cfg.audio.sampling_rate
         for i, offset in enumerate(start_times):
             if int(offset * sr) < len(self.signal):
-                # Slice signal first, then generate spectrogram (like HawkEars)
+                # Slice signal first, then generate spectrogram
                 start_sample = int(offset * sr)
                 end_sample = int((offset + spec_duration) * sr)
                 signal_slice = self.signal[start_sample:end_sample]
@@ -399,7 +399,7 @@ class Audio:
         top_db: Optional[float] = None,
         db_power: Optional[float] = None,
     ):
-        """Generate spectrogram from signal slice (HawkEars approach)."""
+        """Generate spectrogram from signal slice."""
         import torch
         import torchaudio as ta
         import torch.nn.functional as F
@@ -434,14 +434,14 @@ class Audio:
             )
             spec = spec[:, mask, :]  # [channel, selected_freq_bins, time_frames]
             spec = spec.unsqueeze(1)
-            # Use bilinear interpolation (like HawkEars)
+
+            # downsample frequency to spec_height (energy-preserving)
             spec = F.interpolate(
                 spec,
-                size=(self.cfg.audio.spec_height, self.cfg.audio.spec_width),
-                mode="bilinear",
-                align_corners=False,
+                size=(self.cfg.audio.spec_height, spec.shape[-1]),
+                mode="area",
             )
-            spec = spec.squeeze(1)
+            spec = spec.squeeze(1)  # [1, F, T]
             spec = spec.cpu().numpy()[0]
 
         if decibels:
