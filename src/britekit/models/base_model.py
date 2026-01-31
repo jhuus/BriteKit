@@ -254,14 +254,17 @@ class BaseModel(pl.LightningModule):
 
     def configure_optimizers(self):
         cfg = self.cfg.train
-        self.optimizer = create_optimizer_v2(
-            self,
-            cfg.optimizer,
-            lr=cfg.learning_rate,
-            weight_decay=cfg.opt_weight_decay,
-            betas=(cfg.opt_beta1, cfg.opt_beta2),
-            filter_bias_and_bn=False,
-        )
+
+        kwargs = {
+            "lr": cfg.learning_rate,
+            "filter_bias_and_bn": False,
+        }
+        if cfg.opt_weight_decay is not None:
+            kwargs["weight_decay"] = cfg.opt_weight_decay
+        if cfg.opt_beta1 is not None:
+            kwargs["betas"] = (cfg.opt_beta1, cfg.opt_beta2)
+
+        self.optimizer = create_optimizer_v2(self, cfg.optimizer, **kwargs)
 
         total_steps = (
             self.trainer.estimated_stepping_batches

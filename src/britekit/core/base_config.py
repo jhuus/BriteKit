@@ -63,7 +63,9 @@ class TrainingConfig:
     compile: bool = False  # Compile the model?
     mixed_precision: bool = False  # Use mixed precision?
 
-    use_class_weights: bool = True  # Should loss function weight classes by spec count?
+    use_class_weights: bool = (
+        False  # Should loss function weight classes by spec count?
+    )
     weight_exponent: float = 0.5  # Exponent to soften the class weights
 
     pos_label_smoothing: float = 0.08  # Positive side of asymmetric label smoothing
@@ -71,9 +73,9 @@ class TrainingConfig:
 
     # Optimizer parameters
     optimizer: str = "radam"  # Any timm optimizer
-    opt_weight_decay: float = 1e-6  # Weight decay option (L2 regularization)
-    opt_beta1: float = 0.9  # Optimizer parameter
-    opt_beta2: float = 0.999  # Optimizer parameter
+    opt_weight_decay: Optional[float] = None  # Weight decay option (L2 regularization)
+    opt_beta1: Optional[float] = None  # Optimizer parameter
+    opt_beta2: Optional[float] = None  # Optimizer parameter
 
     # Dropout parameters are passed to model only if not None
     drop_rate: Optional[float] = None  # Standard dropout
