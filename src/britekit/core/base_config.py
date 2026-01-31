@@ -33,6 +33,16 @@ class AudioConfig:
     median_threshold: float = 0.77  # see code in Audio::_choose_channel
     sum_threshold: float = 1.08  # see code in Audio::_choose_channel
 
+    # When cache=False, each spectrogram is generated separately.
+    # When cache=True, a single spectrogram is generated for the recording,
+    # by concatenating chunks. Then that big spectrogram is divided as needed,
+    # which saves time when there is a lot of overlap.
+    # Chunks_per_spec defines the size of the individual spectrograms that
+    # are concatenated to create the cache, where the duration is
+    # chunks_per_spec * spec_duration.
+    use_spec_cache: bool = False
+    chunks_per_spec: int = 3
+
 
 @dataclass
 class TrainingConfig:

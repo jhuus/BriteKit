@@ -62,7 +62,7 @@ class Audio:
         self.mel_transform_cache: dict[tuple, Any] = {}
         self.log2_filterbank_cache: dict[tuple, Any] = {}
 
-        self.have_signal = False
+        self.cached = None
         self.path = None
         self.signal: Any = None
         self.set_config(cfg)
@@ -100,6 +100,8 @@ class Audio:
         # defining it in seconds retains temporal and frequency
         # resolution when sampling rate changes
         self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
+
+        self.cached = None  # invalidate cache when config changes
 
         if (
             resample
@@ -209,8 +211,8 @@ class Audio:
             return None, self.cfg.audio.sampling_rate
 
         try:
-            self.have_signal = True
             self.path = path
+            self.cached = None  # invalidate cache when loading new file
             logging.debug("Audio::load processing %s", path)
 
             if self.cfg.audio.choose_channel:
@@ -229,7 +231,6 @@ class Audio:
             self.signal = np.asarray(self.signal, dtype=np.float32)
 
         except Exception as e:
-            self.have_signal = False
             self.signal = None
             self.path = None
             logging.error(f"Caught exception in audio load of {path}: {e}")
@@ -244,6 +245,7 @@ class Audio:
         decibels: Optional[float] = None,
         top_db: Optional[int] = None,
         db_power: Optional[int] = None,
+        skip_cache: bool = False,
     ):
         """
         Generate normalized and unnormalized spectrograms for specified time offsets.
@@ -276,7 +278,7 @@ class Audio:
         """
         import numpy as np
 
-        if not self.have_signal:
+        if self.signal is None:
             return None, None
 
         if spec_duration is not None and spec_duration <= 0:
@@ -292,11 +294,37 @@ class Audio:
         if freq_scale is None:
             freq_scale = self.cfg.audio.freq_scale
 
+        if self.cfg.audio.use_spec_cache and not skip_cache:
+            specs = self._get_spectrograms_cached(
+                start_times, spec_duration, freq_scale, decibels, top_db, db_power
+            )
+        else:
+            specs = self._get_spectrograms_sliced(
+                start_times, spec_duration, freq_scale
+            )
+
+        # Handle empty specs list to prevent error
+        if not specs or all(s is None for s in specs):
+            return np.empty(0), np.empty(0)
+
+        # Filter out None values and stack
+        valid_specs = [s for s in specs if s is not None]
+        if not valid_specs:
+            return np.empty(0), np.empty(0)
+
+        unnormalized_specs = np.stack(valid_specs, axis=0)
+        normalized_specs = unnormalized_specs.copy()
+        self._normalize(normalized_specs)
+        return normalized_specs, unnormalized_specs
+
+    def _get_spectrograms_sliced(self, start_times, spec_duration, freq_scale):
+        """Generate spectrograms by slicing signal first, then computing spectrogram per slice."""
+        import numpy as np
+
         specs = []
         sr = self.cfg.audio.sampling_rate
         for i, offset in enumerate(start_times):
             if int(offset * sr) < len(self.signal):
-                # Slice signal first, then generate spectrogram
                 start_sample = int(offset * sr)
                 end_sample = int((offset + spec_duration) * sr)
                 signal_slice = self.signal[start_sample:end_sample]
@@ -313,20 +341,47 @@ class Audio:
                 specs.append(spec)
             else:
                 specs.append(None)
+        return specs
 
-        # Handle empty specs list to prevent error
-        if not specs or all(s is None for s in specs):
-            return np.empty(0), np.empty(0)
+    def _get_spectrograms_cached(
+        self, start_times, spec_duration, freq_scale, decibels, top_db, db_power
+    ):
+        """Generate spectrograms by computing one full spectrogram, then slicing it."""
+        import numpy as np
 
-        # Filter out None values and stack
-        valid_specs = [s for s in specs if s is not None]
-        if not valid_specs:
-            return np.empty(0), np.empty(0)
+        # Get one spectrogram for the whole recording, then split it up
+        if self.cached is None:
+            logging.debug("Audio::get_spectrograms generate spectrogram for recording")
+            self.cached = self._get_raw_spectrogram(
+                self.signal,
+                freq_scale=freq_scale,
+                decibels=decibels,
+                top_db=top_db,
+                db_power=db_power,
+                chunked=True,
+            )
+        else:
+            logging.debug("Audio::get_spectrograms reuse cached spectrogram")
 
-        unnormalized_specs = np.stack(valid_specs, axis=0)
-        normalized_specs = unnormalized_specs.copy()
-        self._normalize(normalized_specs)
-        return normalized_specs, unnormalized_specs
+        frames_per_sec = self.cfg.audio.spec_width / self.cfg.audio.spec_duration
+        specs = []
+        for i, offset in enumerate(start_times):
+            start_frame = int(offset * frames_per_sec)
+            end_frame = int((offset + spec_duration) * frames_per_sec)
+            end_frame = min(end_frame, self.cached.shape[1])
+            if end_frame - start_frame < frames_per_sec:
+                break  # require at least one second of audio in a spectrogram
+
+            if start_frame < self.cached.shape[1]:
+                spec = self.cached[:, start_frame:end_frame]
+                if spec.shape[1] > self.cfg.audio.spec_width:
+                    spec = spec[:, : self.cfg.audio.spec_width]
+                elif spec.shape[1] < self.cfg.audio.spec_width:
+                    pad_width = self.cfg.audio.spec_width - spec.shape[1]
+                    spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
+
+                specs.append(spec)
+        return specs
 
     def seconds(self):
         """
@@ -347,7 +402,7 @@ class Audio:
         Returns:
             int: Number of samples in the signal, or 0 if no signal is loaded.
         """
-        return 0 if not self.have_signal else len(self.signal)
+        return 0 if self.signal is None else len(self.signal)
 
     # =============================================================================
     # Private Helper Methods
@@ -398,11 +453,21 @@ class Audio:
         decibels: Optional[float] = None,
         top_db: Optional[float] = None,
         db_power: Optional[float] = None,
+        chunked: bool = False,
     ):
-        """Generate spectrogram from signal slice."""
+        """Generate spectrogram from signal.
+
+        Args:
+            signal: Audio signal as numpy array
+            freq_scale: Frequency scale ('linear', 'log', 'mel')
+            decibels: Whether to convert to decibels
+            top_db: Maximum decibel value
+            db_power: Power to apply after dB conversion
+            chunked: If True, process long recordings in chunks to avoid CUDA memory errors
+        """
         import torch
         import torchaudio as ta
-        import torch.nn.functional as F
+        import numpy as np
 
         if freq_scale is None:
             freq_scale = self.cfg.audio.freq_scale
@@ -418,31 +483,42 @@ class Audio:
         if db_power is None:
             db_power = self.cfg.audio.db_power
 
-        signal = signal.reshape((1, signal.shape[0]))
-        tensor = torch.from_numpy(signal).to(self.device)
+        if chunked:
+            # Process in chunks for proper edge handling at chunk boundaries.
+            # Each chunk is computed independently, then concatenated.
+            chunk_duration = (
+                self.cfg.audio.chunks_per_spec * self.cfg.audio.spec_duration
+            )
+            chunk_samples = int(chunk_duration * self.cfg.audio.sampling_rate)
+            min_samples = 2 * self.win_length  # minimum for STFT (n_fft)
 
-        if freq_scale == "mel":
-            spec = self.mel_transform(tensor).cpu().numpy()[0]
+            if signal.shape[0] <= chunk_samples:
+                spec = self._compute_spectrogram_chunk(signal, freq_scale)
+            else:
+                chunks = []
+                for start in range(0, signal.shape[0], chunk_samples):
+                    end = min(start + chunk_samples, signal.shape[0])
+                    chunk_signal = signal[start:end]
+
+                    # Skip chunks too short for STFT
+                    if chunk_signal.shape[0] < min_samples:
+                        continue
+
+                    chunk_spec = self._compute_spectrogram_chunk(
+                        chunk_signal, freq_scale
+                    )
+                    # Truncate to chunks_per_spec * spec_width to match sliced mode behavior
+                    chunk_width = (
+                        self.cfg.audio.chunks_per_spec * self.cfg.audio.spec_width
+                    )
+                    chunk_spec = chunk_spec[:, :chunk_width]
+                    chunks.append(chunk_spec)
+                    del chunk_spec
+                    torch.cuda.empty_cache()
+
+                spec = np.concatenate(chunks, axis=1)
         else:
-            # Linear or log scale - use linear transform then filter/interpolate
-            spec = self.linear_transform(tensor)
-            freqs = torch.fft.rfftfreq(
-                2 * self.win_length, d=1 / self.cfg.audio.sampling_rate
-            )
-            mask = (freqs >= self.cfg.audio.min_freq) & (
-                freqs <= self.cfg.audio.max_freq
-            )
-            spec = spec[:, mask, :]  # [channel, selected_freq_bins, time_frames]
-            spec = spec.unsqueeze(1)
-
-            # downsample frequency to spec_height (energy-preserving)
-            spec = F.interpolate(
-                spec,
-                size=(self.cfg.audio.spec_height, spec.shape[-1]),
-                mode="area",
-            )
-            spec = spec.squeeze(1)  # [1, F, T]
-            spec = spec.cpu().numpy()[0]
+            spec = self._compute_spectrogram_chunk(signal, freq_scale)
 
         if decibels:
             # Apply dB conversion on CPU (already numpy)
@@ -452,6 +528,46 @@ class Audio:
             spec = spec[0].numpy()
 
         return spec
+
+    def _compute_spectrogram_chunk(self, signal, freq_scale):
+        """Compute spectrogram for a single chunk of audio, returning numpy array."""
+        import torch
+        import torch.nn.functional as F
+
+        signal = signal.reshape((1, signal.shape[0]))
+        tensor = torch.from_numpy(signal).to(self.device)
+
+        if freq_scale == "log":
+            spec = self.linear_transform(tensor)  # [1, n_freqs, n_frames]
+            spec = torch.matmul(
+                self.log2_filterbank, spec.squeeze(0)
+            )  # [n_mels, n_frames]
+            spec = spec.unsqueeze(0)  # [1, n_mels, n_frames]
+
+        elif freq_scale == "mel":
+            spec = self.mel_transform(tensor)  # [1, n_mels, T]
+
+        elif freq_scale == "linear":
+            spec = self.linear_transform(tensor)
+            freqs = torch.fft.rfftfreq(
+                2 * self.win_length, d=1 / self.cfg.audio.sampling_rate
+            )
+            mask = (freqs >= self.cfg.audio.min_freq) & (
+                freqs <= self.cfg.audio.max_freq
+            )
+            spec = spec[:, mask, :].unsqueeze(1)  # [1, 1, F_sel, T]
+
+            # downsample frequency to spec_height (energy-preserving)
+            spec = F.interpolate(
+                spec,
+                size=(self.cfg.audio.spec_height, spec.shape[-1]),
+                mode="area",
+            )
+            spec = spec.squeeze(1)  # [1, F, T]
+
+        result = spec[0].cpu().numpy()
+        del spec, tensor
+        return result
 
     def _normalize(self, specs):
         """Normalize values between 0 and 1."""
@@ -488,10 +604,14 @@ class Audio:
                 return left_signal
 
         self.signal = left_signal
-        left_specs, _ = self.get_spectrograms([0], spec_duration=check_seconds)
+        left_specs, _ = self.get_spectrograms(
+            [0], spec_duration=check_seconds, skip_cache=True
+        )
         left_spec = left_specs[0]
         self.signal = right_signal
-        right_specs, _ = self.get_spectrograms([0], spec_duration=check_seconds)
+        right_specs, _ = self.get_spectrograms(
+            [0], spec_duration=check_seconds, skip_cache=True
+        )
         right_spec = right_specs[0]
 
         left_sum = left_spec.sum()
