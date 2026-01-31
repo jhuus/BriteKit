@@ -575,6 +575,7 @@ class Audio:
             if specs[i] is None:
                 continue
 
+            specs[i] -= specs[i].min()
             max = specs[i].max()
             if max > 0:
                 specs[i] = specs[i] / max
