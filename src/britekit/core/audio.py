@@ -8,10 +8,12 @@ from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config
 from britekit.core.util import get_device
 
-# suppress some torchaudio warnings
+# suppress some torchaudio and librosa warnings
 import warnings
 
 warnings.filterwarnings("ignore", message=".*TorchCodec.*|.*StreamingMediaDecoder.*")
+warnings.filterwarnings("ignore", message=".*librosa.core.audio.__audioread_load.*")
+warnings.filterwarnings("ignore", message=".*PySoundFile failed.*")
 
 
 def load_audio(path, sr):
