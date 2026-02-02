@@ -18,7 +18,7 @@ def analyze(
     cfg_path: Optional[str] = None,
     input_path: str = "",
     output_path: str = "",
-    rtype: str = "both",
+    rtype: str = "audacity",
     start_seconds: float = 0,
     min_score: Optional[float] = None,
     num_threads: Optional[int] = None,
@@ -123,8 +123,8 @@ def analyze(
     "-r",
     "--rtype",
     type=str,
-    default="both",
-    help='Output format type. Options are "audacity", "csv", or "both". Default="both".',
+    default="audacity",
+    help='Output format type. Options are "audacity", "csv", or "both". Default="audacity".',
 )
 @click.option(
     "--start",
