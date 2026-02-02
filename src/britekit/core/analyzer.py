@@ -125,7 +125,8 @@ class Analyzer:
         try:
             with open(file_path, "w") as out_file:
                 for name in sorted(labels):
-                    if name in self.exclude_set:
+                    class_name = predictor.get_class_name(name)
+                    if class_name in self.exclude_set:
                         continue
 
                     for label in labels[name]:

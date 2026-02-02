@@ -911,3 +911,12 @@ class Predictor:
             )
 
         return names
+
+    def get_class_name(self, label: str) -> str:
+        """Map a label (name, code, alt_name, or alt_code) back to the class name."""
+        names = self._get_names()
+        try:
+            idx = names.index(label)
+            return self.class_names[idx]
+        except ValueError:
+            return label  # fallback if not found
