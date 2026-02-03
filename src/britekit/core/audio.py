@@ -208,6 +208,9 @@ class Audio:
         import librosa
         import numpy as np
 
+        # Suppress debug logging in librosa
+        logging.getLogger("librosa").setLevel(logging.ERROR)
+
         if not path or not isinstance(path, str):
             logging.error(f"Invalid path provided: {path}")
             return None, self.cfg.audio.sampling_rate
