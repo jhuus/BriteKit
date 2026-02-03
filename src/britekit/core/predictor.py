@@ -88,6 +88,26 @@ class Predictor:
                     "No ckpt file found (needed to provide metadata for onnx files)."
                 )
 
+        # Create dicts so we can get name given code, alt_name or alt_code
+        assert self.class_names is not None
+        assert self.class_codes is not None
+        assert self.class_alt_names is not None
+        assert self.class_alt_codes is not None
+
+        self.code_to_name: dict[str, str] = {}
+        self.alt_name_to_name: dict[str, str] = {}
+        self.alt_code_to_name: dict[str, str] = {}
+        for i in range(len(self.class_names)):
+            name = self.class_names[i]
+            code = self.class_codes[i]
+            alt_name = self.class_alt_names[i]
+            alt_code = self.class_alt_codes[i]
+
+            self.code_to_name[code] = name
+            self.alt_name_to_name[alt_name] = name
+            self.alt_code_to_name[alt_code] = name
+
+
     def get_embeddings(self, spec_array):
         """
         Given an array of spectrograms, return the average embeddings using the loaded models.
@@ -257,7 +277,7 @@ class Predictor:
         audio_duration = self.audio.seconds()
         if audio_duration <= 0:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
-            return None, None, []
+            return None
 
         frame_maps = []
         for i, model in enumerate(self.models):
@@ -277,13 +297,14 @@ class Predictor:
             specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
 
             if self.ov:
-                _, frame_scores = self._get_openvino_scores_single(model, specs)
+                segment_scores, frame_scores = self._get_openvino_scores_single(model, specs)
             else:
-                _, frame_scores = model.predict(specs, self.device)
+                segment_scores, frame_scores = model.predict(specs, self.device)
 
             if frame_scores is None:
-                logging.error(f"No frame scores generated for {recording_path}")
-                return None, None, []
+                # Create frame_scores by duplicating segment scores across the frames
+                frames_per_clip = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
+                frame_scores = np.repeat(segment_scores[:, :, np.newaxis], frames_per_clip, axis=2)
 
             frame_map = self.to_global_frames(
                 frame_scores,
@@ -293,7 +314,7 @@ class Predictor:
             frame_maps.append(frame_map)
 
         if len(frame_maps) == 0:
-            return None, None, []
+            return None
 
         return np.mean(frame_maps, axis=0)
 
@@ -914,9 +935,13 @@ class Predictor:
 
     def get_class_name(self, label: str) -> str:
         """Map a label (name, code, alt_name, or alt_code) back to the class name."""
-        names = self._get_names()
-        try:
-            idx = names.index(label)
-            return self.class_names[idx]
-        except ValueError:
-            return label  # fallback if not found
+        if self.cfg.infer.label_field == "names":
+            return label
+        elif self.cfg.infer.label_field == "codes":
+            mapping = self.code_to_name
+        elif self.cfg.infer.label_field == "alt_names":
+            mapping = self.alt_name_to_name
+        else:
+            mapping = self.alt_code_to_name
+
+        return mapping.get(label, label)
