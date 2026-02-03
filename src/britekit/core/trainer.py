@@ -12,7 +12,7 @@ from britekit.core.util import cfg_to_pure
 
 
 class Trainer:
-    def __init__(self, prefix: Optional[str]):
+    def __init__(self, prefix: Optional[str] = None):
         """
         Initialize Trainer.
 
@@ -34,9 +34,6 @@ class Trainer:
             # should also set num_workers = 0 or 1
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
-
-            # this speeds it up a little
-            torch.utils.deterministic.fill_uninitialized_memory = False
 
     def run(self):
         """
@@ -72,9 +69,9 @@ class Trainer:
                 deterministic = False
 
             if self.prefix is None:
-                filename=f"v{version}-e{{epoch}}"
+                filename = f"v{version}-e{{epoch}}"
             else:
-                filename=f"{self.prefix}-v{version}-e{{epoch}}"
+                filename = f"{self.prefix}-v{version}-e{{epoch}}"
 
             trainer = pl.Trainer(
                 devices=1,

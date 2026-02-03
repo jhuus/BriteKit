@@ -4,7 +4,6 @@
 # Defer some imports to improve --help performance.
 import logging
 from pathlib import Path
-import shutil
 import tempfile
 from typing import Optional
 
@@ -238,6 +237,7 @@ def ensemble(
             from_path = os.path.join(ckpt_dir, name)
             dest_path = os.path.join(save_dir, name)
             shutil.copyfile(from_path, dest_path)
+
 
 @click.command(
     name="ensemble",

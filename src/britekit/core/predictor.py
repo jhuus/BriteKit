@@ -107,7 +107,6 @@ class Predictor:
             self.alt_name_to_name[alt_name] = name
             self.alt_code_to_name[alt_code] = name
 
-
     def get_embeddings(self, spec_array):
         """
         Given an array of spectrograms, return the average embeddings using the loaded models.
@@ -297,14 +296,20 @@ class Predictor:
             specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
 
             if self.ov:
-                segment_scores, frame_scores = self._get_openvino_scores_single(model, specs)
+                segment_scores, frame_scores = self._get_openvino_scores_single(
+                    model, specs
+                )
             else:
                 segment_scores, frame_scores = model.predict(specs, self.device)
 
             if frame_scores is None:
                 # Create frame_scores by duplicating segment scores across the frames
-                frames_per_clip = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
-                frame_scores = np.repeat(segment_scores[:, :, np.newaxis], frames_per_clip, axis=2)
+                frames_per_clip = int(
+                    self.cfg.train.sed_fps * self.cfg.audio.spec_duration
+                )
+                frame_scores = np.repeat(
+                    segment_scores[:, :, np.newaxis], frames_per_clip, axis=2
+                )
 
             frame_map = self.to_global_frames(
                 frame_scores,
