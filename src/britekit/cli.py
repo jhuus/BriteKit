@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import warnings
 
 import click
 
@@ -63,8 +64,9 @@ from .commands._youtube import _youtube_cmd
 
 logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
 logging.getLogger("pyinaturalist").setLevel(logging.ERROR)
-logging.getLogger("pytorch_lightning.utilities.migration.utils").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
+
+warnings.filterwarnings("ignore", message="Found keys that are in the model state dict")
 
 
 @click.group()
