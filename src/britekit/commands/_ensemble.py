@@ -4,6 +4,7 @@
 # Defer some imports to improve --help performance.
 import logging
 from pathlib import Path
+import shutil
 import tempfile
 from typing import Optional
 
@@ -57,12 +58,13 @@ def _eval_ensemble(
 
 def ensemble(
     cfg_path: Optional[str] = None,
-    ckpt_path: str = "",
+    ckpt_dir: str = "",
     ensemble_size: int = 3,
     num_tries: int = 100,
     metric: str = "micro_roc",
     annotations_path: str = "",
     recordings_path: Optional[str] = None,
+    save_dir: Optional[str] = None,
     greedy: bool = False,
 ) -> None:
     """
@@ -73,12 +75,14 @@ def ensemble(
 
     Args:
     - cfg_path (str, optional): Path to YAML file defining configuration overrides.
-    - ckpt_path (str): Path to directory containing checkpoints.
+    - ckpt_dir (str): Path to directory containing checkpoints.
     - ensemble_size (int): Number of checkpoints in ensemble (default=3).
     - num_tries (int): Maximum number of ensembles to try (default=100).
     - metric (str): Metric to use to compare ensembles (default=micro_roc).
     - annotations_path (str): Path to CSV file containing ground truth annotations.
     - recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
+    - save_dir (str, optional): Directory to copy ensemble into.
+    - greedy (bool): If true, use a greedy algorithm.
     """
     import glob
     import itertools
@@ -96,10 +100,10 @@ def ensemble(
         return
 
     cfg = get_config(cfg_path)
-    ckpt_paths = sorted(glob.glob(os.path.join(ckpt_path, "*.ckpt")))
+    ckpt_paths = sorted(glob.glob(os.path.join(ckpt_dir, "*.ckpt")))
     num_ckpts = len(ckpt_paths)
     if num_ckpts == 0:
-        logging.error(f"Error: no checkpoints found in {ckpt_path}")
+        logging.error(f"Error: no checkpoints found in {ckpt_dir}")
         return
     elif num_ckpts < ensemble_size:
         logging.error(
@@ -225,6 +229,15 @@ def ensemble(
     best_names = [Path(ckpt_path).name for ckpt_path in best_ensemble]
     logging.info(f"Best ensemble = {best_names}")
 
+    if save_dir is not None:
+        # Copy the selected ensemble
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        for name in best_names:
+            from_path = os.path.join(ckpt_dir, name)
+            dest_path = os.path.join(save_dir, name)
+            shutil.copyfile(from_path, dest_path)
 
 @click.command(
     name="ensemble",
@@ -240,8 +253,8 @@ def ensemble(
     help="Path to YAML file defining config overrides.",
 )
 @click.option(
-    "--ckpt_path",
-    "ckpt_path",
+    "--ckpt",
+    "ckpt_dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     required=True,
     help="Directory containing checkpoints.",
@@ -294,6 +307,13 @@ def ensemble(
     help="Recordings directory. Default is directory containing annotations file.",
 )
 @click.option(
+    "--save",
+    "save_dir",
+    type=click.Path(exists=False, file_okay=False, dir_okay=True),
+    required=False,
+    help="Directory to copy ensemble into.",
+)
+@click.option(
     "--greedy",
     "greedy",
     is_flag=True,
@@ -301,22 +321,24 @@ def ensemble(
 )
 def _ensemble_cmd(
     cfg_path: Optional[str],
-    ckpt_path: str,
+    ckpt_dir: str,
     ensemble_size: int,
     num_tries: int,
     metric: str,
     annotations_path: str,
     recordings_path: Optional[str],
+    save_dir: Optional[str],
     greedy: bool,
 ) -> None:
     util.set_logging()
     ensemble(
         cfg_path,
-        ckpt_path,
+        ckpt_dir,
         ensemble_size,
         num_tries,
         metric,
         annotations_path,
         recordings_path,
+        save_dir,
         greedy,
     )
