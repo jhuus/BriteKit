@@ -15,6 +15,7 @@ from britekit.core import util
 
 def train(
     cfg_path: Optional[str] = None,
+    prefix: Optional[str] = None,
     seed: Optional[int] = None,
 ):
     """
@@ -31,6 +32,7 @@ def train(
     Args:
     - cfg_path (str, optional): Path to YAML file defining configuration overrides.
         If not specified, uses default configuration.
+    - prefix (str, optional): Prefix to add to checkpoint names.
     - seed (int, optional): Integer seed.
     """
     from britekit.core.trainer import Trainer
@@ -40,7 +42,7 @@ def train(
         cfg.train.seed = seed
     try:
         start_time = time.time()
-        Trainer().run()
+        Trainer(prefix=prefix).run()
         elapsed_time = util.format_elapsed_time(start_time, time.time())
         logging.info(f"Elapsed time = {elapsed_time}")
     except TrainingError as e:
@@ -59,6 +61,13 @@ def train(
     help="Path to YAML file defining config overrides.",
 )
 @click.option(
+    "--prefix",
+    "prefix",
+    type=str,
+    required=False,
+    help="Optional prefix to add to checkpoint names.",
+)
+@click.option(
     "--seed",
     "seed",
     type=int,
@@ -67,6 +76,7 @@ def train(
 )
 def _train_cmd(
     cfg_path: str,
+    prefix: str,
     seed: int,
 ):
     util.set_logging()
@@ -82,7 +92,7 @@ def _train_cmd(
             "For example, use cu126 for CUDA 12.6."
         )
 
-    train(cfg_path, seed)
+    train(cfg_path, prefix, seed)
 
 
 def find_lr(cfg_path: str, num_batches: int):

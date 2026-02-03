@@ -3,6 +3,7 @@
 # Defer some imports to improve initialization performance.
 import logging
 from pathlib import Path
+from typing import Optional
 import yaml
 
 from britekit.core.config_loader import get_config
@@ -11,14 +12,17 @@ from britekit.core.util import cfg_to_pure
 
 
 class Trainer:
-    """
-    Run training as specified in configuration.
-    """
+    def __init__(self, prefix: Optional[str]):
+        """
+        Initialize Trainer.
 
-    def __init__(self):
+        - prefix (str, optional): Prefix to add to checkpoint names.
+        """
+
         import pytorch_lightning as pl
         import torch
 
+        self.prefix = prefix
         self.cfg = get_config()
         torch.set_float32_matmul_precision("medium")
         if self.cfg.train.seed is not None:
@@ -67,6 +71,11 @@ class Trainer:
             else:
                 deterministic = False
 
+            if self.prefix is None:
+                filename=f"v{version}-e{{epoch}}"
+            else:
+                filename=f"{self.prefix}-v{version}-e{{epoch}}"
+
             trainer = pl.Trainer(
                 devices=1,
                 accelerator="auto",
@@ -75,7 +84,7 @@ class Trainer:
                         save_top_k=self.cfg.train.save_last_n,
                         mode="max",
                         monitor="epoch",
-                        filename=f"v{version}-e{{epoch}}",
+                        filename=filename,
                         auto_insert_metric_name=False,
                     ),
                     TQDMProgressBar(refresh_rate=10),
