@@ -291,7 +291,56 @@ Both PR-AUC and ROC-AUC can be calculated using macro-averaging or micro-averagi
 
 ROC-AUC has the nice property that it equals the probability that a randomly selected positive example will be scored higher than a randomly selected negative example. Also, ROC-AUC has lower variance than PR-AUC. So for initial tuning, it is usually best to use ROC-AUC. However, once ROC-AUC has been more or less maximized, it can be helpful to tune PR-AUC. PR-AUC is very sensitive to high-scoring false positives, and tuning it can help to reduce those.
 ## Data Augmentation
-To reduce model overfitting, it is critical to augment your data during training. (More content required here.)
+Data augmentation reduces overfitting by artificially expanding the training dataset. During training, BriteKit randomly transforms spectrograms, so the model sees different variations of the same training samples across epochs. This helps the model generalize to real-world recordings.
+
+### Augmentation Types
+BriteKit supports the following augmentation types:
+
+| Augmentation | Description |
+|---|---|
+| add_real_noise | Merges a noise spectrogram from the training database with the current spectrogram. Requires a "Noise" class in training data. |
+| add_white_noise | Adds random Gaussian noise to the spectrogram. |
+| blur | Applies Gaussian blur to soften spectrogram details. |
+| flip_horizontal | Flips the spectrogram horizontally (time reversal). |
+| freq_mask | Masks random frequency bands with zeros (SpecAugment-style). |
+| shift_horizontal | Shifts the spectrogram left or right in time. |
+| speckle | Adds multiplicative noise (speckle pattern). |
+| time_mask | Masks random time segments with zeros (SpecAugment-style). |
+
+### Configuration
+Augmentation is enabled by default. To configure it, create a YAML file like this:
+
+```
+train:
+  augment: true
+  max_augmentations: 1
+  prob_simple_merge: 0.32
+  prob_fade1: 0.5
+  min_fade1: 0.1
+  max_fade1: 1.0
+  augmentations:
+    - name: add_real_noise
+      prob: 0.34
+      params:
+        prob_fade2: 0.5
+        min_fade2: 0.2
+        max_fade2: 0.8
+    - name: shift_horizontal
+      prob: 0.6
+      params:
+        max_shift: 8
+```
+
+The `prob` field specifies the probability of applying each augmentation. Set `prob: 0` to disable an augmentation. The `params` field contains augmentation-specific parameters.
+
+When `prob_simple_merge` is non-zero, there is a chance of merging two spectrograms from different classes. This teaches the model to recognize overlapping sounds. The `prob_fade1`, `min_fade1` and `max_fade1` parameters control random fading applied after augmentation.
+
+### Practical Tips
+- Start with the default augmentation settings and tune them later.
+- The `add_real_noise` augmentation requires spectrograms labeled as "Noise" in your training database. These should contain background noise without target sounds.
+- For small datasets, more aggressive augmentation can help. Try increasing `max_augmentations` to 2.
+- Time and frequency masking (`time_mask`, `freq_mask`) are based on SpecAugment and can improve robustness.
+- Use the [tune](https://github.com/jhuus/BriteKit/blob/master/command-reference.md#britekit-tune) command to optimize augmentation parameters for your specific application.
 ## Development Environment
 These instructions have been tested in Linux only. To create a BriteKit development environment, install hatch at the user level (not in a virtual environment), and verify it's installed:
 ```
