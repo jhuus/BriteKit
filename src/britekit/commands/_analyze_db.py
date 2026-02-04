@@ -314,12 +314,12 @@ def analyze_db(
     training segments, or to identify classes that are likely to be mistaken for each other.
 
     Args:
-    - cfg_path (str): Path to YAML configuration file defining model and inference settings.
-    - db_path (str): Path to database to analyze.
+    - cfg_path (str): Optional path to YAML file defining config overrides.
+    - db_path (str): Optional path to database to analyze. Defaults to train_db from config.
     - class_name (str): Optional class name. By default, do all classes.
     - classes_path (str): Optional path to CSV listing classes to process. By default, do all classes.
     - spec_group (str): Spectrogram group name. Defaults to 'default'.
-    - output_path (str): Path to output directory where results will be saved.
+    - output_path (str): Required path to output directory where results will be saved.
     - plot (bool): If specified, plot spectrograms per class by ascending score.
     - max_score (float): Save details and plot only if score less than this (default = 0.95).
     """

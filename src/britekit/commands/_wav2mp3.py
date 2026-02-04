@@ -26,7 +26,7 @@ def wav2mp3(
     requirements for large audio datasets.
 
     Args:
-    - dir (str): Path to directory containing audio files to convert.
+    - dir (str): Required path to directory containing audio files to convert.
     - sampling_rate (int): Output sampling rate in Hz. Default is 32000 Hz.
     """
     CONVERT_TYPES = {

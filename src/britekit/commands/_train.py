@@ -30,7 +30,7 @@ def train(
     automatically. The final trained model can be used for inference and evaluation.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
         If not specified, uses default configuration.
     - prefix (str, optional): Prefix to add to checkpoint names.
     - seed (int, optional): Integer seed.
@@ -108,7 +108,7 @@ def find_lr(cfg_path: str, num_batches: int):
     avoiding rates that are too high (causing instability) or too low (slow convergence).
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
         If not specified, uses default configuration.
     - num_batches (int): Number of training batches to analyze for learning rate finding.
         Default is 100. Higher values provide more accurate results but take longer.

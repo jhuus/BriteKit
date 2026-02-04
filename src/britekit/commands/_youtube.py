@@ -19,9 +19,9 @@ def youtube(
     Download an audio recording from Youtube, given a Youtube ID.
 
     Args:
-    - id (str): ID of the clip to download.
-    - output_dir (str): Directory where downloaded recordings will be saved.
-    - sampling_rate (float): Output sampling rate in Hz. Default is 32000.
+    - id (str): Required ID of the clip to download.
+    - output_dir (str): Required directory where downloaded recordings will be saved.
+    - sampling_rate (int): Output sampling rate in Hz. Default is 32000.
     """
     import numpy as np
     import soundfile as sf

@@ -43,14 +43,14 @@ def tune(
     The param_path specifies a YAML file that defines the parameters to be tuned, as described in the README.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
     - param_path (str, optional): Path to YAML file defining hyperparameters to tune and their search space.
-    - output_path (str): Directory where reports will be saved.
-    - annotations_path (str): Path to CSV file containing ground truth annotations.
-    - metric (str): Metric used to compare runs. Options include various MAP and ROC metrics.
+    - output_path (str): Required directory where reports will be saved.
+    - annotations_path (str): Required path to CSV file containing ground truth annotations.
+    - metric (str): Metric used to compare runs. Options include various MAP and ROC metrics. Default is "micro_roc".
     - recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
     - train_log_path (str, optional): Training log directory. Defaults to "logs".
-    - num_trials (int): Number of random trials to run. If 0, performs exhaustive search.
+    - num_trials (int): Number of random trials to run. If 0 (default), performs exhaustive search.
     - num_runs (int): Number of runs to average for each parameter combination. Default is 1.
     - extract (bool): Extract new spectrograms before training, to tune spectrogram parameters.
     - skip_training (bool): Iterate on inference only, using checkpoints from the last training run.

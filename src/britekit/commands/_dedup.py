@@ -102,9 +102,9 @@ def dedup_rec(
     using cosine distance.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    - class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
+    - class_name (str): Required name of the class to scan for duplicates (e.g., "Common Yellowthroat").
     - delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
     - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
     """
@@ -233,10 +233,10 @@ def dedup_seg(
     This command scans the database for segments of the same class that are very similar.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    - output_path (str): Path to the output directory for reports and plots.
-    - class_name (str): Name of the class to scan for duplicates (e.g., "Common Yellowthroat").
+    - output_path (str): Required path to the output directory for reports and plots.
+    - class_name (str): Required name of the class to scan for duplicates (e.g., "Common Yellowthroat").
     - delete (bool): If True, remove duplicate segments from the database. If False, only report them.
     - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
     - threshold (float): Treat as duplicates if cosine similarity >= threshold (default = 0.99).

@@ -23,9 +23,10 @@ def pickle_occurrence(
     Convert an occurrence database to a pickle file for use in inference.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
     - db_path (str, optional): Path to the occurrence database. Defaults to "data/occurrence.db".
-    - output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+    - output_path (str, optional): Output pickle file path. Defaults to "data/occurrence.pkl".
+    - root_dir (str, optional): Root directory containing data directory. Defaults to working directory.
     """
     from britekit.core.pickler import OccurrencePickler
 
@@ -93,13 +94,14 @@ def pickle_train(
     or specific classes specified by a CSV file.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
     - classes_path (str, optional): Path to CSV file containing class names to include.
         If omitted, includes all classes in the database.
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
     - output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+    - root_dir (str, optional): Root directory containing data directory. Defaults to working directory.
     - max_per_class (int, optional): Maximum number of spectrograms to include per class.
-    - spec_group (str): Spectrogram group name to extract from. Defaults to 'default'.
+    - spec_group (str, optional): Spectrogram group name to extract from. Defaults to 'default'.
     """
     from britekit.core.pickler import TrainingPickler
 

@@ -34,13 +34,14 @@ def calibrate(
     prediction scores to better reflect true probabilities.
 
     Args:
-    - annotations_path (str): Path to CSV file containing ground truth annotations.
-    - label_dir (str): Directory containing model prediction labels (Audacity format).
-    - output_path (str): Directory where calibration reports will be saved.
+    - annotations_path (str): Required path to CSV file containing ground truth annotations.
+    - label_dir (str): Required directory containing model prediction labels (Audacity format).
+      If a subdirectory of recordings directory, only the subdirectory name is needed.
+    - output_path (str): Required directory where calibration reports will be saved.
     - recordings_path (str, optional): Directory containing audio recordings. Defaults to annotations directory.
     - cutoff (float): Ignore predictions below this threshold during calibration. Default is 0.4.
-    - coef (float, optional): Use this coefficient for the calibration plot.
-    - inter (float, optional): Use this intercept for the calibration plot.
+    - coef (float, optional): Use this coefficient for the calibration plot. If specified, inter must also be specified.
+    - inter (float, optional): Use this intercept for the calibration plot. If specified, coef must also be specified.
     """
     from britekit.testing.per_segment_tester import PerSegmentTester
 

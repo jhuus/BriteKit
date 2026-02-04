@@ -34,7 +34,7 @@ def init(dest: Optional[Path] = None) -> None:
     a default directory structure.
 
     Args:
-    - dest (Path): Directory to copy files into. Subdirectories are created as needed.
+    - dest (Path, optional): Directory to copy files into. Defaults to working directory. Subdirectories are created as needed.
 
     Examples:
         britekit init --dest .

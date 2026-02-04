@@ -33,7 +33,7 @@ def reextract(
     updating the database.
 
     Args:
-    - cfg_path (str, optional): Path to YAML file defining configuration overrides.
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.training_db.
     - class_name (str, optional): Name of a specific class to reextract. If omitted, processes all classes.
     - classes_path (str, optional): Path to CSV file listing classes to reextract. Alternative to class_name.
