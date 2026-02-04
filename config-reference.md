@@ -10,26 +10,22 @@
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `spec_duration` | `float` | 5.0 | Spectrogram duration in seconds |
-| `spec_height` | `int` | 128 | Spectrogram height |
-| `spec_width` | `int` | 480 | Spectrogram width (divisible by 32) |
+| `spec_height` | `int` | 128 | Spectrogram height in pixels |
+| `spec_width` | `int` | 480 | Spectrogram width in pixels (must be divisible by 32) |
 | `win_length` | `float` | 0.055 | Window length is specified in seconds, to retain temporal and frequency resolution when max_freq and sampling rate are changed |
-| `max_freq` | `int` | 8000 | Maximum frequency for spectrograms |
-| `min_freq` | `int` | 100 | Minimum frequency for spectrograms |
+| `max_freq` | `int` | 8000 | Maximum frequency in Hz |
+| `min_freq` | `int` | 100 | Minimum frequency in Hz |
 | `sampling_rate` | `int` | 18000 | A little more than 2 * max_freq |
 | `freq_scale` | `str` | 'mel' | "linear", "log" or "mel" |
 | `power` | `float` | 1.0 | Use 1.0 for magnitude and 2.0 for power spectrograms |
 | `decibels` | `bool` | False | Use decibel amplitude scale? |
-| `top_db` | `float` | 80 | Parameter to decibel conversion |
+| `top_db` | `float` | 80 | Threshold below max amplitude in dB; lower values are clipped |
 | `db_power` | `float` | 1.0 | Raise to this exponent after convert to decibels |
 | `log_freq_gain` | `float` | 0.6 | Boost loudness of higher frequencies with log scale |
-| `choose_channel` | `bool` | False | Use heuristic to pick the cleanest audio channel |
+| `choose_channel` | `bool` | False | Use heuristic to pick the cleanest audio channel? |
 | `check_seconds` | `float` | 6.0 | Check this many seconds to pick channel |
-| `energy_min_freq` | `int` | 500 | energy band min for channel heuristic |
-| `energy_max_freq` | `int` | 6000 | energy band max for channel heuristic |
-| `median_threshold` | `float` | 0.77 | see code in Audio::_choose_channel |
-| `sum_threshold` | `float` | 1.08 | see code in Audio::_choose_channel |
-| `use_spec_cache` | `bool` | False | When cache=False, each spectrogram is generated separately. When cache=True, a single spectrogram is generated for the recording, by concatenating chunks. Then that big spectrogram is divided as needed, which saves time when there is a lot of overlap. Chunks_per_spec defines the size of the individual spectrograms that are concatenated to create the cache, where the duration is chunks_per_spec * spec_duration. |
-| `chunks_per_spec` | `int` | 3 |  |
+| `use_spec_cache` | `bool` | False | When use_spec_cache=False, each spectrogram is generated separately. When use_spec_cache=True, a single spectrogram is generated for the recording, by concatenating chunks. Then that big spectrogram is divided as needed, which saves time when there is a lot of overlap. |
+| `chunks_per_spec` | `int` | 3 | chunks_per_spec defines the size of the individual spectrograms that are concatenated to create the cache, where the duration is chunks_per_spec * spec_duration. |
 
 ### TrainingConfig
 | Field | Type | Default | Description |
@@ -37,12 +33,12 @@
 | `model_type` | `str` | 'effnet.2' | Use timm.x for timm model "x" |
 | `head_type` | `Union[str, NoneType]` | None | If None, use backbone's default |
 | `hidden_channels` | `int` | 256 | Used by some non-default classifier heads |
-| `pretrained` | `bool` | False | For group=timm |
+| `pretrained` | `bool` | False | Use pretrained weights (applies to timm models) |
 | `load_ckpt_path` | `Union[str, NoneType]` | None | For transfer learning or fine-tuning |
 | `freeze_backbone` | `bool` | False | Option when transfer learning |
-| `multi_label` | `bool` | True | Multi-label or multi-class? |
-| `deterministic` | `bool` | False | Deterministic training? |
-| `seed` | `Union[int, NoneType]` | None | Training seed |
+| `multi_label` | `bool` | True | General training parameters |
+| `deterministic` | `bool` | False | Enable deterministic training for reproducibility |
+| `seed` | `Union[int, NoneType]` | None | Random seed for reproducibility; None uses random seed |
 | `learning_rate` | `float` | 0.001 | Base learning rate |
 | `batch_size` | `int` | 64 | Mini-batch size |
 | `shuffle` | `bool` | True | Shuffle data during training? |
@@ -57,21 +53,21 @@
 | `num_workers` | `int` | 3 | Number of trainer worker threads |
 | `compile` | `bool` | False | Compile the model? |
 | `mixed_precision` | `bool` | False | Use mixed precision? |
-| `use_class_weights` | `bool` | False |  |
+| `use_class_weights` | `bool` | False | Should loss function weight classes by spec count? |
 | `weight_exponent` | `float` | 0.5 | Exponent to soften the class weights |
 | `pos_label_smoothing` | `float` | 0.08 | Positive side of asymmetric label smoothing |
 | `neg_label_smoothing` | `float` | 0.01 | Negative side of asymmetric label smoothing |
 | `optimizer` | `str` | 'radam' | Any timm optimizer |
 | `opt_weight_decay` | `Union[float, NoneType]` | None | Weight decay option (L2 regularization) |
-| `opt_beta1` | `Union[float, NoneType]` | None | Optimizer parameter |
-| `opt_beta2` | `Union[float, NoneType]` | None | Optimizer parameter |
+| `opt_beta1` | `Union[float, NoneType]` | None |  |
+| `opt_beta2` | `Union[float, NoneType]` | None |  |
 | `drop_rate` | `Union[float, NoneType]` | None | Standard dropout |
 | `drop_path_rate` | `Union[float, NoneType]` | None | Stochastic depth dropout |
 | `sed_fps` | `int` | 4 | Frames per second from SED heads |
 | `frame_loss_weight` | `float` | 0.5 | Segment_loss_weight = 1 - frame_loss_weight |
-| `offpeak_weight` | `float` | 0.002 | Offpeak loss penalty weight for SED models |
-| `absence_penalty_eps` | `float` | 0.2 | Absence penalty epsilon for SED models |
-| `absence_penalty_tau` | `float` | 7.0 | Absence penalty tau for SED models |
+| `offpeak_weight` | `float` | 0.002 |  |
+| `absence_penalty_eps` | `float` | 0.2 |  |
+| `absence_penalty_tau` | `float` | 7.0 | Temperature scaling factor for absence penalty |
 | `absence_penalty_weight` | `float` | 0.0 | Absence penalty weight for SED models |
 | `augment` | `bool` | True | Use data augmentation? |
 | `max_augmentations` | `int` | 1 | Up to this many per spectrogram |
@@ -104,10 +100,9 @@
 | `max_models` | `Union[int, NoneType]` | None | If specified, limit ensemble size accordingly |
 | `ckpt_folder` | `str` | 'data/ckpt' | Use an ensemble of all checkpoints in this folder for inference |
 | `search_ckpt_path` | `Union[str, NoneType]` | None | Folder with one or more checkpoints for embeddings and search |
-| `classes_file` | `str` | 'data/classes.txt' | List of classes used to generate pickle files |
 | `exclude_list` | `str` | 'data/exclude.txt' | Classes listed in this file are excluded from inference output |
 | `source_regexes` | `Union[list, NoneType]` | <factory <lambda>> | Sample regexes to map recording names to source names |
-| `map_codes` | `Union[dict, NoneType]` | None | Map old class codes to new codes |
+| `map_codes` | `Union[dict, NoneType]` | None |  |
 
 ### BaseConfig
 | Field | Type | Default | Description |

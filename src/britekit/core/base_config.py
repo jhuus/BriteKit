@@ -7,40 +7,36 @@ from typing import Optional
 @dataclass
 class AudioConfig:
     spec_duration: float = 5.0  # Spectrogram duration in seconds
-    spec_height: int = 128  # Spectrogram height
-    spec_width: int = 480  # Spectrogram width (divisible by 32)
+    spec_height: int = 128  # Spectrogram height in pixels
+    spec_width: int = 480  # Spectrogram width in pixels (must be divisible by 32)
 
     # Window length is specified in seconds,
     # to retain temporal and frequency resolution
     # when max_freq and sampling rate are changed
     win_length: float = 0.055
 
-    max_freq: int = 8000  # Maximum frequency for spectrograms
-    min_freq: int = 100  # Minimum frequency for spectrograms
+    max_freq: int = 8000  # Maximum frequency in Hz
+    min_freq: int = 100  # Minimum frequency in Hz
     sampling_rate: int = 18000  # A little more than 2 * max_freq
     freq_scale: str = "mel"  # "linear", "log" or "mel"
     power: float = 1.0  # Use 1.0 for magnitude and 2.0 for power spectrograms
     decibels: bool = False  # Use decibel amplitude scale?
-    top_db: float = 80  # Parameter to decibel conversion
+    top_db: float = 80  # Threshold below max amplitude in dB; lower values are clipped
     db_power: float = 1.0  # Raise to this exponent after convert to decibels
     log_freq_gain: float = 0.6  # Boost loudness of higher frequencies with log scale
 
-    # Parameters for the channel selection heuristic
-    choose_channel: bool = False  # Use heuristic to pick the cleanest audio channel
+    choose_channel: bool = False  # Use heuristic to pick the cleanest audio channel?
     check_seconds: float = 6.0  # Check this many seconds to pick channel
-    energy_min_freq: int = 500  # energy band min for channel heuristic
-    energy_max_freq: int = 6000  # energy band max for channel heuristic
-    median_threshold: float = 0.77  # see code in Audio::_choose_channel
-    sum_threshold: float = 1.08  # see code in Audio::_choose_channel
 
-    # When cache=False, each spectrogram is generated separately.
-    # When cache=True, a single spectrogram is generated for the recording,
+    # When use_spec_cache=False, each spectrogram is generated separately.
+    # When use_spec_cache=True, a single spectrogram is generated for the recording,
     # by concatenating chunks. Then that big spectrogram is divided as needed,
     # which saves time when there is a lot of overlap.
-    # Chunks_per_spec defines the size of the individual spectrograms that
+    use_spec_cache: bool = False
+
+    # chunks_per_spec defines the size of the individual spectrograms that
     # are concatenated to create the cache, where the duration is
     # chunks_per_spec * spec_duration.
-    use_spec_cache: bool = False
     chunks_per_spec: int = 3
 
 
@@ -50,14 +46,16 @@ class TrainingConfig:
     model_type: str = "effnet.2"  # Use timm.x for timm model "x"
     head_type: Optional[str] = None  # If None, use backbone's default
     hidden_channels: int = 256  # Used by some non-default classifier heads
-    pretrained: bool = False  # For group=timm
+    pretrained: bool = False  # Use pretrained weights (applies to timm models)
     load_ckpt_path: Optional[str] = None  # For transfer learning or fine-tuning
     freeze_backbone: bool = False  # Option when transfer learning
 
     # General training parameters
-    multi_label: bool = True  # Multi-label or multi-class?
-    deterministic: bool = False  # Deterministic training?
-    seed: Optional[int] = None  # Training seed
+    multi_label: bool = (
+        True  # True for multi-label, False for multi-class classification
+    )
+    deterministic: bool = False  # Enable deterministic training for reproducibility
+    seed: Optional[int] = None  # Random seed for reproducibility; None uses random seed
     learning_rate: float = 0.001  # Base learning rate
     batch_size: int = 64  # Mini-batch size
     shuffle: bool = True  # Shuffle data during training?
@@ -73,9 +71,8 @@ class TrainingConfig:
     compile: bool = False  # Compile the model?
     mixed_precision: bool = False  # Use mixed precision?
 
-    use_class_weights: bool = (
-        False  # Should loss function weight classes by spec count?
-    )
+    # Should loss function weight classes by spec count?
+    use_class_weights: bool = False
     weight_exponent: float = 0.5  # Exponent to soften the class weights
 
     pos_label_smoothing: float = 0.08  # Positive side of asymmetric label smoothing
@@ -84,8 +81,12 @@ class TrainingConfig:
     # Optimizer parameters
     optimizer: str = "radam"  # Any timm optimizer
     opt_weight_decay: Optional[float] = None  # Weight decay option (L2 regularization)
-    opt_beta1: Optional[float] = None  # Optimizer parameter
-    opt_beta2: Optional[float] = None  # Optimizer parameter
+    opt_beta1: Optional[float] = (
+        None  # Adam/RAdam beta1 (exponential decay rate for first moment)
+    )
+    opt_beta2: Optional[float] = (
+        None  # Adam/RAdam beta2 (exponential decay rate for second moment)
+    )
 
     # Dropout parameters are passed to model only if not None
     drop_rate: Optional[float] = None  # Standard dropout
@@ -94,9 +95,13 @@ class TrainingConfig:
     # SED-specific parameters
     sed_fps: int = 4  # Frames per second from SED heads
     frame_loss_weight: float = 0.5  # Segment_loss_weight = 1 - frame_loss_weight
-    offpeak_weight: float = 0.002  # Offpeak loss penalty weight for SED models
-    absence_penalty_eps: float = 0.2  # Absence penalty epsilon for SED models
-    absence_penalty_tau: float = 7.0  # Absence penalty tau for SED models
+    offpeak_weight: float = (
+        0.002  # Weight for penalizing predictions outside peak regions
+    )
+    absence_penalty_eps: float = (
+        0.2  # Epsilon threshold for absence penalty calculation
+    )
+    absence_penalty_tau: float = 7.0  # Temperature scaling factor for absence penalty
     absence_penalty_weight: float = 0.0  # Absence penalty weight for SED models
 
     # Data augmentation
@@ -186,8 +191,6 @@ class MiscConfig:
     ckpt_folder: str = "data/ckpt"
     # Folder with one or more checkpoints for embeddings and search
     search_ckpt_path: Optional[str] = None
-    # List of classes used to generate pickle files
-    classes_file: str = "data/classes.txt"
     # Classes listed in this file are excluded from inference output
     exclude_list: str = "data/exclude.txt"
 
@@ -202,7 +205,9 @@ class MiscConfig:
         ]
     )
 
-    map_codes: Optional[dict] = None  # Map old class codes to new codes
+    map_codes: Optional[dict] = (
+        None  # Dict mapping old to new class codes for checkpoint compatibility
+    )
 
 
 @dataclass
