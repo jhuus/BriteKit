@@ -70,6 +70,10 @@ class Audio:
         self.set_config(cfg)
         self.sampling_rate = self.cfg.audio.sampling_rate  # in case resampling needed
 
+        # Suppress debug logging in librosa etc.
+        for logger_name in ["librosa", "audioread", "soundfile", "numba"]:
+            logging.getLogger(logger_name).setLevel(logging.WARNING)
+
     def set_config(self, cfg: Optional[BaseConfig] = None, resample: bool = True):
         """
         Set or update the audio configuration for spectrogram generation.
@@ -207,9 +211,6 @@ class Audio:
         """
         import librosa
         import numpy as np
-
-        # Suppress debug logging in librosa
-        logging.getLogger("librosa").setLevel(logging.ERROR)
 
         if not path or not isinstance(path, str):
             logging.error(f"Invalid path provided: {path}")
