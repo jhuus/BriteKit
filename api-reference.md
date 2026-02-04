@@ -54,7 +54,7 @@ Attributes:
 
 **get_spectrograms**  
 ```python
-Audio.get_spectrograms(self, start_times: list[float], spec_duration: Optional[float] = None, freq_scale: Optional[str] = None, decibels: Optional[float] = None, top_db: Optional[int] = None, db_power: Optional[int] = None)
+Audio.get_spectrograms(self, start_times: list[float], spec_duration: Optional[float] = None, freq_scale: Optional[str] = None, decibels: Optional[float] = None, top_db: Optional[int] = None, db_power: Optional[int] = None, skip_cache: bool = False)
 ```
 Generate normalized and unnormalized spectrograms for specified time offsets.
 
@@ -968,6 +968,12 @@ Returns:
 
 
 
+**get_class_name**  
+```python
+Predictor.get_class_name(self, label: str) -> str
+```
+Map a label (name, code, alt_name, or alt_code) back to the class name.
+
 **get_dataframe**  
 ```python
 Predictor.get_dataframe(self, score_array, frame_map, start_times: list[float], recording_name: str)
@@ -1116,10 +1122,8 @@ Returns:
 ### Trainer
 **Class**  
 ```python
-Trainer()
+Trainer(prefix: Optional[str] = None)
 ```
-Run training as specified in configuration.
-
 **Public methods & properties**
 
 **find_lr**  
@@ -1914,6 +1918,17 @@ Returns:
 TrainingDatabase.optimize(self)
 ```
 Optimize database performance (important after extract or re-extract)
+
+**update_class**  
+```python
+TrainingDatabase.update_class(self, id: int, field: str, value)
+```
+Update a record in the Class table.
+
+Args:
+- id (int): ID that identifies the record to update
+- field (str): Name of column to update.
+- value: New value.
 
 **update_recording**  
 ```python

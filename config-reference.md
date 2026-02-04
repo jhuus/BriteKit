@@ -28,6 +28,8 @@
 | `energy_max_freq` | `int` | 6000 | energy band max for channel heuristic |
 | `median_threshold` | `float` | 0.77 | see code in Audio::_choose_channel |
 | `sum_threshold` | `float` | 1.08 | see code in Audio::_choose_channel |
+| `use_spec_cache` | `bool` | False | When cache=False, each spectrogram is generated separately. When cache=True, a single spectrogram is generated for the recording, by concatenating chunks. Then that big spectrogram is divided as needed, which saves time when there is a lot of overlap. Chunks_per_spec defines the size of the individual spectrograms that are concatenated to create the cache, where the duration is chunks_per_spec * spec_duration. |
+| `chunks_per_spec` | `int` | 3 |  |
 
 ### TrainingConfig
 | Field | Type | Default | Description |
@@ -55,17 +57,22 @@
 | `num_workers` | `int` | 3 | Number of trainer worker threads |
 | `compile` | `bool` | False | Compile the model? |
 | `mixed_precision` | `bool` | False | Use mixed precision? |
+| `use_class_weights` | `bool` | False |  |
+| `weight_exponent` | `float` | 0.5 | Exponent to soften the class weights |
 | `pos_label_smoothing` | `float` | 0.08 | Positive side of asymmetric label smoothing |
 | `neg_label_smoothing` | `float` | 0.01 | Negative side of asymmetric label smoothing |
 | `optimizer` | `str` | 'radam' | Any timm optimizer |
-| `opt_weight_decay` | `float` | 1e-06 | Weight decay option (L2 regularization) |
-| `opt_beta1` | `float` | 0.9 | Optimizer parameter |
-| `opt_beta2` | `float` | 0.999 | Optimizer parameter |
+| `opt_weight_decay` | `Union[float, NoneType]` | None | Weight decay option (L2 regularization) |
+| `opt_beta1` | `Union[float, NoneType]` | None | Optimizer parameter |
+| `opt_beta2` | `Union[float, NoneType]` | None | Optimizer parameter |
 | `drop_rate` | `Union[float, NoneType]` | None | Standard dropout |
 | `drop_path_rate` | `Union[float, NoneType]` | None | Stochastic depth dropout |
 | `sed_fps` | `int` | 4 | Frames per second from SED heads |
 | `frame_loss_weight` | `float` | 0.5 | Segment_loss_weight = 1 - frame_loss_weight |
-| `offpeak_weight` | `float` | 0.002 | Loss penalty weight for SED models |
+| `offpeak_weight` | `float` | 0.002 | Offpeak loss penalty weight for SED models |
+| `absence_penalty_eps` | `float` | 0.2 | Absence penalty epsilon for SED models |
+| `absence_penalty_tau` | `float` | 7.0 | Absence penalty tau for SED models |
+| `absence_penalty_weight` | `float` | 0.0 | Absence penalty weight for SED models |
 | `augment` | `bool` | True | Use data augmentation? |
 | `max_augmentations` | `int` | 1 | Up to this many per spectrogram |
 | `noise_class_name` | `str` | 'Noise' | Augmentation treats noise specially |
@@ -94,6 +101,7 @@
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `force_cpu` | `bool` | False | If true, use CPU (for performance comparisons) |
+| `max_models` | `Union[int, NoneType]` | None | If specified, limit ensemble size accordingly |
 | `ckpt_folder` | `str` | 'data/ckpt' | Use an ensemble of all checkpoints in this folder for inference |
 | `search_ckpt_path` | `Union[str, NoneType]` | None | Folder with one or more checkpoints for embeddings and search |
 | `classes_file` | `str` | 'data/classes.txt' | List of classes used to generate pickle files |

@@ -129,7 +129,7 @@ Options:
   -o, --output DIRECTORY  Path to output directory (optional, defaults to input
                           directory).
   -r, --rtype TEXT        Output format type. Options are "audacity", "csv", or
-                          "both". Default="both".
+                          "both". Default="audacity".
   --start TEXT            Where to start processing each recording, in seconds.
                           For example, '71' and '1:11' have the same meaning,
                           and cause the first 71 seconds to be ignored. Default
@@ -214,7 +214,6 @@ Usage: britekit calibrate [OPTIONS]
   prediction scores to better reflect true probabilities.
 
 Options:
-  -c, --cfg PATH              Path to YAML file defining config overrides.
   -a, --annotations FILE      Path to CSV file containing annotations or ground
                               truth).  [required]
   -l, --labels TEXT           Directory containing Audacity labels. If a
@@ -486,7 +485,7 @@ Usage: britekit ensemble [OPTIONS]
 
 Options:
   -c, --cfg PATH                  Path to YAML file defining config overrides.
-  --ckpt_path DIRECTORY           Directory containing checkpoints.  [required]
+  --ckpt DIRECTORY                Directory containing checkpoints.  [required]
   -e, --ensemble_size INTEGER     Number of checkpoints in ensemble (default=3).
   -n, --num_tries INTEGER         Maximum number of ensembles to try
                                   (default=100).
@@ -499,6 +498,7 @@ Options:
                                   ground truth).  [required]
   -r, --recordings DIRECTORY      Recordings directory. Default is directory
                                   containing annotations file.
+  --save DIRECTORY                Directory to copy ensemble into.
   --greedy                        If specified, use a greedy algorithm, which
                                   runs faster.
   --help                          Show this message and exit.
@@ -634,6 +634,8 @@ Options:
                           500.
   --noprefix              By default, filenames use an 'N' prefix and recording
                           number. Specify this flag to skip the prefix.
+  --nover                 If specified, include recordings that have not been
+                          verified. By default they are excluded.
   --help                  Show this message and exit.
 ```
 ### britekit init
@@ -745,7 +747,7 @@ Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
   --ndims                 If specified, do not show seconds on x-axis and
                           frequencies on y-axis.
-  -i, --input FILE        Path to input directory.  [required]
+  -i, --input FILE        Path to input file.  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
   --all                   If specified, plot whole recordings in one spectrogram
                           each. Otherwise break them up into segments.
@@ -964,6 +966,7 @@ Usage: britekit train [OPTIONS]
 
 Options:
   -c, --cfg PATH  Path to YAML file defining config overrides.
+  --prefix TEXT   Optional prefix to add to checkpoint names.
   --seed INTEGER  Integer seed.
   --help          Show this message and exit.
 ```
@@ -993,10 +996,11 @@ Options:
   -o, --output DIRECTORY          Path to output directory.  [required]
   -a, --annotations FILE          Path to CSV file containing annotations or
                                   ground truth).  [required]
-  -m, --metric [macro_pr|micro_pr|macro_roc|micro_roc]
+  -m, --metric [macro_pr|micro_pr|macro_roc|micro_roc|combo_pr|combo_roc]
                                   Metric used to compare runs. Macro-averaging
                                   uses annotated classes only, but micro-
-                                  averaging uses all classes.
+                                  averaging uses all classes. The combo metrics
+                                  are averages of micro and macro.
   -r, --recordings DIRECTORY      Recordings directory. Default is directory
                                   containing annotations file.
   --log DIRECTORY                 Training log directory.
