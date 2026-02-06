@@ -335,6 +335,11 @@ class Audio:
                 end_sample = int((offset + spec_duration) * sr)
                 signal_slice = self.signal[start_sample:end_sample]
 
+                # Skip slices too short for STFT (n_fft = 2 * win_length)
+                if signal_slice.shape[0] < 2 * self.win_length:
+                    specs.append(None)
+                    continue
+
                 spec = self._get_raw_spectrogram(signal_slice, freq_scale=freq_scale)
                 spec = spec[: self.cfg.audio.spec_height, : self.cfg.audio.spec_width]
                 if spec.shape[1] < self.cfg.audio.spec_width:
