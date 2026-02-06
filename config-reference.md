@@ -59,14 +59,14 @@
 | `neg_label_smoothing` | `float` | 0.01 | Negative side of asymmetric label smoothing |
 | `optimizer` | `str` | 'radam' | Any timm optimizer |
 | `opt_weight_decay` | `Union[float, NoneType]` | None | Weight decay option (L2 regularization) |
-| `opt_beta1` | `Union[float, NoneType]` | None |  |
-| `opt_beta2` | `Union[float, NoneType]` | None |  |
+| `opt_beta1` | `Union[float, NoneType]` | None | Adam/RAdam beta1 (exponential decay rate for first moment) |
+| `opt_beta2` | `Union[float, NoneType]` | None | Adam/RAdam beta2 (exponential decay rate for second moment) |
 | `drop_rate` | `Union[float, NoneType]` | None | Standard dropout |
 | `drop_path_rate` | `Union[float, NoneType]` | None | Stochastic depth dropout |
 | `sed_fps` | `int` | 4 | Frames per second from SED heads |
 | `frame_loss_weight` | `float` | 0.5 | Segment_loss_weight = 1 - frame_loss_weight |
-| `offpeak_weight` | `float` | 0.002 |  |
-| `absence_penalty_eps` | `float` | 0.2 |  |
+| `offpeak_weight` | `float` | 0.002 | Weight for penalizing predictions outside peak regions |
+| `absence_penalty_eps` | `float` | 0.2 | Epsilon threshold for absence penalty calculation |
 | `absence_penalty_tau` | `float` | 7.0 | Temperature scaling factor for absence penalty |
 | `absence_penalty_weight` | `float` | 0.0 | Absence penalty weight for SED models |
 | `augment` | `bool` | True | Use data augmentation? |
@@ -102,7 +102,7 @@
 | `search_ckpt_path` | `Union[str, NoneType]` | None | Folder with one or more checkpoints for embeddings and search |
 | `exclude_list` | `str` | 'data/exclude.txt' | Classes listed in this file are excluded from inference output |
 | `source_regexes` | `Union[list, NoneType]` | <factory <lambda>> | Sample regexes to map recording names to source names |
-| `map_codes` | `Union[dict, NoneType]` | None |  |
+| `map_codes` | `Union[dict, NoneType]` | None | Dict mapping old to new class codes for checkpoint compatibility |
 
 ### BaseConfig
 | Field | Type | Default | Description |

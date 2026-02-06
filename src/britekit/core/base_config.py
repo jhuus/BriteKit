@@ -81,12 +81,12 @@ class TrainingConfig:
     # Optimizer parameters
     optimizer: str = "radam"  # Any timm optimizer
     opt_weight_decay: Optional[float] = None  # Weight decay option (L2 regularization)
-    opt_beta1: Optional[float] = (
-        None  # Adam/RAdam beta1 (exponential decay rate for first moment)
-    )
-    opt_beta2: Optional[float] = (
-        None  # Adam/RAdam beta2 (exponential decay rate for second moment)
-    )
+
+    # Adam/RAdam beta1 (exponential decay rate for first moment)
+    opt_beta1: Optional[float] = None
+
+    # Adam/RAdam beta2 (exponential decay rate for second moment)
+    opt_beta2: Optional[float] = None
 
     # Dropout parameters are passed to model only if not None
     drop_rate: Optional[float] = None  # Standard dropout
@@ -95,12 +95,12 @@ class TrainingConfig:
     # SED-specific parameters
     sed_fps: int = 4  # Frames per second from SED heads
     frame_loss_weight: float = 0.5  # Segment_loss_weight = 1 - frame_loss_weight
-    offpeak_weight: float = (
-        0.002  # Weight for penalizing predictions outside peak regions
-    )
-    absence_penalty_eps: float = (
-        0.2  # Epsilon threshold for absence penalty calculation
-    )
+
+    # Weight for penalizing predictions outside peak regions
+    offpeak_weight: float = 0.002
+
+    # Epsilon threshold for absence penalty calculation
+    absence_penalty_eps: float = 0.2
     absence_penalty_tau: float = 7.0  # Temperature scaling factor for absence penalty
     absence_penalty_weight: float = 0.0  # Absence penalty weight for SED models
 
@@ -205,9 +205,8 @@ class MiscConfig:
         ]
     )
 
-    map_codes: Optional[dict] = (
-        None  # Dict mapping old to new class codes for checkpoint compatibility
-    )
+    # Dict mapping old to new class codes for checkpoint compatibility
+    map_codes: Optional[dict] = None
 
 
 @dataclass
