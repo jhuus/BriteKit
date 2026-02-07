@@ -160,7 +160,7 @@ If `head_type` is not specified, BriteKit uses the default classifier head defin
 
 The `hidden_channels` parameter controls the size of all three SED heads.
 
-Specifying `head_type="effnet"` is sometimes helpful for other models such as DLA and VovNet. See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
+See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
 
 You can specify `val_portion` > 0 to run validation on a portion of the training data, or `num_folds` > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0/version_x etc. Otherwise it is under logs/version_x. Output from the first training run is saved in version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to view graphs such as the learning rate in a web browser.
 
