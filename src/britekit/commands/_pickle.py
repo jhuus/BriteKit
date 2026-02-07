@@ -55,14 +55,14 @@ def pickle_occurrence(
     help="Path to YAML file defining config overrides.",
 )
 @click.option(
-    "-d", "--db", "db_path", required=False, help="Path to the training database."
+    "-d", "--db", "db_path", required=False, help="Path to the occurrence database. Defaults to 'data/occurrence.db'"
 )
 @click.option(
     "-o",
     "--output",
     "output_path",
     required=False,
-    help='Output file path. Default is "data/training.pkl".',
+    help='Output file path. Default is "data/occurrence.pkl".',
 )
 def _pickle_occurrence_cmd(
     cfg_path: Optional[str],
