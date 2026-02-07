@@ -290,9 +290,7 @@ ROC-AUC is the area under the receiver operating charactistic curve. Like the PR
 
 ![](images/ROC-AUC.png)
 
-Both PR-AUC and ROC-AUC can be calculated using macro-averaging or micro-averaging. Macro-averaging weighs all classes equally and micro-average weighs them based on the number of samples they have in the ground truth annotations.
-
-ROC-AUC has the nice property that it equals the probability that a randomly selected positive example will be scored higher than a randomly selected negative example. Also, ROC-AUC has lower variance than PR-AUC. So for initial tuning, it is usually best to use ROC-AUC. However, once ROC-AUC has been more or less maximized, it can be helpful to tune PR-AUC. PR-AUC is very sensitive to high-scoring false positives, and tuning it can help to reduce those.
+Both PR-AUC and ROC-AUC can be calculated using macro-averaging or micro-averaging. Macro-averaging gives all classes equal weight, while micro-averaging aggregates predictions across all classes, making it more sensitive to classes with more annotations or more false positives. ROC-AUC has the nice property that it equals the probability that a randomly selected positive example will be scored higher than a randomly selected negative example. Also, ROC-AUC has lower variance than PR-AUC. So for initial tuning, it is usually best to use ROC-AUC. However, PR-AUC is more sensitive to high-scoring false positives, and tuning it can help to reduce those. Also, users generally care more about precision and recall than about the relative ranking of randomly selected examples, so once ROC-AUC is showing good results it's best to focus on PR-AUC.
 ## Data Augmentation
 Data augmentation reduces overfitting by artificially expanding the training dataset. During training, BriteKit randomly transforms spectrograms, so the model sees different variations of the same training samples across epochs. This helps the model generalize to real-world recordings.
 
