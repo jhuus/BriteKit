@@ -151,11 +151,14 @@ For very small models, say with less than 10 classes and just a few thousand tra
 If `head_type` is not specified, BriteKit uses the default classifier head defined by the model. However, you can also specify any of the following head types:
 | Head Type | Description |
 |---|---|
-| basic | A basic non-SED classifier head. |
-| effnet | The classifier head used in EfficientNetV2. |
-| hgnet | The classifier head used in HgNetV2. |
-| basic_sed | A basic SED head. |
-| scalable_sed | The basic_sed head can be larger than desired, and this one allows you to control the size.  |
+| basic | A basic MLP classifier head. |
+| effnet | The MLP classifier head used in EfficientNetV2. |
+| hgnet | The MLP classifier head used in HgNetV2. |
+| basic_sed | SED head with attention-weighted frame classification applied directly to backbone features. |
+| bitemporal_sed | SED head that uses bidirectional (forward and backward) convolutions for temporal context. |
+| scalable_sed | SED head with grouped channel reduction and a temporal convolution stack. |
+
+The `hidden_channels` parameter controls the size of all three SED heads.
 
 Specifying `head_type="effnet"` is sometimes helpful for other models such as DLA and VovNet. See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
 
