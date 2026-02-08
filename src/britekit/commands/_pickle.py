@@ -55,7 +55,11 @@ def pickle_occurrence(
     help="Path to YAML file defining config overrides.",
 )
 @click.option(
-    "-d", "--db", "db_path", required=False, help="Path to the occurrence database. Defaults to 'data/occurrence.db'"
+    "-d",
+    "--db",
+    "db_path",
+    required=False,
+    help="Path to the occurrence database. Defaults to 'data/occurrence.db'",
 )
 @click.option(
     "-o",
