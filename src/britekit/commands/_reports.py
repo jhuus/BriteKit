@@ -462,14 +462,25 @@ def rpt_labels(
                 seconds_per_rec_class[recording][name] += elapsed
                 seconds_per_class[name] += elapsed
 
-    # save the summary CSV
-    class_names = sorted(seconds_per_class.keys())
+    # save the classes CSV
     rows = []
-    for class_name in class_names:
-        rows.append([class_name, seconds_per_class[class_name]])
+    for class_name, secs in seconds_per_class.items():
+        rows.append([class_name, secs])
 
     df = pd.DataFrame(rows, columns=["class", "seconds"])
-    df.to_csv(os.path.join(output_path, "summary.csv"), index=False)
+    df = df.sort_values(by="seconds", ascending=False, ignore_index=True)
+    df.to_csv(os.path.join(output_path, "classes.csv"), index=False)
+
+    # save the recordings CSV
+    rows = []
+    for recording in sorted(seconds_per_rec_class.keys()):
+        classes = " ".join(sorted(seconds_per_rec_class[recording].keys()))
+        rows.append([recording, classes])
+
+    df = pd.DataFrame(rows, columns=["recording", "classes"])
+    df.to_csv(os.path.join(output_path, "recordings.csv"), index=False)
+
+    class_names = sorted(seconds_per_class.keys())
 
     # save the details CSV
     rows = []
