@@ -810,6 +810,9 @@ class BaseTester:
             if len(start_values) == 0 or start_value > start_values[-1]:
                 start_values.append(start_value)
 
+        if len(start_values) < 2:
+            return 0  # all start values are the same, can't determine overlap
+
         # determine overlap from the minimum gap between adjacent start values
         diffs = [
             start_values[i + 1] - start_values[i] for i in range(len(start_values) - 1)
