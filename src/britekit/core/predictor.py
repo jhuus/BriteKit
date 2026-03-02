@@ -748,8 +748,8 @@ class Predictor:
                     self.models.append(self._load_model(full_path).to(self.device))
 
                 if (
-                    self.cfg.misc.max_models is not None
-                    and len(self.models) == self.cfg.misc.max_models
+                    self.cfg.infer.max_models is not None
+                    and len(self.models) == self.cfg.infer.max_models
                 ):
                     break
 

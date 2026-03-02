@@ -170,6 +170,7 @@ class InferenceConfig:
     overlap: float = 0.0
     min_score: float = 0.80  # Only generate labels when score is at least this
     num_threads: int = 3  # More threads = faster but more VRAM
+    max_models: Optional[int] = None  # If specified, limit ensemble size accordingly
     autocast: bool = True  # Faster and less VRAM but less precision
     audio_power: float = 0.7  # Audio power parameter during inference
     # Platt scaling coefficient, to align predictions with probabilities
@@ -186,7 +187,6 @@ class InferenceConfig:
 @dataclass
 class MiscConfig:
     force_cpu: bool = False  # If true, use CPU (for performance comparisons)
-    max_models: Optional[int] = None  # If specified, limit ensemble size accordingly
     # Use an ensemble of all checkpoints in this folder for inference
     ckpt_folder: str = "data/ckpt"
     # Folder with one or more checkpoints for embeddings and search
