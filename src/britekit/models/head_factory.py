@@ -36,6 +36,9 @@ class ChannelReducer(nn.Module):
 
 
 class BiTemporalSEDHead(nn.Module):
+    """SED head with forward and backward (time-flipped) convolutions for
+    bidirectional temporal context, plus channel reduction and attention pooling."""
+
     def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
         super().__init__()
 
@@ -76,13 +79,9 @@ class BiTemporalSEDHead(nn.Module):
         return segment_logits, frame_logits
 
 
-class ScalableSEDHead(nn.Module):
-    """
-    Scalable version of Basic SED head:
-      [freq-pool] -> [ChannelReducer] -> Conv1d(k3) -> ReLU -> Dropout -> Conv1d(1x1 to classes)
-      + attention pooling for segment logits
-    Returns (segment_logits [B,C], frame_logits [B,C,T]).
-    """
+class ReducedSEDHead(nn.Module):
+    """SED head with grouped channel reduction, a temporal convolution stack,
+    temperature-scaled attention pooling, and optional logit smoothing."""
 
     def __init__(
         self,
@@ -150,6 +149,9 @@ class ScalableSEDHead(nn.Module):
 
 
 class BasicSEDHead(nn.Module):
+    """Minimal SED head: freq-pool, Conv1d classifier, and attention pooling.
+    No channel reduction—operates directly on backbone channels."""
+
     def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
         super().__init__()
         self.temporal_attention = nn.Conv1d(in_channels, 1, kernel_size=1)
@@ -247,10 +249,10 @@ def build_bitemporal_sed_head(
     return BiTemporalSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
 
 
-def build_scalable_sed_head(
+def build_reduced_sed_head(
     in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
 ) -> nn.Module:
-    return ScalableSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
+    return ReducedSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
 
 
 HEAD_REGISTRY = {
@@ -260,5 +262,9 @@ HEAD_REGISTRY = {
     "hgnet": (build_hgnet_head, False),
     "basic_sed": (build_basic_sed_head, True),
     "bitemporal_sed": (build_bitemporal_sed_head, True),
-    "scalable_sed": (build_scalable_sed_head, True),
+    "reduced_sed": (build_reduced_sed_head, True),
+    "scalable_sed": (
+        build_reduced_sed_head,
+        True,
+    ),  # old name for reduced_sed - keep for now
 }

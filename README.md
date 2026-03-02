@@ -156,7 +156,7 @@ If `head_type` is not specified, BriteKit uses the default classifier head defin
 | hgnet | The MLP classifier head used in HgNetV2. |
 | basic_sed | SED head with attention-weighted frame classification applied directly to backbone features. |
 | bitemporal_sed | SED head that uses bidirectional (forward and backward) convolutions for temporal context. |
-| scalable_sed | SED head with grouped channel reduction and a temporal convolution stack. |
+| reduced_sed | SED head with grouped channel reduction, temporal convolution stack, and temperature-scaled attention. |
 
 The `hidden_channels` parameter controls the size of all three SED heads.
 
