@@ -287,6 +287,9 @@ class Predictor:
                 # extra overlap at the beginning
                 start_times = [start_seconds] + start_times
 
+            logging.debug(
+                "Predictor::get_overlapping_scores start_times=%s", start_times
+            )
             specs, _ = self.audio.get_spectrograms(start_times)
             if specs is None or len(specs) == 0:
                 # maybe recording is too short given the increment
