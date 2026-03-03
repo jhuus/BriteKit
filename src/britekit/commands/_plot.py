@@ -94,8 +94,6 @@ def plot_db(
     from britekit.training_db.training_db import TrainingDatabase
 
     cfg = get_config(cfg_path)
-    if power is not None:
-        cfg.audio.power = power
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -130,6 +128,9 @@ def plot_db(
                     prev_filename = r.filename
 
                 spec = util.expand_spectrogram(r.value)
+                if power is not None:
+                    spec **= power
+
                 plot_spec(spec, spec_path, show_dims=not ndims)
                 num_plotted += 1
 
