@@ -114,7 +114,7 @@ class BaseTester:
                     self.segment_len = row.end_time - row.start_time
                 elif not math.isclose(row.end_time - row.start_time, self.segment_len):
                     logging.error(
-                        f"Error: detected different label durations ({self.segment_len} and {row.end_time - row.start_time})"
+                        f"Error: detected different label durations ({self.segment_len} and {row.end_time - row.start_time:.2f}) in recording {recording}"
                     )
                     quit()
 
