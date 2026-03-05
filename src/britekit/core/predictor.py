@@ -716,7 +716,7 @@ class Predictor:
             overlap = self.cfg.infer.overlap
 
         increment = max(0.5, self.cfg.audio.spec_duration - overlap)
-        min_useful_audio = 1.0 # don't keep segments shorter than this
+        min_useful_audio = 1.0  # don't keep segments shorter than this
         max_start = audio_duration - min_useful_audio
         end_offset = max(start_seconds, max_start)
         start_times = util.get_range(start_seconds, end_offset, increment)
