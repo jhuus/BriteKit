@@ -283,7 +283,8 @@ class Predictor:
             # add increment, but never start past the first segment
             curr_start = (start_seconds + i * increment) % self.cfg.audio.spec_duration
             start_times = self._get_start_times(audio_duration, curr_start, overlap=0)
-            if len(start_times) > 0 and start_times[0] > start_seconds:
+            offsets_per_spec = int(self.cfg.audio.spec_duration / increment)
+            if len(start_times) > 0 and start_times[0] > start_seconds and i < offsets_per_spec:
                 # extra overlap at the beginning
                 start_times = [start_seconds] + start_times
 
@@ -711,6 +712,9 @@ class Predictor:
         - audio_duration (float): total audio duration in seconds
         - start_seconds (float): where to start processing the audio (offset in seconds)
         """
+
+        if audio_duration <= self.cfg.audio.spec_duration:
+            return [0]
 
         if overlap is None:
             overlap = self.cfg.infer.overlap
