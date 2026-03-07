@@ -485,7 +485,9 @@ class Predictor:
             )
 
             # Fast reduction over frames to (segments, classes)
-            seg_scores = np.max(seg_view, axis=1)
+            # Using quantile .8 instead of max improves the high end of the PR
+            # curve by reducing FPs caused by smearing scores to adjacent frames.
+            seg_scores = np.quantile(seg_view, 0.8, axis=1)
 
             # Precompute segment times once
             segment_starts = np.arange(num_segments, dtype=np.float32) * segment_len
