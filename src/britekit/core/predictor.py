@@ -226,7 +226,9 @@ class Predictor:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None, None, []
 
-        start_times = self._get_start_times(audio_duration, start_seconds)
+        start_times = self._get_start_times(
+            audio_duration, start_seconds, self.cfg.audio.spec_duration
+        )
         specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
         self.normalized_specs = specs
 
@@ -242,28 +244,27 @@ class Predictor:
         return avg_score, avg_frame_map, start_times
 
     def get_overlapping_scores(
-        self, recording_path: str, increment: float, start_seconds: float = 0
+        self, recording_path: str, segment_len: float, initial_start_times: List[float]
     ):
         """
         This is a variant of get_recording_scores that overlaps spectrograms differently,
-        and is intended for models with SED classifier heads only. Each model processes
-        non-overlapping spectrograms. The first one gets spectrograms starting at offset 0.
-        The second one gets spectrograms starting at increment, the third starts at 2*increment,
-        etc. Since each model processes non-overlapping spectrograms, this achieves overlapped
-        processing with much better performance than get_recording_scores, in which each model
-        processes the same overlapping spectrograms.
+        and is intended mainly for models with SED classifier heads. Each model processes
+        non-overlapping spectrograms. The first start_time for each model is taken from
+        initial_start_times, and then non-overlapping start_times are created from there.
+        For example, suppose initial_start_times = [0, .5, 1.0] and segment_len = 3.0.
+        Then model 1 uses [0, 3, 6, ...], model 2 uses [.5, 3.5, 6.5, ...], model 3 uses
+        [1, 4, 7, ...]. After that it wraps using a modulus operator, so model 4 has the same
+        start_times as model 1 etc.
 
         Args:
         - recording_path (str): Path to the audio recording file.
-        - increment (float): Amount of increment.
+        - segment_len (float): Segment length in seconds, which is not necessarily the same as
+          spec_duration. For example, you could have spec_duration=3 and segment_len=5 if you
+          want to generate 5-second labels using 3-second spectrograms.
+        - initial_start_times (list(float)): See description above.
 
         Returns:
-            tuple: A tuple containing:
-                - avg_score (np.ndarray): Average scores across all models in the ensemble.
-                  Shape is (num_spectrograms, num_classes).
-                - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models.
-                  Shape is (num_frames, num_classes). None if not using SED models.
-                - start_times (list[float]): Start time in seconds for each spectrogram.
+        - avg_frame_map (np.ndarray, optional): Average frame-level scores. Shape is (num_frames, num_classes).
         """
         if not os.path.exists(recording_path):
             raise InferenceError(f'Recording "{recording_path}" not found')
@@ -271,6 +272,7 @@ class Predictor:
         if not os.path.isfile(recording_path):
             raise InferenceError(f'Recording "{recording_path}" is not a file')
 
+        assert len(initial_start_times) > 0
         self.audio.load(recording_path)
 
         audio_duration = self.audio.seconds()
@@ -278,18 +280,17 @@ class Predictor:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None
 
+        start_seconds = initial_start_times[0]
         frame_maps = []
         for i, model in enumerate(self.models):
-            # add increment, but never start past the first segment
-            curr_start = (start_seconds + i * increment) % self.cfg.audio.spec_duration
-            start_times = self._get_start_times(audio_duration, curr_start, overlap=0)
-            offsets_per_spec = int(self.cfg.audio.spec_duration / increment)
-            if (
-                len(start_times) > 0
-                and start_times[0] > start_seconds
-                and i < offsets_per_spec
-            ):
-                # extra overlap at the beginning
+            # curr_start is first start_time for this model
+            curr_start = initial_start_times[i % len(initial_start_times)]
+            start_times = self._get_start_times(
+                audio_duration, curr_start, segment_len, overlap=0
+            )
+
+            if i > 0 and i // len(initial_start_times) == 0:
+                # add extra overlap at start of recording for first batch of models
                 start_times = [start_seconds] + start_times
 
             logging.debug(
@@ -485,9 +486,7 @@ class Predictor:
             )
 
             # Fast reduction over frames to (segments, classes)
-            # Using quantile .8 instead of max improves the high end of the PR
-            # curve by reducing FPs caused by smearing scores to adjacent frames.
-            seg_scores = np.quantile(seg_view, 0.8, axis=1)
+            seg_scores = np.max(seg_view, axis=1)
 
             # Precompute segment times once
             segment_starts = np.arange(num_segments, dtype=np.float32) * segment_len
@@ -711,21 +710,25 @@ class Predictor:
     # Private Helper Methods
     # =============================================================================
 
-    def _get_start_times(self, audio_duration, start_seconds, overlap=None):
+    def _get_start_times(
+        self, audio_duration, start_seconds, segment_len, overlap=None
+    ):
         """
         Return start offset per spectrogram.
 
         - audio_duration (float): total audio duration in seconds
         - start_seconds (float): where to start processing the audio (offset in seconds)
+        - segment_len (float): length of segments in seconds
+        - overlap (float): amount of segment overlap in seconds
         """
 
-        if audio_duration <= self.cfg.audio.spec_duration:
-            return [0]
+        if (audio_duration - start_seconds) <= segment_len:
+            return [start_seconds]
 
         if overlap is None:
             overlap = self.cfg.infer.overlap
 
-        increment = max(0.5, self.cfg.audio.spec_duration - overlap)
+        increment = max(0.5, segment_len - overlap)
         min_useful_audio = 1.0  # don't keep segments shorter than this
         max_start = audio_duration - min_useful_audio
         end_offset = max(start_seconds, max_start)
