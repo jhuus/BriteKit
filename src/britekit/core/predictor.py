@@ -35,6 +35,7 @@ class Predictor:
         model_path: str,
         device: Optional[str] = None,
         cfg: Optional[BaseConfig] = None,
+        quantile: Optional[float] = None,
     ):
         """
         Initialize the Predictor with a model or ensemble of models.
@@ -44,6 +45,9 @@ class Predictor:
             or a directory containing multiple checkpoint/ONNX files for an ensemble.
         - device (str, optional): Device to use for inference ('cuda', 'cpu', or 'mps').
             If None, automatically selects the best available device.
+        - cfg (BaseConfig, optional): If specified, use this config.
+        - quantile (float, optional): If specified, use this quantile instead of max when
+            converting SED frames to fixed-length segments.
         """
         from britekit.core.audio import Audio
 
@@ -63,6 +67,7 @@ class Predictor:
         self.normalized_specs = None
         self.unnormalized_specs = None
 
+        self.quantile = quantile
         self.device = device or util.get_device()
         if self.device == "cpu" and importlib.util.find_spec("openvino") is not None:
             import openvino as ov
@@ -289,7 +294,11 @@ class Predictor:
                 audio_duration, curr_start, segment_len, overlap=0
             )
 
-            if i > 0 and i // len(initial_start_times) == 0:
+            if (
+                i > 0
+                and i // len(initial_start_times) == 0
+                and curr_start < segment_len
+            ):
                 # add extra overlap at start of recording for first batch of models
                 start_times = [start_seconds] + start_times
 
@@ -486,7 +495,10 @@ class Predictor:
             )
 
             # Fast reduction over frames to (segments, classes)
-            seg_scores = np.max(seg_view, axis=1)
+            if self.quantile is None:
+                seg_scores = np.max(seg_view, axis=1)
+            else:
+                seg_scores = np.quantile(seg_view, self.quantile, axis=1)
 
             # Precompute segment times once
             segment_starts = np.arange(num_segments, dtype=np.float32) * segment_len
