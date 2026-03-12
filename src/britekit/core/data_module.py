@@ -22,7 +22,7 @@ class DataModule(LightningDataModule):
 
         # Load training data
         try:
-            class_names, class_codes, alt_names, alt_codes, specs, labels = (
+            class_names, class_codes, alt_names, alt_codes, specs, labels, segment_ids = (
                 self._load_pickle_data(self.cfg.train.train_pickle)
             )
 
@@ -41,6 +41,7 @@ class DataModule(LightningDataModule):
             self.train_class_alt_codes = alt_codes
             self.specs = specs
             self.labels = labels
+            self.segment_ids = segment_ids
             self.num_train_classes = len(class_names)
 
             # flatten the labels so [[1, 2], [3]] becomes [1, 2, 3]
@@ -66,18 +67,33 @@ class DataModule(LightningDataModule):
         else:
             noise_class_index = -1
 
+        # Load frame-label pickle if configured
+        frame_label_dict = None
+        if self.cfg.train.frame_label_pickle:
+            try:
+                with open(self.cfg.train.frame_label_pickle, "rb") as f:
+                    frame_label_dict = pickle.load(f)
+                logging.info(
+                    f"Loaded frame labels for {len(frame_label_dict)} segments "
+                    f"from {self.cfg.train.frame_label_pickle}"
+                )
+            except Exception as e:
+                logging.warning(f"Failed to load frame-label pickle: {e}. Ignoring.")
+
         self.full_dataset = SpectrogramDataset(
             self.specs,
             self.labels,
             len(self.train_class_names),
             noise_class_index,
             is_training=True,
+            segment_ids=self.segment_ids,
+            frame_label_dict=frame_label_dict,
         )
 
         # Load test data
         if self.cfg.train.test_pickle:
             try:
-                class_names, class_codes, alt_names, alt_codes, specs, labels = (
+                class_names, class_codes, alt_names, alt_codes, specs, labels, _ = (
                     self._load_pickle_data(self.cfg.train.test_pickle)
                 )
 
@@ -121,7 +137,7 @@ class DataModule(LightningDataModule):
 
     def _load_pickle_data(
         self, path: str
-    ) -> Tuple[List[str], List[str], List[str], List[str], List[Any], List[List[int]]]:
+    ) -> Tuple[List[str], List[str], List[str], List[str], List[Any], List[List[int]], List[int]]:
         """
         Load data from a pickle file with error handling.
 
@@ -129,7 +145,7 @@ class DataModule(LightningDataModule):
         - path (str): Path to the pickle file
 
         Returns:
-            Tuple containing (class_names, class_codes, alt_names, alt_codes, specs, labels)
+            Tuple containing (class_names, class_codes, alt_names, alt_codes, specs, labels, segment_ids)
 
         Raises:
             FileNotFoundError: If the pickle file doesn't exist
@@ -163,6 +179,9 @@ class DataModule(LightningDataModule):
                 f"Pickle file {path} missing required keys: {missing_keys}"
             )
 
+        # segment_ids was added later; old pickles may not have it
+        segment_ids = data.get("spec_segment_ids", None)
+
         return (
             data["class_names"],
             data["class_codes"],
@@ -170,6 +189,7 @@ class DataModule(LightningDataModule):
             data["alt_codes"],
             data["spec_values"],
             data["spec_class_indexes"],
+            segment_ids,
         )
 
     def class_weights(self):

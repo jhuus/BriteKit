@@ -178,15 +178,21 @@ class BaseModel(pl.LightningModule):
         input = batch["input"]
         seg_labels = batch["segment_labels"]
         raw_labels = batch["segment_labels"]
+        frame_labels_12 = batch.get("frame_labels")  # (B, 12, num_classes) or None
 
         if self.multi_label:
             seg_labels = (
                 seg_labels * (1.0 - self.cfg.train.pos_label_smoothing)
                 + (1.0 - seg_labels) * self.cfg.train.neg_label_smoothing
             )
+            if frame_labels_12 is not None:
+                frame_labels_12 = (
+                    frame_labels_12 * (1.0 - self.cfg.train.pos_label_smoothing)
+                    + (1.0 - frame_labels_12) * self.cfg.train.neg_label_smoothing
+                )
 
         seg_logits, frame_logits = self(input)
-        loss = self._calc_loss(seg_logits, frame_logits, seg_labels, raw_labels)
+        loss = self._calc_loss(seg_logits, frame_logits, seg_labels, raw_labels, frame_labels_12)
 
         if frame_logits is not None and self.cfg.train.offpeak_weight > 0:
             p = torch.sigmoid(frame_logits)
@@ -463,13 +469,20 @@ class BaseModel(pl.LightningModule):
         # normalize over number of absent classes
         return penalty.sum() / (absent_mask.sum() + 1e-6)
 
-    def _calc_loss(self, seg_logits, frame_logits, seg_labels, raw_labels):
+    def _calc_loss(self, seg_logits, frame_logits, seg_labels, raw_labels, frame_labels_12=None):
         segment_loss = self.loss_fn(seg_logits, seg_labels)
 
         if self.use_sed:
             assert frame_logits is not None
             B, C, T = frame_logits.shape
-            frame_labels = seg_labels.unsqueeze(-1).expand(B, C, T).transpose(1, 2)
+            if frame_labels_12 is not None:
+                # Upsample stored frame labels from 12 → T frames
+                # frame_labels_12: (B, 12, C) → permute → (B, C, 12) → interpolate → (B, C, T) → (B, T, C)
+                fl = frame_labels_12.permute(0, 2, 1)  # (B, C, 12)
+                fl = F.interpolate(fl, size=T, mode="nearest")  # (B, C, T)
+                frame_labels = fl.permute(0, 2, 1)  # (B, T, C)
+            else:
+                frame_labels = seg_labels.unsqueeze(-1).expand(B, C, T).transpose(1, 2)
             frame_loss = F.binary_cross_entropy_with_logits(
                 frame_logits.transpose(1, 2), frame_labels, reduction="mean"
             )

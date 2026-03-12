@@ -229,10 +229,11 @@ class TrainingPickler:
         for i, name in enumerate(names):
             class_name_dict[name] = i
 
-        # create lists of class indexes and values for each spectrogram
-        spec_values, class_indexes = [], []
+        # create lists of class indexes, values and segment IDs for each spectrogram
+        spec_values, class_indexes, segment_ids = [], [], []
         for i, spec in enumerate(all_specs):
             spec_values.append(spec.value)
+            segment_ids.append(spec.segment_id)
             class_indexes.append([])
             for name in segment_class_dict[spec.segment_id]:
                 class_indexes[i].append(class_name_dict[name])
@@ -245,6 +246,7 @@ class TrainingPickler:
         pickle_dict["alt_codes"] = alt_codes
         pickle_dict["spec_values"] = spec_values
         pickle_dict["spec_class_indexes"] = class_indexes
+        pickle_dict["spec_segment_ids"] = segment_ids
 
         pickle_file = open(self.output_path, "wb")
         pickle.dump(pickle_dict, pickle_file)

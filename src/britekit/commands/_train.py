@@ -17,6 +17,7 @@ def train(
     cfg_path: Optional[str] = None,
     prefix: Optional[str] = None,
     seed: Optional[int] = None,
+    frame_label_pickle: Optional[str] = None,
 ):
     """
     Train a bioacoustic recognition model using the specified configuration.
@@ -34,12 +35,15 @@ def train(
         If not specified, uses default configuration.
     - prefix (str, optional): Prefix to add to checkpoint names.
     - seed (int, optional): Integer seed.
+    - frame_label_pickle (str, optional): Path to frame-label pickle for SED training.
     """
     from britekit.core.trainer import Trainer
 
     cfg = get_config(cfg_path)  # apply any YAML cfg updates
     if seed is not None:
         cfg.train.seed = seed
+    if frame_label_pickle is not None:
+        cfg.train.frame_label_pickle = frame_label_pickle
     try:
         start_time = time.time()
         Trainer(prefix=prefix).run()
@@ -74,10 +78,18 @@ def train(
     required=False,
     help="Integer seed.",
 )
+@click.option(
+    "--frame-labels",
+    "frame_label_pickle",
+    type=click.Path(exists=True),
+    required=False,
+    help="Path to frame-label pickle for SED training.",
+)
 def _train_cmd(
     cfg_path: str,
     prefix: str,
     seed: int,
+    frame_label_pickle: str,
 ):
     util.set_logging()
 
@@ -92,7 +104,7 @@ def _train_cmd(
             "For example, use cu126 for CUDA 12.6."
         )
 
-    train(cfg_path, prefix, seed)
+    train(cfg_path, prefix, seed, frame_label_pickle)
 
 
 def find_lr(cfg_path: str, num_batches: int):

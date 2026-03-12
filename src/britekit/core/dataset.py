@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import random
+from typing import Any, Callable, Dict, List, Optional
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
-from typing import Any, Callable, List, Optional
 
 from britekit.core.augmentation import AugmentationPipeline
 from britekit.core.config_loader import get_config
@@ -31,6 +32,8 @@ class SpectrogramDataset(Dataset):
         num_classes: int,
         noise_class_index: int = -1,
         is_training: bool = True,
+        segment_ids: Optional[List[int]] = None,
+        frame_label_dict: Optional[Dict[int, np.ndarray]] = None,
     ):
         # Input validation
         if not compressed_specs or not class_indexes:
@@ -59,6 +62,8 @@ class SpectrogramDataset(Dataset):
         self.num_classes = num_classes
         self.noise_class_index = noise_class_index
         self.is_training = is_training
+        self.segment_ids = segment_ids
+        self.frame_label_dict = frame_label_dict
 
         self.cfg = get_config()
 
@@ -103,12 +108,14 @@ class SpectrogramDataset(Dataset):
             spec = self.augment(spec)
 
         spec_tensor = torch.tensor(spec, dtype=torch.float32)
+        frame_labels = self._get_frame_labels(idx, label_tensor, mixup)
         mixup = torch.tensor(mixup)
 
         return {
             "input": spec_tensor,
             "segment_labels": label_tensor,
             "mixup": mixup,
+            "frame_labels": frame_labels,
         }
 
     def get_random_noise(self):
@@ -124,6 +131,37 @@ class SpectrogramDataset(Dataset):
     # =============================================================================
     # Private Helper Methods
     # =============================================================================
+
+    def _get_frame_labels(self, idx, label_tensor, mixup):
+        """
+        Return frame-level labels as a (12, num_classes) float32 tensor.
+
+        If stored frame labels are available for this segment and no mixup occurred,
+        use them for all present classes. Otherwise fall back to broadcasting
+        the segment label to all 12 frames (same as the current all-ones behaviour).
+        """
+        NUM_FRAMES = 12
+        stored = None
+        if (
+            not mixup
+            and self.frame_label_dict is not None
+            and self.segment_ids is not None
+        ):
+            seg_id = self.segment_ids[idx]
+            stored = self.frame_label_dict.get(seg_id)  # (12,) or None
+
+        if stored is not None:
+            # Apply stored labels to all present classes; absent classes stay 0.
+            frame_labels = torch.zeros(NUM_FRAMES, self.num_classes, dtype=torch.float32)
+            present = (label_tensor > 0).nonzero(as_tuple=True)[0]
+            stored_tensor = torch.from_numpy(stored)
+            for k in present:
+                frame_labels[:, k] = stored_tensor
+        else:
+            # Fallback: broadcast segment labels to all frames
+            frame_labels = label_tensor.unsqueeze(0).expand(NUM_FRAMES, -1).clone()
+
+        return frame_labels
 
     def _get_spec(self, idx):
         # Validate index bounds
