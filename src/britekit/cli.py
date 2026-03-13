@@ -45,7 +45,11 @@ from .commands._extract import (
 )
 from .commands._inat import _inat_cmd
 from .commands._init import _init_cmd
-from .commands._pickle import _pickle_occurrence_cmd, _pickle_train_cmd
+from .commands._pickle import (
+    _pickle_frame_cmd,
+    _pickle_occurrence_cmd,
+    _pickle_train_cmd,
+)
 from .commands._plot import _plot_db_cmd, _plot_dir_cmd, _plot_rec_cmd, _plot_test_cmd
 from .commands._reextract import _reextract_cmd
 from .commands._reports import (
@@ -110,6 +114,7 @@ cli.add_command(_find_lr_cmd)
 cli.add_command(_inat_cmd)
 cli.add_command(_init_cmd)
 
+cli.add_command(_pickle_frame_cmd)
 cli.add_command(_pickle_occurrence_cmd)
 cli.add_command(_pickle_train_cmd)
 cli.add_command(_plot_dir_cmd)

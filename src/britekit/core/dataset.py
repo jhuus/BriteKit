@@ -134,13 +134,14 @@ class SpectrogramDataset(Dataset):
 
     def _get_frame_labels(self, idx, label_tensor, mixup):
         """
-        Return frame-level labels as a (12, num_classes) float32 tensor.
+        Return frame-level labels as a (num_frames, num_classes) float32 tensor,
+        where num_frames = round(spec_duration * sed_fps).
 
         If stored frame labels are available for this segment and no mixup occurred,
-        use them for all present classes. Otherwise fall back to broadcasting
-        the segment label to all 12 frames (same as the current all-ones behaviour).
+        use them for the present class. Otherwise fall back to broadcasting
+        the segment label to all frames (all-ones behaviour).
         """
-        NUM_FRAMES = 12
+        num_frames = round(self.cfg.audio.spec_duration * self.cfg.train.sed_fps)
         stored = None
         if (
             not mixup
@@ -148,19 +149,19 @@ class SpectrogramDataset(Dataset):
             and self.segment_ids is not None
         ):
             seg_id = self.segment_ids[idx]
-            stored = self.frame_label_dict.get(seg_id)  # (12,) or None
+            stored = self.frame_label_dict.get(seg_id)  # (num_frames,) or None
 
         present = (label_tensor > 0).nonzero(as_tuple=True)[0]
         if stored is not None and len(present) == 1:
             # Single-class segment: apply stored frame pattern to the present class.
             frame_labels = torch.zeros(
-                NUM_FRAMES, self.num_classes, dtype=torch.float32
+                num_frames, self.num_classes, dtype=torch.float32
             )
             stored_tensor = torch.from_numpy(stored)
             frame_labels[:, present[0]] = stored_tensor
         else:
             # Multi-class or no stored labels: broadcast segment labels to all frames.
-            frame_labels = label_tensor.unsqueeze(0).expand(NUM_FRAMES, -1).clone()
+            frame_labels = label_tensor.unsqueeze(0).expand(num_frames, -1).clone()
 
         return frame_labels
 
