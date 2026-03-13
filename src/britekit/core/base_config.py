@@ -67,7 +67,9 @@ class TrainingConfig:
     train_db: str = "data/training.db"  # Path to training database
     train_pickle: str = "data/training.pkl"  # Path to training pickle file
     test_pickle: Optional[str] = None  # Path to test pickle file
-    frame_label_pickle: Optional[str] = None  # Path to frame-label pickle (SED training)
+    frame_label_pickle: Optional[str] = (
+        None  # Path to frame-label pickle (SED training)
+    )
     num_workers: int = 3  # Number of trainer worker threads
     compile: bool = False  # Compile the model?
     mixed_precision: bool = False  # Use mixed precision?

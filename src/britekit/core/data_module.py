@@ -22,9 +22,15 @@ class DataModule(LightningDataModule):
 
         # Load training data
         try:
-            class_names, class_codes, alt_names, alt_codes, specs, labels, segment_ids = (
-                self._load_pickle_data(self.cfg.train.train_pickle)
-            )
+            (
+                class_names,
+                class_codes,
+                alt_names,
+                alt_codes,
+                specs,
+                labels,
+                segment_ids,
+            ) = self._load_pickle_data(self.cfg.train.train_pickle)
 
             # Validate loaded data
             if not class_names or not specs or not labels:
@@ -135,9 +141,15 @@ class DataModule(LightningDataModule):
             )
             self.indices = list(skf.split(self.specs, self.labels))
 
-    def _load_pickle_data(
-        self, path: str
-    ) -> Tuple[List[str], List[str], List[str], List[str], List[Any], List[List[int]], List[int]]:
+    def _load_pickle_data(self, path: str) -> Tuple[
+        List[str],
+        List[str],
+        List[str],
+        List[str],
+        List[Any],
+        List[List[int]],
+        List[int],
+    ]:
         """
         Load data from a pickle file with error handling.
 

@@ -152,7 +152,9 @@ class SpectrogramDataset(Dataset):
 
         if stored is not None:
             # Apply stored labels to all present classes; absent classes stay 0.
-            frame_labels = torch.zeros(NUM_FRAMES, self.num_classes, dtype=torch.float32)
+            frame_labels = torch.zeros(
+                NUM_FRAMES, self.num_classes, dtype=torch.float32
+            )
             present = (label_tensor > 0).nonzero(as_tuple=True)[0]
             stored_tensor = torch.from_numpy(stored)
             for k in present:
