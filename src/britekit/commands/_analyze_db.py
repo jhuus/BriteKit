@@ -24,10 +24,12 @@ class DatabaseAnalyzer:
         output_path: str = "",
         plot: bool = False,
         max_score: float = 0.95,
+        occlude: bool = False,
     ):
         from britekit.core.predictor import Predictor
 
         self.cfg = get_config(cfg_path)
+        self.num_frames = round(self.cfg.audio.spec_duration * self.cfg.train.sed_fps)
         self.db_path = self.cfg.train.train_db if db_path is None else db_path
         self.class_name = class_name
         self.classes_path = classes_path
@@ -35,6 +37,7 @@ class DatabaseAnalyzer:
         self.output_path = output_path
         self.plot = plot
         self.max_score = max_score
+        self.occlude = occlude
 
         self.predictor = Predictor(self.cfg.misc.ckpt_folder)
         assert self.predictor.class_names is not None
@@ -116,15 +119,16 @@ class DatabaseAnalyzer:
                 scores = self._get_scores(specs)
                 index = class_index_dict[name]
 
-                self._save_class_details(index, scores, specs)
+                if self.occlude:
+                    self._save_class_details(index, scores, specs)
                 if self.plot:
-                    self._plot_specs(name, result.code, scores[:, index], specs)
+                    self._plot_specs(name, result.code, scores[:, 0, index], specs)
 
-                # get basic stats for this class
-                quantile_10s.append(np.quantile(scores[:, index], 0.10))
-                quantile_20s.append(np.quantile(scores[:, index], 0.20))
-                quantile_30s.append(np.quantile(scores[:, index], 0.30))
-                class_means = scores.mean(axis=0)
+                # get basic stats for this class (using original unmasked scores)
+                quantile_10s.append(np.quantile(scores[:, 0, index], 0.10))
+                quantile_20s.append(np.quantile(scores[:, 0, index], 0.20))
+                quantile_30s.append(np.quantile(scores[:, 0, index], 0.30))
+                class_means = scores[:, 0, :].mean(axis=0)
                 means.append(class_means[index])
 
                 # find up to three classes with the next highest mean scores
@@ -192,9 +196,17 @@ class DatabaseAnalyzer:
         logging.info(f"See output reports in {self.output_path}")
 
     def _get_scores(self, specs):
-        """Run inference on a block of spectrograms."""
+        """Run (2*num_frames - 1) inferences per spectrogram: original, (num_frames-1)
+        left-masked, (num_frames-1) right-masked.
+
+        Returns array of shape (num_specs, 2*num_frames-1, num_classes).
+        Case 0: original. Cases 1..num_frames-1: frames zeroed from left.
+        Cases num_frames..2*num_frames-2: frames zeroed from right.
+        """
         import numpy as np
         from britekit.core.util import expand_spectrogram
+
+        frame_width = self.cfg.audio.spec_width // self.num_frames
 
         spec_array = np.zeros(
             (len(specs), 1, self.cfg.audio.spec_height, self.cfg.audio.spec_width),
@@ -202,15 +214,28 @@ class DatabaseAnalyzer:
         )
 
         for i, spec in enumerate(specs):
-            spec = expand_spectrogram(spec.value)
-            spec = spec.reshape(
+            spec_val = expand_spectrogram(spec.value)
+            spec_val = spec_val.reshape(
                 (1, self.cfg.audio.spec_height, self.cfg.audio.spec_width)
             )
+            spec_array[i] = spec_val
 
-            spec_array[i] = spec
+        all_scores = []
+        num_cases = 2 * self.num_frames - 1 if self.occlude else 1
+        for case in range(num_cases):
+            masked = spec_array.copy()
+            if case == 0:
+                pass  # original, no masking
+            elif case <= self.num_frames - 1:
+                masked[:, :, :, : case * frame_width] = 0  # zero left frames 1..case
+            else:
+                right_frames = case - (self.num_frames - 1)
+                masked[:, :, :, -right_frames * frame_width :] = 0  # zero right frames
 
-        scores, _ = self.predictor.get_block_scores(spec_array)
-        return scores
+            scores, _ = self.predictor.get_block_scores(masked)
+            all_scores.append(scores)
+
+        return np.stack(all_scores, axis=1)  # (num_specs, num_cases, num_classes)
 
     def _plot_specs(self, class_name, class_code, scores, specs):
         """Plot spectrograms for a class in ascending order of score."""
@@ -241,7 +266,12 @@ class DatabaseAnalyzer:
             plot_spec(spec_value, os.path.join(spec_dir, image_name))
 
     def _save_class_details(self, class_index, scores, specs):
-        """Save a details CSV for the given class."""
+        """Save a details CSV for the given class.
+
+        scores has shape (num_specs, 2*num_frames-1, num_classes):
+          case 0: original; cases 1..num_frames-1: left-masked;
+          cases num_frames..2*num_frames-2: right-masked.
+        """
         import numpy as np
         import pandas as pd
 
@@ -253,8 +283,11 @@ class DatabaseAnalyzer:
         fp_names = []
         fp_codes = []
         fp_scores = []
+        num_sides = self.num_frames - 1
+        left_scores = [[] for _ in range(num_sides)]
+        right_scores = [[] for _ in range(num_sides)]
 
-        class_scores = scores[:, class_index]
+        class_scores = scores[:, 0, class_index]
         sorted_indexes = np.argsort(class_scores)
         for i, index in enumerate(sorted_indexes):
             spec, score = specs[index], class_scores[index]
@@ -267,14 +300,18 @@ class DatabaseAnalyzer:
             offsets.append(spec.offset)
             saved_scores.append(score)
 
-            # find the other class with the highest score
-            segment_scores = scores[index].copy()
+            # find the other class with the highest score (using original scores)
+            segment_scores = scores[index, 0, :].copy()
             segment_scores[class_index] = -np.inf
             top_indices = np.argsort(segment_scores)
             fp1_class_index = top_indices[-1]
             fp_names.append(self.predictor.class_names[fp1_class_index])
             fp_codes.append(self.predictor.class_codes[fp1_class_index])
             fp_scores.append(segment_scores[fp1_class_index])
+
+            for n in range(num_sides):
+                left_scores[n].append(scores[index, n + 1, class_index])
+                right_scores[n].append(scores[index, n + self.num_frames, class_index])
 
         if len(filenames) > 0:
             df = pd.DataFrame()
@@ -286,6 +323,10 @@ class DatabaseAnalyzer:
             df["FP Name"] = fp_names
             df["FP Code"] = fp_codes
             df["FP Score"] = fp_scores
+            for n in range(num_sides):
+                df[f"score_L{n + 1}"] = left_scores[n]
+            for n in range(num_sides):
+                df[f"score_R{n + 1}"] = right_scores[n]
 
             class_name = self.predictor.class_names[class_index]
             class_code = self.predictor.class_codes[class_index]
@@ -306,6 +347,7 @@ def analyze_db(
     output_path: str = "",
     plot: bool = False,
     max_score: float = 0.95,
+    occlude: bool = False,
 ):
     """
     Run inference on segments in a training database.
@@ -322,6 +364,7 @@ def analyze_db(
     - output_path (str): Required path to output directory where results will be saved.
     - plot (bool): If specified, plot spectrograms per class by ascending score.
     - max_score (float): Save details and plot only if score less than this (default = 0.95).
+    - occlude (bool): If specified, run occlusion sensitivity analysis and save per-class CSVs.
     """
     analyzer = DatabaseAnalyzer(
         cfg_path,
@@ -332,6 +375,7 @@ def analyze_db(
         output_path,
         plot,
         max_score,
+        occlude,
     )
     analyzer.analyze()
 
@@ -390,6 +434,12 @@ def analyze_db(
     default=0.95,
     help="Save details and plot only if score less than this (default = 0.95).",
 )
+@click.option(
+    "--occlude",
+    "occlude",
+    is_flag=True,
+    help="If specified, run occlusion sensitivity analysis and save per-class CSVs.",
+)
 def _analyze_db_cmd(
     cfg_path: str,
     db_path: str,
@@ -399,6 +449,7 @@ def _analyze_db_cmd(
     output_path: str,
     plot: bool,
     max_score: float,
+    occlude: bool,
 ):
     set_logging()
 
@@ -411,4 +462,5 @@ def _analyze_db_cmd(
         output_path,
         plot,
         max_score,
+        occlude,
     )
