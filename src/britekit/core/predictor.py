@@ -294,12 +294,15 @@ class Predictor:
                 audio_duration, curr_start, segment_len, overlap=0
             )
 
+            # add extra overlap at start of recording for first batch of models;
+            # this ensures that all frames in the first segment get a full ensemble;
+            # in theory this could increase edge-effect errors at the end of the first
+            # segment, but testing shows it has a net benefit
             if (
                 i > 0
                 and i // len(initial_start_times) == 0
                 and curr_start < segment_len
             ):
-                # add extra overlap at start of recording for first batch of models
                 start_times = [start_seconds] + start_times
 
             logging.debug(
