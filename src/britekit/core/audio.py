@@ -290,6 +290,9 @@ class Audio:
         if spec_duration is not None and spec_duration <= 0:
             return None, None
 
+        if self.seconds() < 0.5:
+            return None, None # likely to cause errors otherwise
+
         logging.debug("Audio::get_spectrograms start_times=%s", start_times)
 
         if spec_duration is None:
