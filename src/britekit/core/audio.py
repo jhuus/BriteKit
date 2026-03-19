@@ -344,11 +344,12 @@ class Audio:
                     continue
 
                 spec = self._get_raw_spectrogram(signal_slice, freq_scale=freq_scale)
-                spec = spec[: self.cfg.audio.spec_height, : self.cfg.audio.spec_width]
-                if spec.shape[1] < self.cfg.audio.spec_width:
+                target_width = int(spec_duration * self.cfg.audio.spec_width / self.cfg.audio.spec_duration)
+                spec = spec[: self.cfg.audio.spec_height, : target_width]
+                if spec.shape[1] < target_width:
                     spec = np.pad(
                         spec,
-                        ((0, 0), (0, self.cfg.audio.spec_width - spec.shape[1])),
+                        ((0, 0), (0, target_width - spec.shape[1])),
                         "constant",
                         constant_values=0,
                     )
@@ -388,10 +389,11 @@ class Audio:
 
             if start_frame < self.cached.shape[1]:
                 spec = self.cached[:, start_frame:end_frame]
-                if spec.shape[1] > self.cfg.audio.spec_width:
-                    spec = spec[:, : self.cfg.audio.spec_width]
-                elif spec.shape[1] < self.cfg.audio.spec_width:
-                    pad_width = self.cfg.audio.spec_width - spec.shape[1]
+                target_width = end_frame - start_frame
+                if spec.shape[1] > target_width:
+                    spec = spec[:, :target_width]
+                elif spec.shape[1] < target_width:
+                    pad_width = target_width - spec.shape[1]
                     spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
 
                 specs.append(spec)

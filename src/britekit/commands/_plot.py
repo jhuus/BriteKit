@@ -39,8 +39,12 @@ def _plot_recording(
             quit()
 
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
+        base_width = cfg.audio.spec_width
+        image_width = min(4000, int(base_width * recording_seconds / cfg.audio.spec_duration) // 2)
+        image_height = 300
         plot_spec(
-            specs[0], image_path, show_dims=not ndims, spec_duration=recording_seconds
+            specs[0], image_path, show_dims=not ndims, spec_duration=recording_seconds,
+            width=image_width, height=image_height,
         )
     else:
         # plot individual segments

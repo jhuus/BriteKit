@@ -40,8 +40,9 @@ def plot_spec(
         spec = spec.reshape((cfg.audio.spec_height, cfg.audio.spec_width))
 
     if show_dims:
-        x_incr = 64
         spec_width = spec.shape[1]
+        max_x_ticks = 10
+        x_incr = max(1, spec_width // max_x_ticks)
         x_tick_locations = [i for i in range(0, spec_width + 1, x_incr)]
         x_tick_labels = [
             f"{i/(spec_width / spec_duration):.1f}s"
