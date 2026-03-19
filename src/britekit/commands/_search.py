@@ -26,6 +26,8 @@ def search(
     exclude_db: Optional[str] = None,
     class_name2: Optional[str] = None,
     spec_group: str = "default",
+    show_dims: bool = False,
+
 ):
     """
     Search a database for spectrograms similar to a specified one.
@@ -83,7 +85,7 @@ def search(
     _, ext = os.path.splitext(audio_file_name)
     audio_file_name = audio_file_name[: -(len(ext))]
     image_path = os.path.join(output_path, f"0~{audio_file_name}-{offset:.2f}~0.0.jpeg")
-    plot_spec(target_spec**exp, image_path)
+    plot_spec(target_spec**exp, image_path, show_dims=show_dims)
 
     # get spectrograms from the database
     if db_path is None:
@@ -189,7 +191,7 @@ def search(
 
         if not os.path.exists(spec_path):
             spec **= exp
-            plot_spec(spec, spec_path)
+            plot_spec(spec, spec_path, show_dims=show_dims)
             num_plotted += 1
 
 
@@ -276,6 +278,12 @@ def search(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
+@click.option(
+    "--dims",
+    "show_dims",
+    is_flag=True,
+    help="If specified, show seconds on x-axis and frequencies on y-axis.",
+)
 def _search_cmd(
     cfg_path: str,
     db_path: str,
@@ -289,6 +297,7 @@ def _search_cmd(
     exclude_db: str,
     class_name2: str,
     spec_group: str,
+    show_dims: bool,
 ):
     util.set_logging()
     search(
@@ -304,4 +313,5 @@ def _search_cmd(
         exclude_db,
         class_name2,
         spec_group,
+        show_dims,
     )
