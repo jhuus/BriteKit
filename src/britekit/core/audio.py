@@ -389,7 +389,7 @@ class Audio:
 
             if start_frame < self.cached.shape[1]:
                 spec = self.cached[:, start_frame:end_frame]
-                target_width = end_frame - start_frame
+                target_width = int((offset + spec_duration) * frames_per_sec) - start_frame
                 if spec.shape[1] > target_width:
                     spec = spec[:, :target_width]
                 elif spec.shape[1] < target_width:
