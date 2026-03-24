@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import glob
 import logging
 import os
 import re
@@ -87,7 +88,8 @@ class Extractor:
         """
 
         offsets_per_file = {}
-        for image_path in sorted(Path().glob(f"{spec_dir}/*.jpeg")):
+        pattern = str(Path(spec_dir) / "*.jpeg")
+        for image_path in sorted(glob.glob(pattern)):
             name = Path(image_path).stem
             if "~" in name:
                 result = re.split("\\S+~(.+)~.*", name)
