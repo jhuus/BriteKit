@@ -291,8 +291,6 @@ class DatabaseAnalyzer:
         sorted_indexes = np.argsort(class_scores)
         for i, index in enumerate(sorted_indexes):
             spec, score = specs[index], class_scores[index]
-            if score > self.max_score:
-                break
 
             numbers.append(i + 1)
             segment_ids.append(spec.segment_id)
