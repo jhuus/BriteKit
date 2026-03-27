@@ -36,7 +36,7 @@
 | `pretrained` | `bool` | False | Use pretrained weights (applies to timm models) |
 | `load_ckpt_path` | `Union[str, NoneType]` | None | For transfer learning or fine-tuning |
 | `freeze_backbone` | `bool` | False | Option when transfer learning |
-| `multi_label` | `bool` | True | General training parameters |
+| `multi_label` | `bool` | True | True for multi-label, False for multi-class classification |
 | `deterministic` | `bool` | False | Enable deterministic training for reproducibility |
 | `seed` | `Union[int, NoneType]` | None | Random seed for reproducibility; None uses random seed |
 | `learning_rate` | `float` | 0.001 | Base learning rate |
@@ -50,7 +50,7 @@
 | `train_db` | `str` | 'data/training.db' | Path to training database |
 | `train_pickle` | `str` | 'data/training.pkl' | Path to training pickle file |
 | `test_pickle` | `Union[str, NoneType]` | None | Path to test pickle file |
-| `frame_label_pickle` | `Union[str, NoneType]` | None |  |
+| `frame_label_pickle` | `Union[str, NoneType]` | None | Path to frame-label pickle used in SED training |
 | `num_workers` | `int` | 3 | Number of trainer worker threads |
 | `compile` | `bool` | False | Compile the model? |
 | `mixed_precision` | `bool` | False | Use mixed precision? |

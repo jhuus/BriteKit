@@ -51,9 +51,9 @@ class TrainingConfig:
     freeze_backbone: bool = False  # Option when transfer learning
 
     # General training parameters
-    multi_label: bool = (
-        True  # True for multi-label, False for multi-class classification
-    )
+
+    # True for multi-label, False for multi-class classification
+    multi_label: bool = True
     deterministic: bool = False  # Enable deterministic training for reproducibility
     seed: Optional[int] = None  # Random seed for reproducibility; None uses random seed
     learning_rate: float = 0.001  # Base learning rate
@@ -67,9 +67,10 @@ class TrainingConfig:
     train_db: str = "data/training.db"  # Path to training database
     train_pickle: str = "data/training.pkl"  # Path to training pickle file
     test_pickle: Optional[str] = None  # Path to test pickle file
-    frame_label_pickle: Optional[str] = (
-        None  # Path to frame-label pickle (SED training)
-    )
+
+    # Path to frame-label pickle used in SED training
+    frame_label_pickle: Optional[str] = None
+
     num_workers: int = 3  # Number of trainer worker threads
     compile: bool = False  # Compile the model?
     mixed_precision: bool = False  # Use mixed precision?
