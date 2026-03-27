@@ -29,6 +29,7 @@
 | [britekit find-lr](#britekit-find-lr) | Suggest a learning rate. |
 | [britekit inat](#britekit-inat) | Download recordings from iNaturalist. |
 | [britekit init](#britekit-init) | Create default directory structure including sample files. |
+| [britekit pickle-frame](#britekit-pickle-frame) | Create a frame-label pickle from analyze-db occlusion sensitivity CSVs. |
 | [britekit pickle-occurrence](#britekit-pickle-occurrence) | Convert an occurrence database to a pickle file for use in inference. |
 | [britekit pickle-train](#britekit-pickle-train) | Convert a training database to a pickle file for use in training. |
 | [britekit plot-db](#britekit-plot-db) | Plot spectrograms from a database. |
@@ -168,6 +169,8 @@ Options:
                           score.
   --max FLOAT             Save details and plot only if score less than this
                           (default = 0.95).
+  --occlude               If specified, run occlusion sensitivity analysis and
+                          save per-class CSVs.
   --help                  Show this message and exit.
 ```
 ### britekit audioset
@@ -652,6 +655,32 @@ Options:
   --dest DIRECTORY  Root directory to copy under (default is working directory).
   --help            Show this message and exit.
 ```
+### britekit pickle-frame
+```
+Usage: britekit pickle-frame [OPTIONS]
+
+  Create a frame-label pickle from analyze-db occlusion sensitivity CSVs.
+
+  For each segment, uses occlusion-sensitivity scores produced by the analyze-db
+  --occlude flag to determine which spectrogram frames contain the target class.
+  The number of frames is derived from cfg.audio.spec_duration *
+  cfg.train.sed_fps.
+
+Options:
+  -c, --cfg PATH         Path to YAML file defining config overrides.
+  -i, --input DIRECTORY  Directory containing per-class CSV files from analyze-
+                         db --occlude.  [required]
+  -o, --output TEXT      Output pickle file path.  [required]
+  --alpha FLOAT          Score drop threshold as a fraction of the original
+                         score (default 0.05). Lower values are more
+                         conservative (wider active regions).
+  --csv DIRECTORY        Optional directory for per-class output CSVs with
+                         segment IDs and frame labels.
+  --names FILE           Optional path to a text file listing CSV filenames (one
+                         per line) to process. Default is all CSV files in the
+                         input directory.
+  --help                 Show this message and exit.
+```
 ### britekit pickle-occurrence
 ```
 Usage: britekit pickle-occurrence [OPTIONS]
@@ -660,8 +689,9 @@ Usage: britekit pickle-occurrence [OPTIONS]
 
 Options:
   -c, --cfg PATH     Path to YAML file defining config overrides.
-  -d, --db TEXT      Path to the training database.
-  -o, --output TEXT  Output file path. Default is "data/training.pkl".
+  -d, --db TEXT      Path to the occurrence database. Defaults to
+                     'data/occurrence.db'
+  -o, --output TEXT  Output file path. Default is "data/occurrence.pkl".
   --help             Show this message and exit.
 ```
 ### britekit pickle-train
@@ -947,6 +977,8 @@ Options:
   --name2 TEXT            If --exclude is specified, this is class name in
                           exclude database. Default is the search class name.
   --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
+  --dims                  If specified, show seconds on x-axis and frequencies
+                          on y-axis.
   --help                  Show this message and exit.
 ```
 ### britekit train
@@ -965,10 +997,11 @@ Usage: britekit train [OPTIONS]
   evaluation.
 
 Options:
-  -c, --cfg PATH  Path to YAML file defining config overrides.
-  --prefix TEXT   Optional prefix to add to checkpoint names.
-  --seed INTEGER  Integer seed.
-  --help          Show this message and exit.
+  -c, --cfg PATH       Path to YAML file defining config overrides.
+  --prefix TEXT        Optional prefix to add to checkpoint names.
+  --seed INTEGER       Integer seed.
+  --frame-labels PATH  Path to frame-label pickle for SED training.
+  --help               Show this message and exit.
 ```
 ### britekit tune
 ```

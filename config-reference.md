@@ -50,6 +50,7 @@
 | `train_db` | `str` | 'data/training.db' | Path to training database |
 | `train_pickle` | `str` | 'data/training.pkl' | Path to training pickle file |
 | `test_pickle` | `Union[str, NoneType]` | None | Path to test pickle file |
+| `frame_label_pickle` | `Union[str, NoneType]` | None |  |
 | `num_workers` | `int` | 3 | Number of trainer worker threads |
 | `compile` | `bool` | False | Compile the model? |
 | `mixed_precision` | `bool` | False | Use mixed precision? |
@@ -85,6 +86,7 @@
 | `overlap` | `float` | 0.0 | Number of seconds overlap for adjacent spectrograms |
 | `min_score` | `float` | 0.8 | Only generate labels when score is at least this |
 | `num_threads` | `int` | 3 | More threads = faster but more VRAM |
+| `max_models` | `Union[int, NoneType]` | None | If specified, limit ensemble size accordingly |
 | `autocast` | `bool` | True | Faster and less VRAM but less precision |
 | `audio_power` | `float` | 0.7 | Audio power parameter during inference |
 | `scaling_coefficient` | `float` | 1.0 | Platt scaling coefficient, to align predictions with probabilities |
@@ -97,7 +99,6 @@
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `force_cpu` | `bool` | False | If true, use CPU (for performance comparisons) |
-| `max_models` | `Union[int, NoneType]` | None | If specified, limit ensemble size accordingly |
 | `ckpt_folder` | `str` | 'data/ckpt' | Use an ensemble of all checkpoints in this folder for inference |
 | `search_ckpt_path` | `Union[str, NoneType]` | None | Folder with one or more checkpoints for embeddings and search |
 | `exclude_list` | `str` | 'data/exclude.txt' | Classes listed in this file are excluded from inference output |

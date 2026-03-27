@@ -91,7 +91,7 @@ Args:
 ### analyze_db
 **Function**  
 ```python
-analyze_db(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, classes_path: Optional[str] = None, spec_group: str = 'default', output_path: str = '', plot: bool = False, max_score: float = 0.95)
+analyze_db(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: Optional[str] = None, classes_path: Optional[str] = None, spec_group: str = 'default', output_path: str = '', plot: bool = False, max_score: float = 0.95, occlude: bool = False)
 ```
 Run inference on segments in a training database.
 
@@ -107,6 +107,7 @@ Args:
 - output_path (str): Required path to output directory where results will be saved.
 - plot (bool): If specified, plot spectrograms per class by ascending score.
 - max_score (float): Save details and plot only if score less than this (default = 0.95).
+- occlude (bool): If specified, run occlusion sensitivity analysis and save per-class CSVs.
 
 ### audioset
 **Function**  
@@ -537,6 +538,27 @@ Args:
 Examples:
     britekit init --dest .
 
+### pickle_frame
+**Function**  
+```python
+pickle_frame(input_dir: str, output_path: str, cfg_path: Optional[str] = None, alpha: float = 0.05, csv_dir: Optional[str] = None, names_path: Optional[str] = None) -> None
+```
+Create a frame-label pickle from analyze-db occlusion sensitivity CSVs.
+
+For each segment, uses occlusion-sensitivity scores produced by the analyze-db
+--occlude flag to determine which spectrogram frames contain the target class.
+The number of frames is derived from cfg.audio.spec_duration * cfg.train.sed_fps.
+
+Args:
+- input_dir (str): Directory containing per-class CSV files from analyze-db --occlude.
+- output_path (str): Output pickle file path.
+- cfg_path (str, optional): Path to YAML file defining config overrides.
+- alpha (float, optional): Score drop threshold as a fraction of the original score
+    (default 0.05). Lower values are more conservative (wider active regions).
+- csv_dir (str, optional): Directory for per-class output CSVs with frame labels.
+- names_path (str, optional): Path to a text file listing CSV filenames (one per line)
+    to process. Default is all CSV files in the input directory.
+
 ### pickle_occurrence
 **Function**  
 ```python
@@ -772,7 +794,7 @@ Args:
 ### search
 **Function**  
 ```python
-search(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: str = '', max_dist: float = 0.5, exp: float = 0.5, num_to_plot: int = 200, output_path: str = '', input_path: str = '', offset: float = 0.0, exclude_db: Optional[str] = None, class_name2: Optional[str] = None, spec_group: str = 'default')
+search(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: str = '', max_dist: float = 0.5, exp: float = 0.5, num_to_plot: int = 200, output_path: str = '', input_path: str = '', offset: float = 0.0, exclude_db: Optional[str] = None, class_name2: Optional[str] = None, spec_group: str = 'default', show_dims: bool = False)
 ```
 Search a database for spectrograms similar to a specified one.
 
@@ -797,7 +819,7 @@ Args:
 ### train
 **Function**  
 ```python
-train(cfg_path: Optional[str] = None, prefix: Optional[str] = None, seed: Optional[int] = None)
+train(cfg_path: Optional[str] = None, prefix: Optional[str] = None, seed: Optional[int] = None, frame_label_pickle: Optional[str] = None)
 ```
 Train a bioacoustic recognition model using the specified configuration.
 
@@ -814,6 +836,7 @@ Args:
     If not specified, uses default configuration.
 - prefix (str, optional): Prefix to add to checkpoint names.
 - seed (int, optional): Integer seed.
+- frame_label_pickle (str, optional): Path to frame-label pickle for SED training.
 
 ### tune
 **Function**  

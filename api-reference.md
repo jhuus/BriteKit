@@ -945,7 +945,7 @@ Note:
 ### Predictor
 **Class**  
 ```python
-Predictor(model_path: str, device: Optional[str] = None, cfg: Optional[britekit.core.base_config.BaseConfig] = None)
+Predictor(model_path: str, device: Optional[str] = None, cfg: Optional[britekit.core.base_config.BaseConfig] = None, quantile: Optional[float] = None)
 ```
 Given a recording and a model or ensemble of models, provide methods to return scores in several formats.
 
@@ -1029,23 +1029,27 @@ Returns:
 
 **get_overlapping_scores**  
 ```python
-Predictor.get_overlapping_scores(self, recording_path: str, increment: float, start_seconds: float = 0)
+Predictor.get_overlapping_scores(self, recording_path: str, segment_len: float, initial_start_times: List[float])
 ```
 This is a variant of get_recording_scores that overlaps spectrograms differently,
-and is intended for models with SED classifier heads only. Each model processes
-non-overlapping spectrograms. The first one gets spectrograms starting at offset 0.
-The second one gets spectrograms starting at increment, the third starts at 2*increment,
-etc. Since each model processes non-overlapping spectrograms, this achieves overlapped
-processing with much better performance than get_recording_scores, in which each model
-processes the same overlapping spectrograms.
+and is intended mainly for models with SED classifier heads. Each model processes
+non-overlapping spectrograms. The first start_time for each model is taken from
+initial_start_times, and then non-overlapping start_times are created from there.
+For example, suppose initial_start_times = [0, .5, 1.0] and segment_len = 3.0.
+Then model 1 uses [0, 3, 6, ...], model 2 uses [.5, 3.5, 6.5, ...], model 3 uses
+[1, 4, 7, ...]. After that it wraps using a modulus operator, so model 4 has the same
+start_times as model 1 etc.
 
 Args:
 - recording_path (str): Path to the audio recording file.
-- increment (float): Amount of increment.
+- segment_len (float): Segment length in seconds, which is not necessarily the same as
+  spec_duration. For example, you could have spec_duration=3 and segment_len=5 if you
+  want to generate 5-second labels using 3-second spectrograms.
+- initial_start_times (list(float)): See description above.
 
 Returns:
 
-- `tuple` *(A tuple containing:)* — - avg_score (np.ndarray): Average scores across all models in the ensemble. Shape is (num_spectrograms, num_classes). - avg_frame_map (np.ndarray, optional): Average frame-level scores if using SED models. Shape is (num_frames, num_classes). None if not using SED models. - start_times (list[float]): Start time in seconds for each spectrogram.
+- - avg_frame_map (np.ndarray, optional): Average frame-level scores. Shape is (num_frames, num_classes).
 
 
 
