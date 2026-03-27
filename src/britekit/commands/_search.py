@@ -27,7 +27,6 @@ def search(
     class_name2: Optional[str] = None,
     spec_group: str = "default",
     show_dims: bool = False,
-
 ):
     """
     Search a database for spectrograms similar to a specified one.

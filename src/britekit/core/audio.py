@@ -291,7 +291,7 @@ class Audio:
             return None, None
 
         if self.seconds() < 0.5:
-            return None, None # likely to cause errors otherwise
+            return None, None  # likely to cause errors otherwise
 
         logging.debug("Audio::get_spectrograms start_times=%s", start_times)
 
@@ -344,8 +344,12 @@ class Audio:
                     continue
 
                 spec = self._get_raw_spectrogram(signal_slice, freq_scale=freq_scale)
-                target_width = int(spec_duration * self.cfg.audio.spec_width / self.cfg.audio.spec_duration)
-                spec = spec[: self.cfg.audio.spec_height, : target_width]
+                target_width = int(
+                    spec_duration
+                    * self.cfg.audio.spec_width
+                    / self.cfg.audio.spec_duration
+                )
+                spec = spec[: self.cfg.audio.spec_height, :target_width]
                 if spec.shape[1] < target_width:
                     spec = np.pad(
                         spec,
@@ -389,7 +393,9 @@ class Audio:
 
             if start_frame < self.cached.shape[1]:
                 spec = self.cached[:, start_frame:end_frame]
-                target_width = int((offset + spec_duration) * frames_per_sec) - start_frame
+                target_width = (
+                    int((offset + spec_duration) * frames_per_sec) - start_frame
+                )
                 if spec.shape[1] > target_width:
                     spec = spec[:, :target_width]
                 elif spec.shape[1] < target_width:
