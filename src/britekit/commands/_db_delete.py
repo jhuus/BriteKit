@@ -373,7 +373,10 @@ def del_seg(
                         if "~" in base:
                             result = re.split("\\S+~(\\S+)-(\\S+)~.*", base)
                         else:
-                            result = re.split("(.+)-(.+)", base)
+                            # Strip optional leading integer rank prefix produced by
+                            # occlude_time.py / occlude_high.py (e.g. "12-XC123-30.0").
+                            base_to_parse = re.sub(r"^\d+-", "", base, count=1)
+                            result = re.split("(.+)-(.+)", base_to_parse)
 
                         if len(result) != 4:
                             logging.error(
