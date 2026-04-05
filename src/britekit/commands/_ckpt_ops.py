@@ -90,19 +90,26 @@ def ckpt_freeze(input_path: str = ""):
     and inference rather than continued training.
 
     Args:
-    - input_path (str): Required path to the checkpoint file to freeze.
+    - input_path (str): Required path to a checkpoint file, or a directory of checkpoint files, to freeze.
     """
     import pytorch_lightning as pl
     from britekit.models.model_loader import load_from_checkpoint
 
-    renamed_path = input_path + ".original"
-    os.rename(input_path, renamed_path)
-    model = load_from_checkpoint(renamed_path)
-    model.freeze()
+    if os.path.isdir(input_path):
+        ckpt_paths = glob.glob(os.path.join(input_path, "*.ckpt"))
+    else:
+        ckpt_paths = [input_path]
 
-    trainer = pl.Trainer()
-    trainer.strategy.connect(model)
-    trainer.save_checkpoint(input_path)
+    for ckpt_path in ckpt_paths:
+        logging.info(f"Freezing {ckpt_path}")
+        renamed_path = ckpt_path + ".original"
+        os.rename(ckpt_path, renamed_path)
+        model = load_from_checkpoint(renamed_path)
+        model.freeze()
+
+        trainer = pl.Trainer()
+        trainer.strategy.connect(model)
+        trainer.save_checkpoint(ckpt_path)
 
 
 @click.command(
@@ -115,8 +122,8 @@ def ckpt_freeze(input_path: str = ""):
     "--input",
     "input_path",
     required=True,
-    type=click.Path(file_okay=True, dir_okay=False),
-    help="Path to checkpoint to freeze",
+    type=click.Path(file_okay=True, dir_okay=True),
+    help="Path to checkpoint file or directory of checkpoints to freeze",
 )
 def _ckpt_freeze_cmd(input_path: str):
     util.set_logging()
@@ -139,20 +146,28 @@ def ckpt_onnx(
 
     Args:
     - cfg_path (str, optional): Path to YAML file defining config overrides.
-    - input_path (str): Required path to the PyTorch checkpoint file to convert.
+    - input_path (str): Required path to a checkpoint file, or a directory of checkpoint files, to convert.
     """
     import torch
     from britekit.models.model_loader import load_from_checkpoint
 
     cfg = get_config(cfg_path)
-    base, _ = os.path.splitext(input_path)
-    output_path = base + ".onnx"
-    model = load_from_checkpoint(input_path)
-    model.eval()
-    input_sample = torch.randn(
-        (cfg.infer.openvino_block_size, 1, cfg.audio.spec_height, cfg.audio.spec_width)
-    )
-    model.to_onnx(output_path, input_sample, export_params=True)
+
+    if os.path.isdir(input_path):
+        ckpt_paths = glob.glob(os.path.join(input_path, "*.ckpt"))
+    else:
+        ckpt_paths = [input_path]
+
+    for ckpt_path in ckpt_paths:
+        logging.info(f"Converting {ckpt_path}")
+        base, _ = os.path.splitext(ckpt_path)
+        output_path = base + ".onnx"
+        model = load_from_checkpoint(ckpt_path)
+        model.eval()
+        input_sample = torch.randn(
+            (cfg.infer.openvino_block_size, 1, cfg.audio.spec_height, cfg.audio.spec_width)
+        )
+        model.to_onnx(output_path, input_sample, export_params=True)
 
 
 @click.command(
@@ -173,8 +188,8 @@ def ckpt_onnx(
     "--input",
     "input_path",
     required=True,
-    type=click.Path(file_okay=True, dir_okay=False),
-    help="Path to checkpoint to convert to ONNX format",
+    type=click.Path(file_okay=True, dir_okay=True),
+    help="Path to checkpoint file or directory of checkpoints to convert to ONNX format",
 )
 def _ckpt_onnx_cmd(
     cfg_path: str,
