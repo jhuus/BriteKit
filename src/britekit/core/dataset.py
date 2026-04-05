@@ -94,21 +94,32 @@ class SpectrogramDataset(Dataset):
         label_tensor[label_indexes] = 1.0
 
         mixup = False
+        cutmix_info = None  # (time_range, other_label, original_label) if cutmix was applied
         if self.is_training and self.augment:
-            if (
-                self.cfg.train.multi_label
-                and self.class_indexes[idx][0] != self.noise_class_index
-                and random.random() < self.cfg.train.prob_simple_merge
-            ):
-                spec, label_tensor = self._merge_specs(
-                    spec, label_tensor, self.class_indexes[idx]
-                )
-                mixup = True
+            if self.cfg.train.multi_label and self.class_indexes[idx][0] != self.noise_class_index:
+                r = random.random()
+                if r < self.cfg.train.prob_simple_merge:
+                    spec, label_tensor = self._merge_specs(
+                        spec, label_tensor, self.class_indexes[idx]
+                    )
+                    mixup = True
+                elif r < self.cfg.train.prob_simple_merge + self.cfg.train.prob_mixup:
+                    spec, label_tensor = self._mixup(
+                        spec, label_tensor, self.class_indexes[idx]
+                    )
+                    mixup = True
+                elif r < self.cfg.train.prob_simple_merge + self.cfg.train.prob_mixup + self.cfg.train.prob_cutmix:
+                    original_label = label_tensor.clone()
+                    spec, label_tensor, time_range, other_label = self._cutmix(
+                        spec, label_tensor, self.class_indexes[idx]
+                    )
+                    cutmix_info = (time_range, other_label, original_label)
+                    mixup = True
 
             spec = self.augment(spec)
 
         spec_tensor = torch.tensor(spec, dtype=torch.float32)
-        frame_labels = self._get_frame_labels(idx, label_tensor, mixup)
+        frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
         mixup = torch.tensor(mixup)
 
         return {
@@ -132,16 +143,30 @@ class SpectrogramDataset(Dataset):
     # Private Helper Methods
     # =============================================================================
 
-    def _get_frame_labels(self, idx, label_tensor, mixup):
+    def _get_frame_labels(self, idx, label_tensor, mixup, cutmix_info=None):
         """
         Return frame-level labels as a (num_frames, num_classes) float32 tensor,
         where num_frames = round(spec_duration * sed_fps).
+
+        For CutMix, assigns labelA to frames outside the pasted region and labelB
+        to frames inside it, giving accurate per-frame supervision.
 
         If stored frame labels are available for this segment and no mixup occurred,
         use them for the present class. Otherwise fall back to broadcasting
         the segment label to all frames (all-ones behaviour).
         """
         num_frames = round(self.cfg.audio.spec_duration * self.cfg.train.sed_fps)
+
+        if cutmix_info is not None:
+            time_range, other_label, original_label = cutmix_info
+            y1, y2 = time_range
+            frame_start = max(0, round(y1 * num_frames / self.cfg.audio.spec_width))
+            frame_end = min(num_frames, round(y2 * num_frames / self.cfg.audio.spec_width))
+            frame_labels = original_label.unsqueeze(0).expand(num_frames, -1).clone()
+            if frame_end > frame_start:
+                frame_labels[frame_start:frame_end] = other_label
+            return frame_labels
+
         stored = None
         if (
             not mixup
@@ -174,6 +199,77 @@ class SpectrogramDataset(Dataset):
 
         spec = expand_spectrogram(self.compressed_specs[idx])
         return spec.reshape(1, self.cfg.audio.spec_height, self.cfg.audio.spec_width)
+
+    def _mixup(self, spec, label_tensor, class_indexes):
+        """
+        Traditional mixup: blend two spectrograms and their labels with a lambda
+        drawn from Beta(alpha, alpha). Unlike simple merge, this produces a
+        weighted combination rather than a sum, so soft labels are used.
+        """
+        while True:
+            other_index = random.randint(0, len(self.class_indexes) - 1)
+            other_class_index = self.class_indexes[other_index][0]
+            if (
+                other_class_index not in class_indexes
+                and other_class_index != self.noise_class_index
+            ):
+                break
+
+        lam = np.random.beta(self.cfg.train.mixup_alpha, self.cfg.train.mixup_alpha)
+        other_spec = self._get_spec(other_index)
+        other_label_tensor = torch.nn.functional.one_hot(
+            torch.tensor(other_class_index, dtype=torch.long),
+            num_classes=self.num_classes,
+        ).float()
+
+        return (
+            lam * spec + (1 - lam) * other_spec,
+            lam * label_tensor + (1 - lam) * other_label_tensor,
+        )
+
+    def _cutmix(self, spec, label_tensor, class_indexes):
+        """
+        CutMix: paste a rectangular region from another spectrogram into this one.
+        Lambda is drawn from Beta(alpha, alpha) and determines the box size via
+        cut_ratio = sqrt(1 - lambda). Labels are mixed proportionally to the actual
+        pasted area. Returns the mixed spec, mixed segment label, the pasted time
+        range in spectrogram pixels (for frame label computation), and the other
+        sample's label.
+        """
+        while True:
+            other_index = random.randint(0, len(self.class_indexes) - 1)
+            other_class_index = self.class_indexes[other_index][0]
+            if (
+                other_class_index not in class_indexes
+                and other_class_index != self.noise_class_index
+            ):
+                break
+
+        lam = np.random.beta(self.cfg.train.mixup_alpha, self.cfg.train.mixup_alpha)
+        other_spec = self._get_spec(other_index)
+        other_label = torch.nn.functional.one_hot(
+            torch.tensor(other_class_index, dtype=torch.long),
+            num_classes=self.num_classes,
+        ).float()
+
+        _, freq, time = spec.shape
+        cut_ratio = np.sqrt(1 - lam)
+        cut_h = int(freq * cut_ratio)
+        cut_w = int(time * cut_ratio)
+
+        cx = np.random.randint(freq)
+        cy = np.random.randint(time)
+        x1 = max(0, cx - cut_h // 2)
+        x2 = min(freq, cx + cut_h // 2)
+        y1 = max(0, cy - cut_w // 2)
+        y2 = min(time, cy + cut_w // 2)
+
+        spec[:, x1:x2, y1:y2] = other_spec[:, x1:x2, y1:y2]
+
+        actual_lam = 1 - (x2 - x1) * (y2 - y1) / (freq * time)
+        mixed_label = actual_lam * label_tensor + (1 - actual_lam) * other_label
+
+        return spec, mixed_label, (y1, y2), other_label
 
     def _merge_specs(self, spec, label_tensor, class_indexes):
         """

@@ -113,6 +113,9 @@ class TrainingConfig:
     max_augmentations: int = 1  # Up to this many per spectrogram
     noise_class_name: str = "Noise"  # Augmentation treats noise specially
     prob_simple_merge: float = 0.32  # Prob of simple merge
+    prob_mixup: float = 0.0  # Prob of traditional mixup (mutually exclusive with simple merge)
+    prob_cutmix: float = 0.0  # Prob of CutMix (mutually exclusive with simple merge and mixup)
+    mixup_alpha: float = 0.4  # Beta distribution parameter for mixup/cutmix lambda
     prob_fade1: float = 0.5  # Prob of fading after augmentation
     min_fade1: float = 0.1  # Min factor for fading
     max_fade1: float = 1.0  # Max factor for fading

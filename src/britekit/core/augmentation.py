@@ -70,7 +70,7 @@ class AugmentationPipeline:
         Add an actual noise spectrogram but, unlike mixup, do not update the label.
         """
         global _have_real_noise
-        if not _have_real_noise.value:
+        if not _have_real_noise.value or self.dataset is None:
             return spec
 
         noise_spec = self.dataset.get_random_noise()
@@ -127,12 +127,13 @@ class AugmentationPipeline:
         return np.flip(spec, axis=-1)
 
     @register_augmentation("freq_mask")
-    def freq_mask(self, spec, max_width1=8):
-        """Mask a random frequency band by setting it to zero."""
+    def freq_mask(self, spec, max_width1=8, num_masks1=1):
+        """Mask random frequency bands by setting them to zero."""
         f = spec.shape[-2]
-        w = min(np.random.randint(1, max_width1 + 1), f)  # Ensure w doesn't exceed f
-        start = np.random.randint(0, max(1, f - w))  # Ensure start is valid
-        spec[..., start : start + w, :] = 0
+        for _ in range(num_masks1):
+            w = min(np.random.randint(1, max_width1 + 1), f)
+            start = np.random.randint(0, f - w + 1)
+            spec[..., start : start + w, :] = 0
         return spec
 
     @register_augmentation("shift_horizontal")
@@ -156,12 +157,13 @@ class AugmentationPipeline:
         return np.clip(spec, 0, 1)
 
     @register_augmentation("time_mask")
-    def time_mask(self, spec, max_width2=16):
-        """Mask a random time segment by setting it to zero."""
+    def time_mask(self, spec, max_width2=16, num_masks2=1):
+        """Mask random time segments by setting them to zero."""
         t = spec.shape[-1]
-        w = min(np.random.randint(1, max_width2 + 1), t)  # Ensure w doesn't exceed t
-        start = np.random.randint(0, max(1, t - w))  # Ensure start is valid
-        spec[..., :, start : start + w] = 0
+        for _ in range(num_masks2):
+            w = min(np.random.randint(1, max_width2 + 1), t)
+            start = np.random.randint(0, t - w + 1)
+            spec[..., :, start : start + w] = 0
         return spec
 
     def __call__(self, spec):
