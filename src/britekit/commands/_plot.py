@@ -81,6 +81,7 @@ def plot_db(
     prefix: Optional[str] = None,
     power: Optional[float] = 1.0,
     spec_group: Optional[str] = None,
+    augment: bool = False,
 ):
     """
     Plot spectrograms from a training database for a specific class.
@@ -99,7 +100,9 @@ def plot_db(
     - prefix (str, optional): Only include recordings that start with this filename prefix.
     - power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
     - spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
+    - augment (bool): If True, apply the configured augmentation pipeline before plotting.
     """
+    from britekit.core.augmentation import AugmentationPipeline
     from britekit.core.plot import plot_spec
     from britekit.training_db.training_db import TrainingDatabase
 
@@ -113,6 +116,8 @@ def plot_db(
 
     if spec_group is None:
         spec_group = "default"
+
+    augmentation_pipeline = AugmentationPipeline(cfg, None) if augment else None
 
     with TrainingDatabase(db_path) as db:
         results = db.get_spectrogram_by_class(class_name, spec_group=spec_group)
@@ -138,6 +143,11 @@ def plot_db(
                     prev_filename = r.filename
 
                 spec = util.expand_spectrogram(r.value)
+                if augmentation_pipeline is not None:
+                    spec = augmentation_pipeline(
+                        spec.reshape(1, cfg.audio.spec_height, cfg.audio.spec_width)
+                    ).squeeze(0)
+
                 if power is not None:
                     spec **= power
 
@@ -210,6 +220,12 @@ def plot_db(
     required=False,
     help="Spectrogram group name. Defaults to 'default'.",
 )
+@click.option(
+    "--augment",
+    "augment",
+    is_flag=True,
+    help="If specified, apply the configured augmentation pipeline before plotting.",
+)
 def _plot_db_cmd(
     cfg_path: str,
     class_name: str,
@@ -220,6 +236,7 @@ def _plot_db_cmd(
     prefix: Optional[str],
     power: Optional[float],
     spec_group: Optional[str],
+    augment: bool,
 ):
     util.set_logging()
     plot_db(
@@ -232,6 +249,7 @@ def _plot_db_cmd(
         prefix,
         power,
         spec_group,
+        augment,
     )
 
 
