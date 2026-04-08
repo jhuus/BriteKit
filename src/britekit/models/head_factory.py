@@ -197,16 +197,18 @@ class LSEHead(nn.Module):
         self,
         in_channels: int,
         num_classes: int,
+        hidden_channels: Optional[int] = None,
         dropout: float = 0.5,
         lse_temperature: float = 1.0,
     ):
         super().__init__()
+        mid = hidden_channels if hidden_channels is not None else in_channels
         self.lse_pool = LSEPooling(pool_axis=1, temperature=lse_temperature)
         self.cls_fc = nn.Sequential(
-            nn.Linear(in_channels, in_channels),
+            nn.Linear(in_channels, mid),
             nn.ReLU(inplace=True),
             nn.Dropout(dropout),
-            nn.Linear(in_channels, num_classes),
+            nn.Linear(mid, num_classes),
         )
 
     def forward(self, x):  # x: [B, C, F, T]
@@ -221,7 +223,9 @@ class LSEHead(nn.Module):
 def build_lse_head(
     in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
 ) -> nn.Module:
-    return LSEHead(in_channels, num_classes, dropout=drop_rate)
+    return LSEHead(
+        in_channels, num_classes, hidden_channels=hidden_channels, dropout=drop_rate
+    )
 
 
 def is_sed(head_type: Optional[str]):
