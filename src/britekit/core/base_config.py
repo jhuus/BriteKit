@@ -14,6 +14,7 @@ class AudioConfig:
     # to retain temporal and frequency resolution
     # when max_freq and sampling rate are changed
     win_length: float = 0.055
+    n_fft: Optional[int] = None  # If none, use 1st power of 2 after win_length
 
     max_freq: int = 8000  # Maximum frequency in Hz
     min_freq: int = 100  # Minimum frequency in Hz

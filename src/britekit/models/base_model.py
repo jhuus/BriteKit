@@ -14,6 +14,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
+from britekit import __version__ as britekit_version
 from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core import util
 from britekit.models.head_factory import is_sed
@@ -118,6 +119,7 @@ class BaseModel(pl.LightningModule):
         checkpoint["identifier"] = self.identifier
         checkpoint["training_date"] = self.training_date
         checkpoint["training_cfg"] = util.cfg_to_pure(self.cfg)
+        checkpoint["britekit_version"] = britekit_version
 
     def on_load_checkpoint(self, checkpoint):
         if "identifier" in checkpoint:
@@ -137,6 +139,15 @@ class BaseModel(pl.LightningModule):
             self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
 
             self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
+
+            if "n_fft" in self.training_cfg["audio"]:
+                self.cfg.audio.n_fft = self.training_cfg["audio"]["n_fft"]
+            else:
+                # Use old formula for compatibility with old models
+                win_length_samples = int(
+                    self.cfg.audio.win_length * self.cfg.audio.sampling_rate
+                )
+                self.cfg.audio.n_fft = 2 * win_length_samples
 
             logging.debug(
                 "BaseModel::on_load_checkpoint sr=%d, win=%d, duration=%.2f, height=%d, width=%d",

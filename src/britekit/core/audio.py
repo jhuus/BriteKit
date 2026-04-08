@@ -107,6 +107,11 @@ class Audio:
         # resolution when sampling rate changes
         self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
 
+        if self.cfg.audio.n_fft is None:
+            self.n_fft = self.win_length
+        else:
+            self.n_fft = self.cfg.audio.n_fft
+
         self.cached = None  # invalidate cache when config changes
 
         if (
@@ -150,8 +155,9 @@ class Audio:
         if key in self.linear_transform_cache:
             self.linear_transform = self.linear_transform_cache[key]
         else:
+
             self.linear_transform = ta.transforms.Spectrogram(
-                n_fft=2 * self.win_length,
+                n_fft=self.n_fft,
                 win_length=self.win_length,
                 hop_length=int(
                     self.cfg.audio.spec_duration
@@ -175,7 +181,7 @@ class Audio:
             else:
                 self.mel_transform = ta.transforms.MelSpectrogram(
                     sample_rate=self.sampling_rate,
-                    n_fft=2 * self.win_length,
+                    n_fft=self.n_fft,
                     win_length=self.win_length,
                     hop_length=int(
                         self.cfg.audio.spec_duration
@@ -338,7 +344,7 @@ class Audio:
                 end_sample = int((offset + spec_duration) * sr)
                 signal_slice = self.signal[start_sample:end_sample]
 
-                # Skip slices too short for STFT (n_fft = 2 * win_length)
+                # Skip slices too short for STFT
                 if signal_slice.shape[0] < 2 * self.win_length:
                     specs.append(None)
                     continue
@@ -438,9 +444,8 @@ class Audio:
         f_max = self.cfg.audio.max_freq
         n_bins = self.cfg.audio.spec_height
         sr = self.cfg.audio.sampling_rate
-        n_fft = 2 * self.win_length
 
-        fft_freqs = np.linspace(0, sr / 2, n_fft // 2 + 1)
+        fft_freqs = np.linspace(0, sr / 2, self.n_fft // 2 + 1)
         fft_log2 = np.log2(fft_freqs + 1e-6)  # avoid log(0)
 
         log2_fmin = np.log2(f_min)
@@ -512,7 +517,7 @@ class Audio:
                 self.cfg.audio.chunks_per_spec * self.cfg.audio.spec_duration
             )
             chunk_samples = int(chunk_duration * self.cfg.audio.sampling_rate)
-            min_samples = 2 * self.win_length  # minimum for STFT (n_fft)
+            min_samples = self.n_fft  # minimum for STFT (n_fft)
 
             if signal.shape[0] <= chunk_samples:
                 spec = self._compute_spectrogram_chunk(signal, freq_scale)
