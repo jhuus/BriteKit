@@ -33,6 +33,7 @@ class SpectrogramDataset(Dataset):
         noise_class_index: int = -1,
         is_training: bool = True,
         segment_ids: Optional[List[int]] = None,
+        recording_ids: Optional[List[int]] = None,
         frame_label_dict: Optional[Dict[int, np.ndarray]] = None,
     ):
         # Input validation
@@ -63,6 +64,7 @@ class SpectrogramDataset(Dataset):
         self.noise_class_index = noise_class_index
         self.is_training = is_training
         self.segment_ids = segment_ids
+        self.recording_ids = recording_ids
         self.frame_label_dict = frame_label_dict
 
         self.cfg = get_config()
@@ -94,9 +96,14 @@ class SpectrogramDataset(Dataset):
         label_tensor[label_indexes] = 1.0
 
         mixup = False
-        cutmix_info = None  # (time_range, other_label, original_label) if cutmix was applied
+        cutmix_info = (
+            None  # (time_range, other_label, original_label) if cutmix was applied
+        )
         if self.is_training and self.augment:
-            if self.cfg.train.multi_label and self.class_indexes[idx][0] != self.noise_class_index:
+            if (
+                self.cfg.train.multi_label
+                and self.class_indexes[idx][0] != self.noise_class_index
+            ):
                 r = random.random()
                 if r < self.cfg.train.prob_simple_merge:
                     spec, label_tensor = self._merge_specs(
@@ -108,7 +115,12 @@ class SpectrogramDataset(Dataset):
                         spec, label_tensor, self.class_indexes[idx]
                     )
                     mixup = True
-                elif r < self.cfg.train.prob_simple_merge + self.cfg.train.prob_mixup + self.cfg.train.prob_cutmix:
+                elif (
+                    r
+                    < self.cfg.train.prob_simple_merge
+                    + self.cfg.train.prob_mixup
+                    + self.cfg.train.prob_cutmix
+                ):
                     original_label = label_tensor.clone()
                     spec, label_tensor, time_range, other_label = self._cutmix(
                         spec, label_tensor, self.class_indexes[idx]
@@ -161,7 +173,9 @@ class SpectrogramDataset(Dataset):
             time_range, other_label, original_label = cutmix_info
             y1, y2 = time_range
             frame_start = max(0, round(y1 * num_frames / self.cfg.audio.spec_width))
-            frame_end = min(num_frames, round(y2 * num_frames / self.cfg.audio.spec_width))
+            frame_end = min(
+                num_frames, round(y2 * num_frames / self.cfg.audio.spec_width)
+            )
             frame_labels = original_label.unsqueeze(0).expand(num_frames, -1).clone()
             if frame_end > frame_start:
                 frame_labels[frame_start:frame_end] = other_label

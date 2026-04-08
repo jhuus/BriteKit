@@ -3,11 +3,46 @@
 # Defer some imports to improve initialization performance.
 import logging
 import pickle
-from typing import Any, List, Tuple
+import random
+from typing import Any, List, Optional, Tuple
 
 from pytorch_lightning import LightningDataModule
+from torch.utils.data import Sampler
 
 from britekit.core.config_loader import get_config
+
+
+class PerRecordingSampler(Sampler):
+    """
+    Samples up to max_per_recording spectrogram indices per recording per epoch.
+    Indices are drawn randomly and the final list is shuffled.
+    """
+
+    def __init__(
+        self, indices: List[int], recording_ids: List[int], max_per_recording: int
+    ):
+        self.indices = indices
+        self.recording_ids = recording_ids
+        self.max_per_recording = max_per_recording
+
+        # Group subset indices by recording ID
+        groups: dict = {}
+        for idx in indices:
+            rec_id = recording_ids[idx]
+            groups.setdefault(rec_id, []).append(idx)
+        self.groups = list(groups.values())
+
+    def __iter__(self):
+        selected = []
+        for group in self.groups:
+            k = min(self.max_per_recording, len(group))
+            selected.extend(random.sample(group, k))
+        random.shuffle(selected)
+        return iter(selected)
+
+    def __len__(self):
+        total = sum(min(self.max_per_recording, len(g)) for g in self.groups)
+        return total
 
 
 class DataModule(LightningDataModule):
@@ -30,6 +65,7 @@ class DataModule(LightningDataModule):
                 specs,
                 labels,
                 segment_ids,
+                recording_ids,
             ) = self._load_pickle_data(self.cfg.train.train_pickle)
 
             # Validate loaded data
@@ -48,6 +84,7 @@ class DataModule(LightningDataModule):
             self.specs = specs
             self.labels = labels
             self.segment_ids = segment_ids
+            self.recording_ids = recording_ids
             self.num_train_classes = len(class_names)
 
             # flatten the labels so [[1, 2], [3]] becomes [1, 2, 3]
@@ -93,13 +130,14 @@ class DataModule(LightningDataModule):
             noise_class_index,
             is_training=True,
             segment_ids=self.segment_ids,
+            recording_ids=self.recording_ids,
             frame_label_dict=frame_label_dict,
         )
 
         # Load test data
         if self.cfg.train.test_pickle:
             try:
-                class_names, class_codes, alt_names, alt_codes, specs, labels, _ = (
+                class_names, class_codes, alt_names, alt_codes, specs, labels, _, _ = (
                     self._load_pickle_data(self.cfg.train.test_pickle)
                 )
 
@@ -148,7 +186,8 @@ class DataModule(LightningDataModule):
         List[str],
         List[Any],
         List[List[int]],
-        List[int],
+        Optional[List[int]],
+        Optional[List[int]],
     ]:
         """
         Load data from a pickle file with error handling.
@@ -191,8 +230,9 @@ class DataModule(LightningDataModule):
                 f"Pickle file {path} missing required keys: {missing_keys}"
             )
 
-        # segment_ids was added later; old pickles may not have it
+        # segment_ids and recording_ids were added later; old pickles may not have them
         segment_ids = data.get("spec_segment_ids", None)
+        recording_ids = data.get("spec_recording_ids", None)
 
         return (
             data["class_names"],
@@ -202,6 +242,7 @@ class DataModule(LightningDataModule):
             data["spec_values"],
             data["spec_class_indexes"],
             segment_ids,
+            recording_ids,
         )
 
     def class_weights(self):
@@ -276,6 +317,21 @@ class DataModule(LightningDataModule):
 
         if self.train_data is None:
             raise ValueError("Training data not prepared. Call prepare_fold() first.")
+
+        max_per_recording = self.cfg.train.max_per_recording
+        if max_per_recording is not None and self.recording_ids is not None:
+            sampler = PerRecordingSampler(
+                list(self.train_data.indices),
+                self.recording_ids,
+                max_per_recording,
+            )
+            return DataLoader(
+                self.train_data,
+                batch_size=self.cfg.train.batch_size,
+                sampler=sampler,
+                num_workers=self.cfg.train.num_workers,
+            )
+
         return DataLoader(
             self.train_data,
             batch_size=self.cfg.train.batch_size,
