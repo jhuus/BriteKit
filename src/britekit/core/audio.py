@@ -150,6 +150,7 @@ class Audio:
             self.cfg.audio.spec_duration,
             self.cfg.audio.spec_height,
             self.cfg.audio.spec_width,
+            self.cfg.audio.mel_norm,
         )
 
         if key in self.linear_transform_cache:
@@ -192,6 +193,7 @@ class Audio:
                     f_max=self.cfg.audio.max_freq,
                     n_mels=self.cfg.audio.spec_height,
                     power=self.cfg.audio.power,
+                    norm=self.cfg.audio.mel_norm,
                 ).to(self.device)
                 self.mel_transform_cache[key] = self.mel_transform
 

@@ -26,6 +26,8 @@ class AudioConfig:
     db_power: float = 1.0  # Raise to this exponent after convert to decibels
     log_freq_gain: float = 0.6  # Boost loudness of higher frequencies with log scale
 
+    mel_norm: Optional[str] = None  # Mel filterbank normalization: None or "slaney"
+
     choose_channel: bool = False  # Use heuristic to pick the cleanest audio channel?
     check_seconds: float = 6.0  # Check this many seconds to pick channel
 
