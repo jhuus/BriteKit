@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import math
 from typing import Optional
 
 import torch
@@ -172,6 +173,57 @@ class BasicSEDHead(nn.Module):
         return segment_logits, frame_logits
 
 
+class LSEPooling(nn.Module):
+
+    def __init__(self, pool_axis: int = -1, temperature: float = 1.0):
+        super().__init__()
+        self.temperature = temperature
+        self.pool_axis = pool_axis
+
+    def forward(self, x):
+        return self.temperature * (
+            torch.logsumexp(x / self.temperature, dim=self.pool_axis)
+            - math.log(x.shape[self.pool_axis])
+        )
+
+
+class LSEHead(nn.Module):
+    """Log-Sum-Exp (LSE) pooling head. Freq-pools backbone features, applies a
+    per-frame FC classifier, then aggregates over time with LSE pooling — a smooth
+    approximation to max that approaches hard-max as temperature → 0 and soft
+    average-weighted max at temperature = 1."""
+
+    def __init__(
+        self,
+        in_channels: int,
+        num_classes: int,
+        dropout: float = 0.5,
+        lse_temperature: float = 1.0,
+    ):
+        super().__init__()
+        self.lse_pool = LSEPooling(pool_axis=1, temperature=lse_temperature)
+        self.cls_fc = nn.Sequential(
+            nn.Linear(in_channels, in_channels),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
+            nn.Linear(in_channels, num_classes),
+        )
+
+    def forward(self, x):  # x: [B, C, F, T]
+        x = x.mean(dim=2)  # [B, C, T]
+        x = x.transpose(1, 2)  # [B, T, C]
+        timewise_logits = self.cls_fc(x)  # [B, T, num_classes]
+        segment_logits = self.lse_pool(timewise_logits)  # [B, num_classes]
+        frame_logits = timewise_logits.transpose(1, 2)  # [B, num_classes, T]
+        return segment_logits, frame_logits
+
+
+def build_lse_head(
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+) -> nn.Module:
+    return LSEHead(in_channels, num_classes, dropout=drop_rate)
+
+
 def is_sed(head_type: Optional[str]):
     # Return true for SED heads only
     if not head_type:
@@ -260,6 +312,7 @@ HEAD_REGISTRY = {
     "basic": (build_basic_head, False),
     "effnet": (build_effnet_head, False),
     "hgnet": (build_hgnet_head, False),
+    "lse": (build_lse_head, True),
     "basic_sed": (build_basic_sed_head, True),
     "bitemporal_sed": (build_bitemporal_sed_head, True),
     "reduced_sed": (build_reduced_sed_head, True),
