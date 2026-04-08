@@ -165,7 +165,12 @@ def ckpt_onnx(
         model = load_from_checkpoint(ckpt_path)
         model.eval()
         input_sample = torch.randn(
-            (cfg.infer.openvino_block_size, 1, cfg.audio.spec_height, cfg.audio.spec_width)
+            (
+                cfg.infer.openvino_block_size,
+                1,
+                cfg.audio.spec_height,
+                cfg.audio.spec_width,
+            )
         )
         model.to_onnx(output_path, input_sample, export_params=True)
 
