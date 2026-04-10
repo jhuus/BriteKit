@@ -251,7 +251,11 @@ class BaseModel(pl.LightningModule):
         all_labels = (torch.cat(self._val_labels) >= 0.5).int().numpy()
         self._val_preds.clear()
         self._val_labels.clear()
-        self.log("val_roc", metrics.roc_auc_score(all_labels, all_preds, average="micro"), prog_bar=True)
+        self.log(
+            "val_roc",
+            metrics.roc_auc_score(all_labels, all_preds, average="micro"),
+            prog_bar=True,
+        )
 
     def test_step(self, batch, batch_idx):
         from sklearn import metrics
@@ -265,7 +269,9 @@ class BaseModel(pl.LightningModule):
             preds = torch.sigmoid(seg_logits)
             self.log(
                 "test_roc_auc",
-                metrics.roc_auc_score((y.cpu() >= 0.5).int(), preds.cpu(), average="micro"),
+                metrics.roc_auc_score(
+                    (y.cpu() >= 0.5).int(), preds.cpu(), average="micro"
+                ),
                 on_step=False,
                 on_epoch=True,
                 prog_bar=True,

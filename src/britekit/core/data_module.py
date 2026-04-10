@@ -271,8 +271,12 @@ class DataModule(LightningDataModule):
 
         specs = [self.specs[i] for i in val_indices]
         labels = [self.labels[i] for i in val_indices]
-        segment_ids = [self.segment_ids[i] for i in val_indices] if self.segment_ids else None
-        recording_ids = [self.recording_ids[i] for i in val_indices] if self.recording_ids else None
+        segment_ids = (
+            [self.segment_ids[i] for i in val_indices] if self.segment_ids else None
+        )
+        recording_ids = (
+            [self.recording_ids[i] for i in val_indices] if self.recording_ids else None
+        )
         noise_class_index = self.full_dataset.noise_class_index
         return SpectrogramDataset(
             specs,
@@ -319,7 +323,9 @@ class DataModule(LightningDataModule):
             val_indices = indices[train_size:]
 
             self.train_data = Subset(self.full_dataset, train_indices)
-            self.val_data = Subset(self._make_val_dataset(val_indices), list(range(len(val_indices))))
+            self.val_data = Subset(
+                self._make_val_dataset(val_indices), list(range(len(val_indices)))
+            )
         else:
             # Stratified k-fold split
             if not hasattr(self, "indices") or not self.indices:
@@ -332,7 +338,9 @@ class DataModule(LightningDataModule):
 
             train_idx, val_idx = self.indices[fold_index]
             self.train_data = Subset(self.full_dataset, train_idx)
-            self.val_data = Subset(self._make_val_dataset(val_idx), list(range(len(val_idx))))
+            self.val_data = Subset(
+                self._make_val_dataset(val_idx), list(range(len(val_idx)))
+            )
 
     def train_dataloader(self):
         from torch.utils.data import DataLoader

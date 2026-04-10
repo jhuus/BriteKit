@@ -170,7 +170,6 @@ class TrainingPickler:
 
         # get dict from spec ID to class names
         segment_class_dict = TrainingDataProvider(self.db).segment_class_dict()
-        name_set = set(names)
         name_order = {name: i for i, name in enumerate(names)}
 
         # Collect all unique segments that have at least one selected class.
@@ -191,8 +190,9 @@ class TrainingPickler:
             class_counts = {name: 0 for name in names}
             kept = []
             for spec in all_specs:
-                seg_names = [n for n in segment_class_dict[spec.segment_id]
-                             if n in name_order]
+                seg_names = [
+                    n for n in segment_class_dict[spec.segment_id] if n in name_order
+                ]
                 if not seg_names:
                     continue
                 primary = min(seg_names, key=lambda n: name_order[n])

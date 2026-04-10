@@ -2,7 +2,6 @@
 
 # Defer some imports to improve initialization performance.
 import logging
-import math
 from typing import Any, Optional
 
 from britekit.core.base_config import BaseConfig
