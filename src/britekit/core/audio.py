@@ -2,6 +2,7 @@
 
 # Defer some imports to improve initialization performance.
 import logging
+import math
 from typing import Any, Optional
 
 from britekit.core.base_config import BaseConfig
@@ -108,7 +109,9 @@ class Audio:
         self.win_length = int(self.cfg.audio.win_length * self.cfg.audio.sampling_rate)
 
         if self.cfg.audio.n_fft is None:
-            self.n_fft = self.win_length
+            # n_fft = win_length is too low in some cases, so use 2x as a default;
+            # that's usually more than necessary, but you can override it if you want
+            self.n_fft = 2 * self.win_length
         else:
             self.n_fft = self.cfg.audio.n_fft
 
