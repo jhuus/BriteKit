@@ -171,47 +171,51 @@ class TrainingPickler:
         # get dict from spec ID to class names
         segment_class_dict = TrainingDataProvider(self.db).segment_class_dict()
         name_set = set(names)
+        name_order = {name: i for i, name in enumerate(names)}
 
-        # get spectrograms for each selected class
-        total_count = 0
-        empty_classes = []
+        # Collect all unique segments that have at least one selected class.
+        # A segment with multiple labels is included once with all its labels.
         all_specs = []
         used_segment_ids = set()
         for name in names:
             specs = self.db.get_spectrogram_by_class(name, spec_group=self.spec_group)
-
-            # segments might have multiple classes, so exclude any with unselected classes,
-            # or any already used in a previous class
-            valid_specs = []
             for spec in specs:
-                valid_spec = True
-                if spec.segment_id in used_segment_ids:
-                    valid_spec = False  # used in a previous class
-                else:
-                    for name in segment_class_dict[spec.segment_id]:
-                        if name not in name_set:
-                            valid_spec = False  # matches an unselected class
-                            break
-
-                if valid_spec:
-                    valid_specs.append(spec)
+                if spec.segment_id not in used_segment_ids:
                     used_segment_ids.add(spec.segment_id)
+                    all_specs.append(spec)
 
-            specs = valid_specs
+        # Apply max_per_class if specified: assign each segment to its earliest
+        # class in the names list, then limit each class to max_per_class.
+        if self.max_per_class:
+            random.shuffle(all_specs)
+            class_counts = {name: 0 for name in names}
+            kept = []
+            for spec in all_specs:
+                seg_names = [n for n in segment_class_dict[spec.segment_id]
+                             if n in name_order]
+                if not seg_names:
+                    continue
+                primary = min(seg_names, key=lambda n: name_order[n])
+                if class_counts[primary] < self.max_per_class:
+                    kept.append(spec)
+                    class_counts[primary] += 1
+            all_specs = kept
 
-            # pick random subset if we have more than max_per_class
-            if self.max_per_class and self.max_per_class < len(specs):
-                random.shuffle(specs)
-                specs = specs[: self.max_per_class]
+        # Count per-class coverage for logging and empty-class detection.
+        class_counts = {name: 0 for name in names}
+        for spec in all_specs:
+            for seg_name in segment_class_dict.get(spec.segment_id, []):
+                if seg_name in class_counts:
+                    class_counts[seg_name] += 1
 
+        empty_classes = []
+        for name in names:
             if not quiet:
-                logging.info(f'Fetched {len(specs)} spectrograms for "{name}"')
-
-            total_count += len(specs)
-            if len(specs) == 0:
+                logging.info(f'Fetched {class_counts[name]} spectrograms for "{name}"')
+            if class_counts[name] == 0:
                 empty_classes.append(name)
 
-            all_specs.extend(specs)
+        total_count = len(all_specs)
 
         # stop if there are classes with no spectrograms
         if len(empty_classes) > 0:
@@ -237,7 +241,8 @@ class TrainingPickler:
             recording_ids.append(spec.recording_id)
             class_indexes.append([])
             for name in segment_class_dict[spec.segment_id]:
-                class_indexes[i].append(class_name_dict[name])
+                if name in class_name_dict:
+                    class_indexes[i].append(class_name_dict[name])
 
         # create and save the pickle file
         pickle_dict = {}

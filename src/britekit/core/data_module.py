@@ -177,7 +177,10 @@ class DataModule(LightningDataModule):
             skf = StratifiedKFold(
                 n_splits=self.cfg.train.num_folds, shuffle=True, random_state=42
             )
-            self.indices = list(skf.split(self.specs, self.labels))
+            # Use first label per segment for stratification (multi-label segments
+            # have lists; StratifiedKFold requires a flat 1D array).
+            stratify_labels = [lbl[0] if lbl else 0 for lbl in self.labels]
+            self.indices = list(skf.split(self.specs, stratify_labels))
 
     def _load_pickle_data(self, path: str) -> Tuple[
         List[str],
@@ -262,6 +265,25 @@ class DataModule(LightningDataModule):
 
         return class_weights
 
+    def _make_val_dataset(self, val_indices):
+        """Create a non-augmenting dataset containing only the validation samples."""
+        from britekit.core.dataset import SpectrogramDataset
+
+        specs = [self.specs[i] for i in val_indices]
+        labels = [self.labels[i] for i in val_indices]
+        segment_ids = [self.segment_ids[i] for i in val_indices] if self.segment_ids else None
+        recording_ids = [self.recording_ids[i] for i in val_indices] if self.recording_ids else None
+        noise_class_index = self.full_dataset.noise_class_index
+        return SpectrogramDataset(
+            specs,
+            labels,
+            self.num_train_classes,
+            noise_class_index,
+            is_training=False,
+            segment_ids=segment_ids,
+            recording_ids=recording_ids,
+        )
+
     def prepare_fold(self, fold_index: int):
         """
         Prepare train/validation split for a specific fold.
@@ -297,7 +319,7 @@ class DataModule(LightningDataModule):
             val_indices = indices[train_size:]
 
             self.train_data = Subset(self.full_dataset, train_indices)
-            self.val_data = Subset(self.full_dataset, val_indices)
+            self.val_data = Subset(self._make_val_dataset(val_indices), list(range(len(val_indices))))
         else:
             # Stratified k-fold split
             if not hasattr(self, "indices") or not self.indices:
@@ -310,7 +332,7 @@ class DataModule(LightningDataModule):
 
             train_idx, val_idx = self.indices[fold_index]
             self.train_data = Subset(self.full_dataset, train_idx)
-            self.val_data = Subset(self.full_dataset, val_idx)
+            self.val_data = Subset(self._make_val_dataset(val_idx), list(range(len(val_idx))))
 
     def train_dataloader(self):
         from torch.utils.data import DataLoader
@@ -320,9 +342,13 @@ class DataModule(LightningDataModule):
 
         max_per_recording = self.cfg.train.max_per_recording
         if max_per_recording is not None and self.recording_ids is not None:
+            # Subset indices are original-dataset indices; sampler must output
+            # subset-relative indices (0..len(subset)-1) for the DataLoader.
+            train_indices = list(self.train_data.indices)
+            subset_recording_ids = [self.recording_ids[i] for i in train_indices]
             sampler = PerRecordingSampler(
-                list(self.train_data.indices),
-                self.recording_ids,
+                list(range(len(train_indices))),
+                subset_recording_ids,
                 max_per_recording,
             )
             return DataLoader(
@@ -344,6 +370,26 @@ class DataModule(LightningDataModule):
 
         if self.val_data is None:
             raise ValueError("Validation data not prepared. Call prepare_fold() first.")
+
+        val_max = self.cfg.train.val_max_per_recording
+        val_dataset = self.val_data.dataset  # the non-augmenting SpectrogramDataset
+        if val_max is not None and val_dataset.recording_ids is not None:
+            # Take first val_max segments per recording (deterministic).
+            groups: dict = {}
+            for idx in range(len(val_dataset)):
+                rec_id = val_dataset.recording_ids[idx]
+                if rec_id not in groups:
+                    groups[rec_id] = []
+                if len(groups[rec_id]) < val_max:
+                    groups[rec_id].append(idx)
+            selected = [idx for group in groups.values() for idx in group]
+            return DataLoader(
+                val_dataset,
+                batch_size=self.cfg.train.batch_size,
+                sampler=selected,
+                num_workers=self.cfg.train.num_workers,
+            )
+
         return DataLoader(
             self.val_data,
             batch_size=self.cfg.train.batch_size,

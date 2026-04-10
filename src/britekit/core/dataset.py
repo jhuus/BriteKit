@@ -220,21 +220,20 @@ class SpectrogramDataset(Dataset):
         drawn from Beta(alpha, alpha). Unlike simple merge, this produces a
         weighted combination rather than a sum, so soft labels are used.
         """
+        class_index_set = set(class_indexes)
         while True:
             other_index = random.randint(0, len(self.class_indexes) - 1)
-            other_class_index = self.class_indexes[other_index][0]
+            other_indexes = self.class_indexes[other_index]
             if (
-                other_class_index not in class_indexes
-                and other_class_index != self.noise_class_index
+                not any(i in class_index_set for i in other_indexes)
+                and self.noise_class_index not in other_indexes
             ):
                 break
 
         lam = np.random.beta(self.cfg.train.mixup_alpha, self.cfg.train.mixup_alpha)
         other_spec = self._get_spec(other_index)
-        other_label_tensor = torch.nn.functional.one_hot(
-            torch.tensor(other_class_index, dtype=torch.long),
-            num_classes=self.num_classes,
-        ).float()
+        other_label_tensor = torch.zeros(self.num_classes, dtype=torch.float)
+        other_label_tensor[other_indexes] = 1.0
 
         return (
             lam * spec + (1 - lam) * other_spec,
@@ -250,21 +249,20 @@ class SpectrogramDataset(Dataset):
         range in spectrogram pixels (for frame label computation), and the other
         sample's label.
         """
+        class_index_set = set(class_indexes)
         while True:
             other_index = random.randint(0, len(self.class_indexes) - 1)
-            other_class_index = self.class_indexes[other_index][0]
+            other_indexes = self.class_indexes[other_index]
             if (
-                other_class_index not in class_indexes
-                and other_class_index != self.noise_class_index
+                not any(i in class_index_set for i in other_indexes)
+                and self.noise_class_index not in other_indexes
             ):
                 break
 
         lam = np.random.beta(self.cfg.train.mixup_alpha, self.cfg.train.mixup_alpha)
         other_spec = self._get_spec(other_index)
-        other_label = torch.nn.functional.one_hot(
-            torch.tensor(other_class_index, dtype=torch.long),
-            num_classes=self.num_classes,
-        ).float()
+        other_label = torch.zeros(self.num_classes, dtype=torch.float)
+        other_label[other_indexes] = 1.0
 
         _, freq, time = spec.shape
         cut_ratio = np.sqrt(1 - lam)
@@ -292,19 +290,18 @@ class SpectrogramDataset(Dataset):
         """
 
         # pick a non-noise spectrogram from a different class
+        class_index_set = set(class_indexes)
         while True:
             other_index = random.randint(0, len(self.class_indexes) - 1)
-            other_class_index = self.class_indexes[other_index][0]
+            other_indexes = self.class_indexes[other_index]
             if (
-                other_class_index not in class_indexes
-                and other_class_index != self.noise_class_index
+                not any(i in class_index_set for i in other_indexes)
+                and self.noise_class_index not in other_indexes
             ):
                 break
 
         other_spec = self._get_spec(other_index)
-        other_label_tensor = torch.nn.functional.one_hot(
-            torch.tensor(other_class_index, dtype=torch.long),
-            num_classes=self.num_classes,
-        ).float()
+        other_label_tensor = torch.zeros(self.num_classes, dtype=torch.float)
+        other_label_tensor[other_indexes] = 1.0
 
         return spec + other_spec, label_tensor + other_label_tensor

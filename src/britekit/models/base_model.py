@@ -94,6 +94,8 @@ class BaseModel(pl.LightningModule):
         self.num_train_specs = num_train_specs
         self.num_classes = len(train_class_names)
         self.learning_rate = self.cfg.train.learning_rate
+        self._val_preds: List = []
+        self._val_labels: List = []
 
         # Loss function
         if self.multi_label:
@@ -143,7 +145,6 @@ class BaseModel(pl.LightningModule):
             if "n_fft" in self.training_cfg["audio"]:
                 self.cfg.audio.n_fft = self.training_cfg["audio"]["n_fft"]
             else:
-                # Use old formula for compatibility with old models
                 win_length_samples = int(
                     self.cfg.audio.win_length * self.cfg.audio.sampling_rate
                 )
@@ -226,8 +227,6 @@ class BaseModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        from sklearn import metrics
-
         x, y = batch["input"], batch["segment_labels"]
         seg_logits, _ = self(x)
         loss = self.loss_fn(seg_logits, y)
@@ -238,15 +237,21 @@ class BaseModel(pl.LightningModule):
             else torch.softmax(seg_logits, dim=1)
         )
 
+        self._val_preds.append(preds.cpu())
+        self._val_labels.append(y.cpu())
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=False)
-        self.log(
-            "val_roc",
-            metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro"),
-            on_step=False,
-            on_epoch=True,
-            prog_bar=True,
-        )
         return loss
+
+    def on_validation_epoch_end(self):
+        from sklearn import metrics
+
+        if not self._val_preds:
+            return
+        all_preds = torch.cat(self._val_preds).numpy()
+        all_labels = (torch.cat(self._val_labels) >= 0.5).int().numpy()
+        self._val_preds.clear()
+        self._val_labels.clear()
+        self.log("val_roc", metrics.roc_auc_score(all_labels, all_preds, average="micro"), prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         from sklearn import metrics
@@ -260,7 +265,7 @@ class BaseModel(pl.LightningModule):
             preds = torch.sigmoid(seg_logits)
             self.log(
                 "test_roc_auc",
-                metrics.roc_auc_score(y.cpu(), preds.cpu(), average="micro"),
+                metrics.roc_auc_score((y.cpu() >= 0.5).int(), preds.cpu(), average="micro"),
                 on_step=False,
                 on_epoch=True,
                 prog_bar=True,
