@@ -114,6 +114,9 @@ class TrainingConfig:
     # Per-recording sampling: if set, randomly select this many specs per recording per epoch
     max_per_recording: Optional[int] = None
 
+    # Per-recording limit for validation: if set, take the first N specs per recording
+    val_max_per_recording: Optional[int] = None
+
     # Data augmentation
     augment: bool = True  # Use data augmentation?
     max_augmentations: int = 1  # Up to this many per spectrogram
