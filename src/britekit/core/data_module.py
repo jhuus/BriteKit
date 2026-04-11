@@ -323,9 +323,12 @@ class DataModule(LightningDataModule):
             val_indices = indices[train_size:]
 
             self.train_data = Subset(self.full_dataset, train_indices)
-            self.val_data = Subset(
-                self._make_val_dataset(val_indices), list(range(len(val_indices)))
-            )
+            if val_indices:
+                self.val_data = Subset(
+                    self._make_val_dataset(val_indices), list(range(len(val_indices)))
+                )
+            else:
+                self.val_data = None
         else:
             # Stratified k-fold split
             if not hasattr(self, "indices") or not self.indices:
@@ -377,7 +380,7 @@ class DataModule(LightningDataModule):
         from torch.utils.data import DataLoader
 
         if self.val_data is None:
-            raise ValueError("Validation data not prepared. Call prepare_fold() first.")
+            return None
 
         val_max = self.cfg.train.val_max_per_recording
         val_dataset = self.val_data.dataset  # the non-augmenting SpectrogramDataset

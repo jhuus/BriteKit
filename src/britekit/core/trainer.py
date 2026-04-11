@@ -73,6 +73,8 @@ class Trainer:
             else:
                 filename = f"{self.prefix}-v{version}-e{{epoch}}"
 
+            dm.prepare_fold(k)
+
             trainer = pl.Trainer(
                 devices=1,
                 accelerator="auto",
@@ -90,9 +92,8 @@ class Trainer:
                 max_epochs=self.cfg.train.num_epochs,
                 precision="16-mixed" if self.cfg.train.mixed_precision else 32,
                 logger=logger,
+                limit_val_batches=0 if dm.val_data is None else 1.0,
             )
-
-            dm.prepare_fold(k)
 
             # create model inside loop so parameters are reset for each fold,
             # and so metrics are tracked correctly
