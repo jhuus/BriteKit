@@ -343,10 +343,16 @@ class Audio:
         specs = []
         sr = self.cfg.audio.sampling_rate
         for i, offset in enumerate(start_times):
-            if int(offset * sr) < len(self.signal):
+            end_sample = int((offset + spec_duration) * sr)
+            if end_sample > 0 and int(offset * sr) < len(self.signal):
                 start_sample = int(offset * sr)
-                end_sample = int((offset + spec_duration) * sr)
+                pad_samples = max(0, -start_sample)
+                start_sample = max(0, start_sample)
                 signal_slice = self.signal[start_sample:end_sample]
+                if pad_samples > 0:
+                    signal_slice = np.concatenate(
+                        [np.zeros(pad_samples, dtype=np.float32), signal_slice]
+                    )
 
                 # Skip slices too short for STFT
                 if signal_slice.shape[0] < 2 * self.win_length:
@@ -397,15 +403,20 @@ class Audio:
         for i, offset in enumerate(start_times):
             start_frame = int(offset * frames_per_sec)
             end_frame = int((offset + spec_duration) * frames_per_sec)
+            pad_frames = max(0, -start_frame)
+            start_frame = max(0, start_frame)
             end_frame = min(end_frame, self.cached.shape[1])
             if end_frame - start_frame < frames_per_sec:
                 break  # require at least one second of audio in a spectrogram
 
             if start_frame < self.cached.shape[1]:
                 spec = self.cached[:, start_frame:end_frame]
-                target_width = (
-                    int((offset + spec_duration) * frames_per_sec) - start_frame
-                )
+                if pad_frames > 0:
+                    spec = np.concatenate(
+                        [np.zeros((spec.shape[0], pad_frames), dtype=spec.dtype), spec],
+                        axis=1,
+                    )
+                target_width = int(spec_duration * frames_per_sec)
                 if spec.shape[1] > target_width:
                     spec = spec[:, :target_width]
                 elif spec.shape[1] < target_width:
