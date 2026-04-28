@@ -140,6 +140,7 @@ class Reextractor:
 
             # Do the extract
             from britekit.core.audio import Audio
+            from britekit.core.exceptions import DatabaseError
 
             audio_obj = Audio()
             for recording in recordings:
@@ -155,6 +156,7 @@ class Reextractor:
                         offsets.append(max(0, segment.offset + self.offset))
 
                     spectrograms, _ = audio_obj.get_spectrograms(offsets)
+                    processed_offsets = set()
                     if spectrograms is not None:
                         for i, spec in enumerate(spectrograms):
                             compressed_spec = util.compress_spectrogram(spec)
@@ -162,6 +164,16 @@ class Reextractor:
                             db.insert_specvalue(
                                 compressed_spec, specgroup_id, segment.id
                             )
+
+                            if self.offset != 0:
+                                if offsets[i] not in processed_offsets:
+                                    try:
+                                        db.update_segment(segments[i].id, "Offset", offsets[i])
+                                    except DatabaseError as e:
+                                        # updated offset could be a duplicate - ignore the error
+                                        continue
+
+                                processed_offsets.add(offsets[i])
                 else:
                     logging.warning(
                         f"No recording path specified for recording {recording.ID}"
