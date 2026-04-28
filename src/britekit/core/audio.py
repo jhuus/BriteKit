@@ -319,7 +319,7 @@ class Audio:
             )
         else:
             specs = self._get_spectrograms_sliced(
-                start_times, spec_duration, freq_scale
+                start_times, spec_duration, freq_scale, decibels, top_db, db_power
             )
 
         # Handle empty specs list to prevent error
@@ -336,9 +336,18 @@ class Audio:
         self._normalize(normalized_specs)
         return normalized_specs, unnormalized_specs
 
-    def _get_spectrograms_sliced(self, start_times, spec_duration, freq_scale):
+    def _get_spectrograms_sliced(
+        self, start_times, spec_duration, freq_scale, decibels, top_db, db_power
+    ):
         """Generate spectrograms by slicing signal first, then computing spectrogram per slice."""
         import numpy as np
+
+        if decibels is None:
+            decibels = self.cfg.audio.decibels
+        if top_db is None:
+            top_db = self.cfg.audio.top_db
+        if db_power is None:
+            db_power = self.cfg.audio.db_power
 
         specs = []
         sr = self.cfg.audio.sampling_rate
@@ -359,7 +368,9 @@ class Audio:
                     specs.append(None)
                     continue
 
-                spec = self._get_raw_spectrogram(signal_slice, freq_scale=freq_scale)
+                spec = self._get_raw_spectrogram(
+                    signal_slice, freq_scale=freq_scale, decibels=False
+                )
                 target_width = int(
                     spec_duration
                     * self.cfg.audio.spec_width
@@ -373,6 +384,16 @@ class Audio:
                         "constant",
                         constant_values=0,
                     )
+
+                if decibels:
+                    import torch
+                    import torchaudio as ta
+
+                    t = torch.from_numpy(spec).unsqueeze(0)
+                    t = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(t)
+                    t = t**db_power
+                    spec = t[0].numpy()
+
                 specs.append(spec)
             else:
                 specs.append(None)
@@ -384,15 +405,25 @@ class Audio:
         """Generate spectrograms by computing one full spectrogram, then slicing it."""
         import numpy as np
 
-        # Get one spectrogram for the whole recording, then split it up
+        # Resolve dB params now so we can apply them per-slice after extracting from cache.
+        # The cache always stores raw (pre-dB) values so the dB reference max is computed
+        # from each individual slice, matching the behaviour of _get_spectrograms_sliced.
+        if decibels is None:
+            decibels = self.cfg.audio.decibels
+        if top_db is None:
+            top_db = self.cfg.audio.top_db
+        if db_power is None:
+            db_power = self.cfg.audio.db_power
+
+        # Get one spectrogram for the whole recording, then split it up.
+        # Set decibels=False since we call AmplitudeToDB below. That way
+        # it uses the correct values for different offsets.
         if self.cached is None:
             logging.debug("Audio::get_spectrograms generate spectrogram for recording")
             self.cached = self._get_raw_spectrogram(
                 self.signal,
                 freq_scale=freq_scale,
-                decibels=decibels,
-                top_db=top_db,
-                db_power=db_power,
+                decibels=False,
                 chunked=True,
             )
         else:
@@ -422,6 +453,15 @@ class Audio:
                 elif spec.shape[1] < target_width:
                     pad_width = target_width - spec.shape[1]
                     spec = np.pad(spec, ((0, 0), (0, pad_width)), mode="constant")
+
+                if decibels:
+                    import torch
+                    import torchaudio as ta
+
+                    t = torch.from_numpy(spec).unsqueeze(0)
+                    t = ta.transforms.AmplitudeToDB(stype="power", top_db=top_db)(t)
+                    t = t**db_power
+                    spec = t[0].numpy()
 
                 specs.append(spec)
         return specs
