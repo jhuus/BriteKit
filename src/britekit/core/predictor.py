@@ -138,7 +138,9 @@ class Predictor:
 
         return average_embeddings
 
-    def get_block_scores(self, specs, start_times=None, audio_duration=None):
+    def get_block_scores(
+        self, specs, start_times=None, audio_duration=None, max_models=None
+    ):
         """
         Get scores in array format from the loaded models for the given block of spectrograms.
 
@@ -156,7 +158,7 @@ class Predictor:
         """
         frame_maps = []
         if self.ov:
-            scores, ov_frame_scores = self._get_openvino_scores(specs)
+            scores, ov_frame_scores = self._get_openvino_scores(specs, max_models)
             if ov_frame_scores is not None and start_times is not None:
                 # SED model with OpenVINO, process frame scores
                 if audio_duration is None:
@@ -171,7 +173,10 @@ class Predictor:
                     frame_maps.append(frame_map)
         else:
             scores = []
-            for model in self.models:
+            for i, model in enumerate(self.models):
+                if max_models is not None and i == max_models:
+                    break
+
                 segment_scores, frame_scores = model.predict(specs, self.device)
 
                 scores.append(segment_scores)
@@ -231,7 +236,7 @@ class Predictor:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None, None, []
 
-        start_times = self._get_start_times(
+        start_times = self.get_start_times(
             audio_duration, start_seconds, self.cfg.audio.spec_duration
         )
         specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
@@ -290,7 +295,7 @@ class Predictor:
         for i, model in enumerate(self.models):
             # curr_start is first start_time for this model
             curr_start = initial_start_times[i % len(initial_start_times)]
-            start_times = self._get_start_times(
+            start_times = self.get_start_times(
                 audio_duration, curr_start, segment_len, overlap=0
             )
 
@@ -580,6 +585,30 @@ class Predictor:
         df["score"] = score_list
         return df
 
+    def get_start_times(self, audio_duration, start_seconds, segment_len, overlap=None):
+        """
+        Return start offset per spectrogram.
+
+        - audio_duration (float): total audio duration in seconds
+        - start_seconds (float): where to start processing the audio (offset in seconds)
+        - segment_len (float): length of segments in seconds
+        - overlap (float): amount of segment overlap in seconds
+        """
+
+        if (audio_duration - start_seconds) <= segment_len:
+            return [start_seconds]
+
+        if overlap is None:
+            overlap = self.cfg.infer.overlap
+
+        increment = max(0.5, segment_len - overlap)
+        min_useful_audio = 1.0  # don't keep segments shorter than this
+        max_start = audio_duration - min_useful_audio
+        end_offset = max(start_seconds, max_start)
+        start_times = util.get_range(start_seconds, end_offset, increment)
+
+        return [t for t in start_times if t <= max_start]
+
     def get_specs(self):
         return self.normalized_specs, self.unnormalized_specs
 
@@ -726,32 +755,6 @@ class Predictor:
     # Private Helper Methods
     # =============================================================================
 
-    def _get_start_times(
-        self, audio_duration, start_seconds, segment_len, overlap=None
-    ):
-        """
-        Return start offset per spectrogram.
-
-        - audio_duration (float): total audio duration in seconds
-        - start_seconds (float): where to start processing the audio (offset in seconds)
-        - segment_len (float): length of segments in seconds
-        - overlap (float): amount of segment overlap in seconds
-        """
-
-        if (audio_duration - start_seconds) <= segment_len:
-            return [start_seconds]
-
-        if overlap is None:
-            overlap = self.cfg.infer.overlap
-
-        increment = max(0.5, segment_len - overlap)
-        min_useful_audio = 1.0  # don't keep segments shorter than this
-        max_start = audio_duration - min_useful_audio
-        end_offset = max(start_seconds, max_start)
-        start_times = util.get_range(start_seconds, end_offset, increment)
-
-        return [t for t in start_times if t <= max_start]
-
     def _load_models(self, model_path: str) -> None:
         """Given a checkpoint path or directory, load and return a list of models"""
         self.models = []
@@ -832,7 +835,7 @@ class Predictor:
 
         return model
 
-    def _get_openvino_scores(self, specs):
+    def _get_openvino_scores(self, specs, max_models=None):
         import numpy as np
         import torch
 
@@ -845,7 +848,10 @@ class Predictor:
         w = self.cfg.infer.scaling_coefficient
         b = self.cfg.infer.scaling_intercept
 
-        for model in self.models:
+        for i, model in enumerate(self.models):
+            if max_models is not None and i == max_models:
+                break
+
             try:
                 output_layer = model.output(0)
                 # Check if model has a second output for frame-level scores (SED)
