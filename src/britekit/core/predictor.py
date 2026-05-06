@@ -290,7 +290,6 @@ class Predictor:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None
 
-        start_seconds = initial_start_times[0]
         frame_maps = []
         for i, model in enumerate(self.models):
             # curr_start is first start_time for this model
@@ -299,16 +298,15 @@ class Predictor:
                 audio_duration, curr_start, segment_len, overlap=0
             )
 
-            # add extra overlap at start of recording for first batch of models;
+            # add extra overlap at start of recording for non-first models in each batch;
             # this ensures that all frames in the first segment get a full ensemble;
-            # in theory this could increase edge-effect errors at the end of the first
-            # segment, but testing shows it has a net benefit
+            # apply to every batch (not just the first) so that a 12-model ensemble
+            # scores the same as the average of two 6-model ensembles
             if (
-                i > 0
-                and i // len(initial_start_times) == 0
+                i % len(initial_start_times) != 0
                 and curr_start < segment_len
             ):
-                start_times = [start_seconds] + start_times
+                start_times = [curr_start - segment_len] + start_times
 
             logging.debug(
                 "Predictor::get_overlapping_scores start_times=%s", start_times
