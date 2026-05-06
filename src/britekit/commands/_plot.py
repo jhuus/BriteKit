@@ -21,6 +21,7 @@ def _plot_recording(
     all: bool,
     overlap: float,
     ndims: bool,
+    power: Optional[float] = None,
 ):
     from britekit.core.plot import plot_spec
 
@@ -36,7 +37,11 @@ def _plot_recording(
         specs, _ = audio.get_spectrograms([0], spec_duration=recording_seconds)
         if specs is None:
             logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
-            quit()
+            return
+
+        spec = specs[0]
+        if power is not None:
+            spec **= power
 
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
         base_width = cfg.audio.spec_width
@@ -45,7 +50,7 @@ def _plot_recording(
         )
         image_height = 300
         plot_spec(
-            specs[0],
+            spec,
             image_path,
             show_dims=not ndims,
             spec_duration=recording_seconds,
@@ -62,9 +67,11 @@ def _plot_recording(
         )
         if specs is None:
             logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
-            quit()
+            return
 
         for i, spec in enumerate(specs):
+            if power is not None:
+                spec **= power
             image_path = os.path.join(
                 output_path, f"{Path(input_path).stem}-{offsets[i]:.1f}.jpeg"
             )
@@ -376,7 +383,7 @@ def plot_rec(
     output_path: str = "",
     all: bool = False,
     overlap: float = 0.0,
-    power: float = 1.0,
+    power: Optional[float] = None,
 ):
     """
     Plot spectrograms for a specific audio recording.
@@ -392,13 +399,11 @@ def plot_rec(
     - output_path (str): Required directory where spectrogram images will be saved.
     - all (bool): If True, plot the entire recording as one spectrogram. If False, break into segments.
     - overlap (float): Spectrogram overlap in seconds when breaking the recording into segments. Default is 0.
-    - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+    - power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
     """
     from britekit.core.audio import Audio
 
     cfg = get_config(cfg_path)
-    if power is not None:
-        cfg.audio.power = power
 
     if overlap is None:
         overlap = cfg.infer.overlap
@@ -407,7 +412,7 @@ def plot_rec(
         os.makedirs(output_path)
 
     audio = Audio(cfg=cfg)
-    _plot_recording(cfg, audio, input_path, output_path, all, overlap, ndims)
+    _plot_recording(cfg, audio, input_path, output_path, all, overlap, ndims, power)
 
 
 @click.command(
