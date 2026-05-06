@@ -386,6 +386,129 @@ def _rpt_epochs_cmd(
     )
 
 
+def rpt_iou(
+    cfg_path: Optional[str] = None,
+    annotations_path: str = "",
+    label_dir: str = "",
+    output_path: str = "",
+    start: float = 0.2,
+    end: float = 0.95,
+    incr: float = 0.05,
+):
+    """
+    Measure temporal localization quality using Intersection-over-Union (IoU).
+
+    Computes IoU between predicted labels and ground-truth annotations across a
+    range of score thresholds. Annotations may be incomplete: if a class is annotated
+    in a recording, all occurrences of that class are annotated, but other classes
+    may be present without annotation. Only annotated (recording, class) pairs are scored.
+
+    For each threshold, overlapping annotations and labels are grouped into connected
+    components. Each component yields one IoU score (intersection / union of the
+    combined intervals). Isolated annotations and isolated labels each score 0.
+    The total IoU is the mean of all scores.
+
+    Args:
+    - cfg_path (str, optional): Path to YAML file defining config overrides.
+    - annotations_path (str): Required path to CSV file containing ground truth annotations.
+    - label_dir (str): Required directory containing inference output (CSV or Audacity labels).
+    - output_path (str): Required directory where reports will be saved.
+    - start (float): Lowest threshold to evaluate (default 0.2).
+    - end (float): Highest threshold to evaluate (default 0.95).
+    - incr (float): Threshold increment (default 0.05).
+    """
+    from britekit.testing.iou_tester import IoUTester
+
+    labels_path = os.path.join(str(Path(annotations_path).parent), label_dir)
+    if not os.path.exists(labels_path):
+        if os.path.exists(label_dir):
+            labels_path = label_dir
+        else:
+            logging.error(f"Label directory {label_dir} not found.")
+            return
+
+    IoUTester(
+        annotation_path=annotations_path,
+        label_dir=labels_path,
+        output_dir=output_path,
+        start=start,
+        end=end,
+        incr=incr,
+        cfg_path=cfg_path,
+    ).run()
+
+
+@click.command(
+    name="rpt-iou",
+    short_help="Measure temporal localization quality using IoU.",
+    help=util.cli_help_from_doc(rpt_iou.__doc__),
+)
+@click.option(
+    "-c",
+    "--cfg",
+    "cfg_path",
+    type=click.Path(exists=True),
+    required=False,
+    help="Path to YAML file defining config overrides.",
+)
+@click.option(
+    "-a",
+    "--annotations",
+    "annotations_path",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    required=True,
+    help="Path to CSV file containing ground truth annotations.",
+)
+@click.option(
+    "-l",
+    "--labels",
+    "label_dir",
+    type=str,
+    required=True,
+    help="Directory containing inference output (CSV file or Audacity label files).",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=click.Path(file_okay=False, dir_okay=True),
+    required=True,
+    help="Path to output directory.",
+)
+@click.option(
+    "--start",
+    type=float,
+    default=0.0,
+    show_default=True,
+    help="Lowest threshold to evaluate.",
+)
+@click.option(
+    "--end",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Highest threshold to evaluate.",
+)
+@click.option(
+    "--incr",
+    type=float,
+    default=0.01,
+    show_default=True,
+    help="Threshold increment.",
+)
+def _rpt_iou_cmd(
+    cfg_path: Optional[str],
+    annotations_path: str,
+    label_dir: str,
+    output_path: str,
+    start: float,
+    end: float,
+    incr: float,
+):
+    util.set_logging()
+    rpt_iou(cfg_path, annotations_path, label_dir, output_path, start, end, incr)
+
+
 def rpt_labels(
     label_dir: str = "",
     output_path: str = "",

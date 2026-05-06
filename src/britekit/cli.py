@@ -56,6 +56,7 @@ from .commands._reports import (
     _rpt_ann_cmd,
     _rpt_db_cmd,
     _rpt_epochs_cmd,
+    _rpt_iou_cmd,
     _rpt_labels_cmd,
     _rpt_test_cmd,
 )
@@ -128,6 +129,7 @@ cli.add_command(_reextract_cmd)
 cli.add_command(_rpt_ann_cmd)
 cli.add_command(_rpt_db_cmd)
 cli.add_command(_rpt_epochs_cmd)
+cli.add_command(_rpt_iou_cmd)
 cli.add_command(_rpt_labels_cmd)
 cli.add_command(_rpt_test_cmd)
 

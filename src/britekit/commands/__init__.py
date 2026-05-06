@@ -25,7 +25,7 @@ from ._init import init
 from ._pickle import pickle_frame, pickle_occurrence, pickle_train
 from ._plot import plot_db, plot_dir, plot_rec, plot_test
 from ._reextract import reextract
-from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_labels, rpt_test
+from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_iou, rpt_labels, rpt_test
 from ._search import search
 from ._train import train, find_lr
 from ._tune import tune
@@ -75,6 +75,7 @@ __all__ = [
     "rpt_cal",
     "rpt_db",
     "rpt_epochs",
+    "rpt_iou",
     "rpt_labels",
     "rpt_test",
     "search",
