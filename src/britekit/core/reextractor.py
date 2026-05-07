@@ -168,8 +168,10 @@ class Reextractor:
                             if self.offset != 0:
                                 if offsets[i] not in processed_offsets:
                                     try:
-                                        db.update_segment(segments[i].id, "Offset", offsets[i])
-                                    except DatabaseError as e:
+                                        db.update_segment(
+                                            segments[i].id, "Offset", offsets[i]
+                                        )
+                                    except DatabaseError:
                                         # updated offset could be a duplicate - ignore the error
                                         continue
 
