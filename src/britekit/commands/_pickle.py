@@ -199,7 +199,7 @@ def _pickle_train_cmd(
     )
 
 
-def _compute_frame_labels(score, left_scores, right_scores, alpha, num_frames):
+def _compute_frame_labels(score, left_scores, right_scores, alpha, num_frames, pad=0):
     import numpy as np
 
     threshold = alpha * score
@@ -230,6 +230,10 @@ def _compute_frame_labels(score, left_scores, right_scores, alpha, num_frames):
     lo = min(key_from_left, key_from_right) - 1  # convert to 0-indexed
     hi = max(key_from_left, key_from_right)  # exclusive upper bound
 
+    # Extend by pad frames on each side, clamped to valid range.
+    lo = max(0, lo - pad)
+    hi = min(num_frames, hi + pad)
+
     labels = np.zeros(num_frames, dtype=np.float32)
     labels[lo:hi] = 1.0
     return labels
@@ -242,6 +246,7 @@ def pickle_frame(
     alpha: float = 0.05,
     csv_dir: Optional[str] = None,
     names_path: Optional[str] = None,
+    pad: int = 0,
 ) -> None:
     """
     Create a frame-label pickle from analyze-db occlusion sensitivity CSVs.
@@ -259,6 +264,9 @@ def pickle_frame(
     - csv_dir (str, optional): Directory for per-class output CSVs with frame labels.
     - names_path (str, optional): Path to a text file listing CSV filenames (one per line)
         to process. Default is all CSV files in the input directory.
+    - pad (int, optional): Number of extra frame labels to add on each side of the active
+        region (default 0). Padding is clamped to the segment boundary, so a region that
+        already starts at frame 0 will only be extended on the right, and vice versa.
     """
     import pickle
 
@@ -321,7 +329,7 @@ def pickle_frame(
                 left_scores = [float(row[c]) for c in left_cols]
                 right_scores = [float(row[c]) for c in right_cols]
                 labels = _compute_frame_labels(
-                    score, left_scores, right_scores, alpha, num_frames
+                    score, left_scores, right_scores, alpha, num_frames, pad
                 )
 
             if labels.sum() == num_frames:
@@ -410,6 +418,14 @@ def pickle_frame(
     help="Optional path to a text file listing CSV filenames (one per line) to process. "
     "Default is all CSV files in the input directory.",
 )
+@click.option(
+    "--pad",
+    "pad",
+    type=int,
+    default=0,
+    help="Number of extra frame labels to add on each side of the active region (default 0). "
+    "Clamped to segment boundaries.",
+)
 def _pickle_frame_cmd(
     cfg_path: Optional[str],
     input_dir: str,
@@ -417,6 +433,7 @@ def _pickle_frame_cmd(
     alpha: float,
     csv_dir: Optional[str],
     names_path: Optional[str],
+    pad: int,
 ) -> None:
     util.set_logging()
-    pickle_frame(input_dir, output_path, cfg_path, alpha, csv_dir, names_path)
+    pickle_frame(input_dir, output_path, cfg_path, alpha, csv_dir, names_path, pad)
