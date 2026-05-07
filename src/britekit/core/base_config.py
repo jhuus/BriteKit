@@ -201,6 +201,10 @@ class InferenceConfig:
     # Block size when OpenVINO is used (do not change after creating onnx files)
     openvino_block_size: int = 100
 
+    # If specified, analyze command calls get_overlapping_scores instead of
+    # get_recording_scores and passes this array.
+    initial_offsets: Optional[list] = None
+
 
 @dataclass
 class MiscConfig:

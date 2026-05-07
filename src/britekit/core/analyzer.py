@@ -70,9 +70,17 @@ class Analyzer:
         predictor = Predictor(self.cfg.misc.ckpt_folder)
         for recording_path in recording_paths:
             logging.info(f"[Thread {thread_num}] Processing {recording_path}")
-            scores, frame_map, offsets = predictor.get_recording_scores(
-                recording_path, start_seconds
-            )
+
+            if self.cfg.infer.initial_offsets is None:
+                scores, frame_map, offsets = predictor.get_recording_scores(
+                    recording_path, start_seconds
+                )
+            else:
+                frame_map = predictor.get_overlapping_scores(
+                    recording_path, self.cfg.infer.initial_offsets
+                )
+                scores, offsets = None, None
+
             if show:
                 predictor.show_scores(scores, frame_map)  # log the scores for debugging
 

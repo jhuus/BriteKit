@@ -254,23 +254,20 @@ class Predictor:
         return avg_score, avg_frame_map, start_times
 
     def get_overlapping_scores(
-        self, recording_path: str, segment_len: float, initial_start_times: List[float]
+        self, recording_path: str, initial_start_times: List[float]
     ):
         """
         This is a variant of get_recording_scores that overlaps spectrograms differently,
         and is intended mainly for models with SED classifier heads. Each model processes
         non-overlapping spectrograms. The first start_time for each model is taken from
         initial_start_times, and then non-overlapping start_times are created from there.
-        For example, suppose initial_start_times = [0, .5, 1.0] and segment_len = 3.0.
+        For example, suppose initial_start_times = [0, .5, 1.0] and spec_duration = 3.0.
         Then model 1 uses [0, 3, 6, ...], model 2 uses [.5, 3.5, 6.5, ...], model 3 uses
         [1, 4, 7, ...]. After that it wraps using a modulus operator, so model 4 has the same
         start_times as model 1 etc.
 
         Args:
         - recording_path (str): Path to the audio recording file.
-        - segment_len (float): Segment length in seconds, which is not necessarily the same as
-          spec_duration. For example, you could have spec_duration=3 and segment_len=5 if you
-          want to generate 5-second labels using 3-second spectrograms.
         - initial_start_times (list(float)): See description above.
 
         Returns:
@@ -290,12 +287,13 @@ class Predictor:
             logging.error(f"Invalid audio duration: {audio_duration} seconds")
             return None
 
+        spec_duration = self.cfg.audio.spec_duration
         frame_maps = []
         for i, model in enumerate(self.models):
             # curr_start is first start_time for this model
             curr_start = initial_start_times[i % len(initial_start_times)]
             start_times = self.get_start_times(
-                audio_duration, curr_start, segment_len, overlap=0
+                audio_duration, curr_start, spec_duration, overlap=0
             )
 
             # add extra overlap at start of recording for non-first models in each batch;
@@ -304,9 +302,9 @@ class Predictor:
             # scores the same as the average of two 6-model ensembles
             if (
                 i % len(initial_start_times) != 0
-                and curr_start < segment_len
+                and curr_start < spec_duration
             ):
-                start_times = [curr_start - segment_len] + start_times
+                start_times = [curr_start - spec_duration] + start_times
 
             logging.debug(
                 "Predictor::get_overlapping_scores start_times=%s", start_times
@@ -330,7 +328,7 @@ class Predictor:
             if frame_scores is None:
                 # Create frame_scores by duplicating segment scores across the frames
                 frames_per_clip = int(
-                    self.cfg.train.sed_fps * self.cfg.audio.spec_duration
+                    self.cfg.train.sed_fps * spec_duration
                 )
                 frame_scores = np.repeat(
                     segment_scores[:, :, np.newaxis], frames_per_clip, axis=2
