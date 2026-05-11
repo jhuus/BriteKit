@@ -199,7 +199,7 @@ def _pickle_train_cmd(
     )
 
 
-def _compute_frame_labels(score, left_scores, right_scores, alpha, num_frames, pad=0):
+def _compute_frame_labels(score, left_scores, right_scores, alpha, num_frames, pad=1):
     import numpy as np
 
     threshold = alpha * score
@@ -243,10 +243,10 @@ def pickle_frame(
     input_dir: str,
     output_path: str,
     cfg_path: Optional[str] = None,
-    alpha: float = 0.05,
+    alpha: float = 0.04,
     csv_dir: Optional[str] = None,
     names_path: Optional[str] = None,
-    pad: int = 0,
+    pad: int = 1,
 ) -> None:
     """
     Create a frame-label pickle from analyze-db occlusion sensitivity CSVs.
@@ -260,12 +260,12 @@ def pickle_frame(
     - output_path (str): Output pickle file path.
     - cfg_path (str, optional): Path to YAML file defining config overrides.
     - alpha (float, optional): Score drop threshold as a fraction of the original score
-        (default 0.05). Lower values are more conservative (wider active regions).
+        (default 0.04). Lower values are more conservative (wider active regions).
     - csv_dir (str, optional): Directory for per-class output CSVs with frame labels.
     - names_path (str, optional): Path to a text file listing CSV filenames (one per line)
         to process. Default is all CSV files in the input directory.
     - pad (int, optional): Number of extra frame labels to add on each side of the active
-        region (default 0). Padding is clamped to the segment boundary, so a region that
+        region (default 1). Padding is clamped to the segment boundary, so a region that
         already starts at frame 0 will only be extended on the right, and vice versa.
     """
     import pickle
@@ -399,8 +399,8 @@ def pickle_frame(
     "--alpha",
     "alpha",
     type=float,
-    default=0.05,
-    help="Score drop threshold as a fraction of the original score (default 0.05). "
+    default=0.04,
+    help="Score drop threshold as a fraction of the original score (default 0.04). "
     "Lower values are more conservative (wider active regions).",
 )
 @click.option(
@@ -422,7 +422,7 @@ def pickle_frame(
     "--pad",
     "pad",
     type=int,
-    default=0,
+    default=1,
     help="Number of extra frame labels to add on each side of the active region (default 0). "
     "Clamped to segment boundaries.",
 )
