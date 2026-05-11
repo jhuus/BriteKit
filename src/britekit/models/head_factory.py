@@ -316,9 +316,9 @@ HEAD_REGISTRY = {
     "basic": (build_basic_head, False),
     "effnet": (build_effnet_head, False),
     "hgnet": (build_hgnet_head, False),
-    "lse": (build_lse_head, True),
     "basic_sed": (build_basic_sed_head, True),
     "bitemporal_sed": (build_bitemporal_sed_head, True),
+    "lse_sed": (build_lse_head, True),
     "reduced_sed": (build_reduced_sed_head, True),
     "scalable_sed": (
         build_reduced_sed_head,
