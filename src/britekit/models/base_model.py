@@ -466,33 +466,6 @@ class BaseModel(pl.LightningModule):
     def set_config(self, cfg: BaseConfig):
         self.cfg = cfg
 
-    def _absence_penalty(
-        self,
-        frame_scores: torch.Tensor,
-        clip_labels: torch.Tensor,
-    ):
-        """
-        For SED models, penalize high confidence for classes confirmed absent in a clip.
-
-        frame_scores: [B, T, C] sigmoid outputs
-        clip_labels:  [B, C] boolean or {0,1}
-        """
-
-        eps = self.cfg.train.absence_penalty_eps
-        tau = self.cfg.train.absence_penalty_tau
-
-        # mask for absent classes
-        absent_mask = (clip_labels == 0).float()
-
-        # soft max over time (log-sum-exp pooling)
-        frame_softmax = torch.logsumexp(frame_scores * tau, dim=1) / tau  # [B, C]
-
-        # penalty only if confidence exceeds epsilon
-        penalty = torch.relu(frame_softmax - eps) * absent_mask
-
-        # normalize over number of absent classes
-        return penalty.sum() / (absent_mask.sum() + 1e-6)
-
     def _calc_loss(
         self, seg_logits, frame_logits, seg_labels, raw_labels, frame_labels=None
     ):
@@ -513,13 +486,9 @@ class BaseModel(pl.LightningModule):
                 frame_logits.transpose(1, 2), frame_labels, reduction="mean"
             )
             segment_loss_weight = 1 - self.cfg.train.frame_loss_weight
-            absence_loss = self._absence_penalty(
-                torch.sigmoid(frame_logits).transpose(1, 2), raw_labels
-            )
             loss = (
                 segment_loss_weight * segment_loss
                 + self.cfg.train.frame_loss_weight * frame_loss
-                + self.cfg.train.absence_penalty_weight * absence_loss
             )
         else:
             loss = segment_loss

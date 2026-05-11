@@ -106,11 +106,6 @@ class TrainingConfig:
     # Weight for penalizing predictions outside peak regions
     offpeak_weight: float = 0.002
 
-    # Epsilon threshold for absence penalty calculation
-    absence_penalty_eps: float = 0.2
-    absence_penalty_tau: float = 7.0  # Temperature scaling factor for absence penalty
-    absence_penalty_weight: float = 0.0  # Absence penalty weight for SED models
-
     # Per-recording sampling: if set, randomly select this many specs per recording per epoch
     max_per_recording: Optional[int] = None
 
