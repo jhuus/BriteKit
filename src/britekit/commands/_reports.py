@@ -391,9 +391,11 @@ def rpt_iou(
     annotations_path: str = "",
     label_dir: str = "",
     output_path: str = "",
-    start: float = 0.2,
-    end: float = 0.95,
-    incr: float = 0.05,
+    start: float = 0.0,
+    end: float = 1.0,
+    incr: float = 0.01,
+    t1: float = 0.6,
+    t2: float = 0.8,
 ):
     """
     Measure temporal localization quality using Intersection-over-Union (IoU).
@@ -413,9 +415,11 @@ def rpt_iou(
     - annotations_path (str): Required path to CSV file containing ground truth annotations.
     - label_dir (str): Required directory containing inference output (CSV or Audacity labels).
     - output_path (str): Required directory where reports will be saved.
-    - start (float): Lowest threshold to evaluate (default 0.2).
-    - end (float): Highest threshold to evaluate (default 0.95).
-    - incr (float): Threshold increment (default 0.05).
+    - start (float): Lowest threshold to evaluate (default 0.0).
+    - end (float): Highest threshold to evaluate (default 1.0).
+    - incr (float): Threshold increment (default 0.01).
+    - t1 (float): First fixed threshold to report in summary and recordings.csv (default 0.6).
+    - t2 (float): Second fixed threshold to report in summary and recordings.csv (default 0.8).
     """
     from britekit.testing.iou_tester import IoUTester
 
@@ -434,6 +438,8 @@ def rpt_iou(
         start=start,
         end=end,
         incr=incr,
+        t1=t1,
+        t2=t2,
         cfg_path=cfg_path,
     ).run()
 
@@ -496,6 +502,26 @@ def rpt_iou(
     show_default=True,
     help="Threshold increment.",
 )
+@click.option(
+    "--t1",
+    type=float,
+    default=0.6,
+    show_default=True,
+    help="First fixed threshold to report in summary and recordings.csv.",
+)
+@click.option(
+    "--t2",
+    type=float,
+    default=0.8,
+    show_default=True,
+    help="Second fixed threshold to report in summary and recordings.csv.",
+)
+@click.option(
+    "--debug",
+    "debug",
+    is_flag=True,
+    help="If specified, turn on debug logging.",
+)
 def _rpt_iou_cmd(
     cfg_path: Optional[str],
     annotations_path: str,
@@ -504,9 +530,15 @@ def _rpt_iou_cmd(
     start: float,
     end: float,
     incr: float,
+    t1: float,
+    t2: float,
+    debug: bool,
 ):
-    util.set_logging()
-    rpt_iou(cfg_path, annotations_path, label_dir, output_path, start, end, incr)
+    if debug:
+        util.set_logging(level=logging.DEBUG, timestamp=True)
+    else:
+        util.set_logging(level=logging.INFO, timestamp=True)
+    rpt_iou(cfg_path, annotations_path, label_dir, output_path, start, end, incr, t1, t2)
 
 
 def rpt_labels(

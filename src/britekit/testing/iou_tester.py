@@ -27,9 +27,11 @@ class IoUTester:
         annotation_path: str,
         label_dir: str,
         output_dir: str,
-        start: float = 0.2,
-        end: float = 0.95,
-        incr: float = 0.05,
+        start: float = 0.0,
+        end: float = 1.0,
+        incr: float = 0.01,
+        t1: float = 0.6,
+        t2: float = 0.8,
         cfg_path: Optional[str] = None,
     ):
         self.annotation_path = annotation_path
@@ -38,6 +40,8 @@ class IoUTester:
         self.start = start
         self.end = end
         self.incr = incr
+        self.t1 = t1
+        self.t2 = t2
         self.cfg = get_config(cfg_path)
 
     def _load_annotations(self):
@@ -53,7 +57,7 @@ class IoUTester:
         for _, row in df.iterrows():
             recording = row["recording"]
             if not recording:
-                break
+                continue
 
             class_code = row["class"]
             if not class_code:
@@ -223,8 +227,47 @@ class IoUTester:
     def _compute_iou(self, annotations, labels, threshold):
         """Mean IoU across all annotated (recording, class) pairs at the given threshold."""
         all_scores = []
+        logging.debug(f"threshold={threshold:.4f}")
 
         for recording, class_dict in annotations.items():
+            for class_code, ann_intervals in class_dict.items():
+                raw_lbls = []
+                lbl_intervals = []
+                if recording in labels and class_code in labels[recording]:
+                    raw_lbls = [
+                        iv
+                        for iv in labels[recording][class_code]
+                        if iv[2] >= threshold
+                    ]
+                    lbl_intervals = self._merge_adjacent_labels(raw_lbls)
+
+                logging.debug(
+                    f"  {recording} / {class_code}:"
+                    f"\n    annotations : {ann_intervals}"
+                    f"\n    labels (raw): {raw_lbls}"
+                    f"\n    labels (merged): {[(s, e) for s, e, _ in lbl_intervals]}"
+                )
+
+                scores = self._iou_scores_for_pair(ann_intervals, lbl_intervals)
+                logging.debug(f"    component scores: {[f'{s:.4f}' for s in scores]}")
+                all_scores.extend(scores)
+
+        if not all_scores:
+            logging.debug("  no scores — returning 0.0")
+            return 0.0
+
+        mean_iou = sum(all_scores) / len(all_scores)
+        logging.debug(
+            f"  all scores: {[f'{s:.4f}' for s in all_scores]}"
+            f"\n  mean IoU: {mean_iou:.4f}"
+        )
+        return mean_iou
+
+    def _compute_iou_per_recording(self, annotations, labels, threshold):
+        """Mean IoU per recording across all annotated classes at the given threshold."""
+        results = {}
+        for recording, class_dict in annotations.items():
+            scores = []
             for class_code, ann_intervals in class_dict.items():
                 lbl_intervals = []
                 if recording in labels and class_code in labels[recording]:
@@ -235,13 +278,9 @@ class IoUTester:
                             if iv[2] >= threshold
                         ]
                     )
-
-                scores = self._iou_scores_for_pair(ann_intervals, lbl_intervals)
-                all_scores.extend(scores)
-
-        if not all_scores:
-            return 0.0
-        return sum(all_scores) / len(all_scores)
+                scores.extend(self._iou_scores_for_pair(ann_intervals, lbl_intervals))
+            results[recording] = sum(scores) / len(scores) if scores else 0.0
+        return results
 
     def run(self):
         import pandas as pd
@@ -267,13 +306,38 @@ class IoUTester:
         max_iou = max(r[1] for r in results) if results else 0.0
         max_threshold = next(r[0] for r in results if r[1] == max_iou)
 
+        iou_t1 = self._compute_iou(annotations, labels, self.t1)
+        iou_t2 = self._compute_iou(annotations, labels, self.t2)
+
         pd.DataFrame(results, columns=["threshold", "iou"]).to_csv(
-            os.path.join(self.output_dir, "details.csv"),
+            os.path.join(self.output_dir, "thresholds.csv"),
             index=False,
             float_format="%.4f",
         )
 
-        summary_msg = f"Maximum IoU = {max_iou:.4f} at threshold = {max_threshold:.4f}"
-        logging.info(summary_msg)
+        per_t1 = self._compute_iou_per_recording(annotations, labels, self.t1)
+        per_t2 = self._compute_iou_per_recording(annotations, labels, self.t2)
+        per_peak = self._compute_iou_per_recording(annotations, labels, max_threshold)
+        recordings_df = pd.DataFrame(
+            {
+                "recording": sorted(per_peak.keys()),
+                f"iou_{self.t1:.2f}": [per_t1[r] for r in sorted(per_peak.keys())],
+                f"iou_{self.t2:.2f}": [per_t2[r] for r in sorted(per_peak.keys())],
+                "iou_peak": [per_peak[r] for r in sorted(per_peak.keys())],
+            }
+        )
+        recordings_df.to_csv(
+            os.path.join(self.output_dir, "recordings.csv"),
+            index=False,
+            float_format="%.4f",
+        )
+
+        summary_lines = [
+            f"IoU at t1 ({self.t1:.4f}) = {iou_t1:.4f}",
+            f"IoU at t2 ({self.t2:.4f}) = {iou_t2:.4f}",
+            f"Maximum IoU = {max_iou:.4f} at threshold = {max_threshold:.4f}",
+        ]
+        for line in summary_lines:
+            logging.info(line)
         with open(os.path.join(self.output_dir, "summary.txt"), "w") as f:
-            f.write(summary_msg + "\n")
+            f.write("\n".join(summary_lines) + "\n")
