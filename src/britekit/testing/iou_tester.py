@@ -321,9 +321,9 @@ class IoUTester:
         recordings_df = pd.DataFrame(
             {
                 "recording": sorted(per_peak.keys()),
+                "iou_max": [per_peak[r] for r in sorted(per_peak.keys())],
                 f"iou_{self.t1:.2f}": [per_t1[r] for r in sorted(per_peak.keys())],
                 f"iou_{self.t2:.2f}": [per_t2[r] for r in sorted(per_peak.keys())],
-                "iou_peak": [per_peak[r] for r in sorted(per_peak.keys())],
             }
         )
         recordings_df.to_csv(
