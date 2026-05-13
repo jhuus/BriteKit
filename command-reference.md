@@ -40,6 +40,7 @@
 | [britekit rpt-ann](#britekit-rpt-ann) | Summarize annotations in a per-segment test. |
 | [britekit rpt-db](#britekit-rpt-db) | Generate a database summary report. |
 | [britekit rpt-epochs](#britekit-rpt-epochs) | Plot the test score for every training epoch. |
+| [britekit rpt-iou](#britekit-rpt-iou) | Measure temporal localization quality using IoU. |
 | [britekit rpt-labels](#britekit-rpt-labels) | Summarize the output of an inference run. |
 | [britekit rpt-test](#britekit-rpt-test) | Generate metrics and reports from test results. |
 | [britekit search](#britekit-search) | Search a database for spectrograms similar to one given. |
@@ -264,7 +265,8 @@ Usage: britekit ckpt-freeze [OPTIONS]
   for deployment and inference rather than continued training.
 
 Options:
-  -i, --input FILE  Path to checkpoint to freeze  [required]
+  -i, --input PATH  Path to checkpoint file or directory of checkpoints to
+                    freeze  [required]
   --help            Show this message and exit.
 ```
 ### britekit ckpt-onnx
@@ -282,7 +284,8 @@ Usage: britekit ckpt-onnx [OPTIONS]
 
 Options:
   -c, --cfg PATH    Path to YAML file defining config overrides.
-  -i, --input FILE  Path to checkpoint to convert to ONNX format  [required]
+  -i, --input PATH  Path to checkpoint file or directory of checkpoints to
+                    convert to ONNX format  [required]
   --help            Show this message and exit.
 ```
 ### britekit dedup-rec
@@ -672,13 +675,16 @@ Options:
                          db --occlude.  [required]
   -o, --output TEXT      Output pickle file path.  [required]
   --alpha FLOAT          Score drop threshold as a fraction of the original
-                         score (default 0.05). Lower values are more
+                         score (default 0.04). Lower values are more
                          conservative (wider active regions).
   --csv DIRECTORY        Optional directory for per-class output CSVs with
                          segment IDs and frame labels.
   --names FILE           Optional path to a text file listing CSV filenames (one
                          per line) to process. Default is all CSV files in the
                          input directory.
+  --pad INTEGER          Number of extra frame labels to add on each side of the
+                         active region (default 0). Clamped to segment
+                         boundaries.
   --help                 Show this message and exit.
 ```
 ### britekit pickle-occurrence
@@ -738,6 +744,8 @@ Options:
   --power FLOAT           Raise spectrograms to this power. Lower values show
                           more detail.
   --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
+  --augment               If specified, apply the configured augmentation
+                          pipeline before plotting.
   --help                  Show this message and exit.
 ```
 ### britekit plot-dir
@@ -886,6 +894,40 @@ Options:
   -a, --annotations FILE  Path to CSV file containing annotations or ground
                           truth).  [required]
   -o, --output DIRECTORY  Path to output directory.  [required]
+  --help                  Show this message and exit.
+```
+### britekit rpt-iou
+```
+Usage: britekit rpt-iou [OPTIONS]
+
+  Measure temporal localization quality using Intersection-over-Union (IoU).
+
+  Computes IoU between predicted labels and ground-truth annotations across a
+  range of score thresholds. Annotations may be incomplete: if a class is
+  annotated in a recording, all occurrences of that class are annotated, but
+  other classes may be present without annotation. Only annotated (recording,
+  class) pairs are scored.
+
+  For each threshold, overlapping annotations and labels are grouped into
+  connected components. Each component yields one IoU score (intersection /
+  union of the combined intervals). Isolated annotations and isolated labels
+  each score 0. The total IoU is the mean of all scores.
+
+Options:
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  -a, --annotations FILE  Path to CSV file containing ground truth annotations.
+                          [required]
+  -l, --labels TEXT       Directory containing inference output (CSV file or
+                          Audacity label files).  [required]
+  -o, --output DIRECTORY  Path to output directory.  [required]
+  --start FLOAT           Lowest threshold to evaluate.  [default: 0.0]
+  --end FLOAT             Highest threshold to evaluate.  [default: 1.0]
+  --incr FLOAT            Threshold increment.  [default: 0.01]
+  --t1 FLOAT              First fixed threshold to report in summary and
+                          recordings.csv.  [default: 0.6]
+  --t2 FLOAT              Second fixed threshold to report in summary and
+                          recordings.csv.  [default: 0.8]
+  --debug                 If specified, turn on debug logging.
   --help                  Show this message and exit.
 ```
 ### britekit rpt-labels

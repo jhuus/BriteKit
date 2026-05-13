@@ -13,6 +13,7 @@
 | `spec_height` | `int` | 128 | Spectrogram height in pixels |
 | `spec_width` | `int` | 480 | Spectrogram width in pixels (must be divisible by 32) |
 | `win_length` | `float` | 0.055 | Window length is specified in seconds, to retain temporal and frequency resolution when max_freq and sampling rate are changed |
+| `n_fft` | `Union[int, NoneType]` | None | If none, set n_fft = win_length_samples |
 | `max_freq` | `int` | 8000 | Maximum frequency in Hz |
 | `min_freq` | `int` | 100 | Minimum frequency in Hz |
 | `sampling_rate` | `int` | 18000 | A little more than 2 * max_freq |
@@ -22,6 +23,7 @@
 | `top_db` | `float` | 80 | Threshold below max amplitude in dB; lower values are clipped |
 | `db_power` | `float` | 1.0 | Raise to this exponent after convert to decibels |
 | `log_freq_gain` | `float` | 0.6 | Boost loudness of higher frequencies with log scale |
+| `mel_norm` | `Union[str, NoneType]` | None | Mel filterbank normalization: None or "slaney" |
 | `choose_channel` | `bool` | False | Use heuristic to pick the cleanest audio channel? |
 | `check_seconds` | `float` | 6.0 | Check this many seconds to pick channel |
 | `use_spec_cache` | `bool` | False | When use_spec_cache=False, each spectrogram is generated separately. When use_spec_cache=True, a single spectrogram is generated for the recording, by concatenating chunks. Then that big spectrogram is divided as needed, which saves time when there is a lot of overlap. |
@@ -67,13 +69,15 @@
 | `sed_fps` | `int` | 4 | Frames per second from SED heads |
 | `frame_loss_weight` | `float` | 0.5 | Segment_loss_weight = 1 - frame_loss_weight |
 | `offpeak_weight` | `float` | 0.002 | Weight for penalizing predictions outside peak regions |
-| `absence_penalty_eps` | `float` | 0.2 | Epsilon threshold for absence penalty calculation |
-| `absence_penalty_tau` | `float` | 7.0 | Temperature scaling factor for absence penalty |
-| `absence_penalty_weight` | `float` | 0.0 | Absence penalty weight for SED models |
+| `max_per_recording` | `Union[int, NoneType]` | None | Per-recording sampling: if set, randomly select this many specs per recording per epoch |
+| `val_max_per_recording` | `Union[int, NoneType]` | None | Per-recording limit for validation: if set, take the first N specs per recording |
 | `augment` | `bool` | True | Use data augmentation? |
 | `max_augmentations` | `int` | 1 | Up to this many per spectrogram |
 | `noise_class_name` | `str` | 'Noise' | Augmentation treats noise specially |
 | `prob_simple_merge` | `float` | 0.32 | Prob of simple merge |
+| `prob_mixup` | `float` | 0.0 | Prob of traditional mixup (mutually exclusive with simple merge) |
+| `prob_cutmix` | `float` | 0.0 | Prob of CutMix (mutually exclusive with simple merge and mixup) |
+| `mixup_alpha` | `float` | 0.4 | Beta distribution parameter for mixup/cutmix lambda |
 | `prob_fade1` | `float` | 0.5 | Prob of fading after augmentation |
 | `min_fade1` | `float` | 0.1 | Min factor for fading |
 | `max_fade1` | `float` | 1.0 | Max factor for fading |
@@ -94,6 +98,7 @@
 | `label_field` | `str` | 'codes' | "names", "codes", "alt_names" or "alt_codes" |
 | `block_size` | `int` | 200 | Do this many spectrograms at a time to avoid running out of GPU memory |
 | `openvino_block_size` | `int` | 100 | Block size when OpenVINO is used (do not change after creating onnx files) |
+| `initial_offsets` | `Union[list, NoneType]` | None | If specified, analyze command calls get_overlapping_scores instead of get_recording_scores and passes this array. |
 
 ### MiscConfig
 | Field | Type | Default | Description |

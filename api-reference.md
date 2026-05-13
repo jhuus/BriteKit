@@ -953,7 +953,7 @@ Given a recording and a model or ensemble of models, provide methods to return s
 
 **get_block_scores**  
 ```python
-Predictor.get_block_scores(self, specs, start_times=None, audio_duration=None)
+Predictor.get_block_scores(self, specs, start_times=None, audio_duration=None, max_models=None)
 ```
 Get scores in array format from the loaded models for the given block of spectrograms.
 
@@ -1029,22 +1029,19 @@ Returns:
 
 **get_overlapping_scores**  
 ```python
-Predictor.get_overlapping_scores(self, recording_path: str, segment_len: float, initial_start_times: List[float])
+Predictor.get_overlapping_scores(self, recording_path: str, initial_start_times: List[float])
 ```
 This is a variant of get_recording_scores that overlaps spectrograms differently,
 and is intended mainly for models with SED classifier heads. Each model processes
 non-overlapping spectrograms. The first start_time for each model is taken from
 initial_start_times, and then non-overlapping start_times are created from there.
-For example, suppose initial_start_times = [0, .5, 1.0] and segment_len = 3.0.
+For example, suppose initial_start_times = [0, .5, 1.0] and spec_duration = 3.0.
 Then model 1 uses [0, 3, 6, ...], model 2 uses [.5, 3.5, 6.5, ...], model 3 uses
 [1, 4, 7, ...]. After that it wraps using a modulus operator, so model 4 has the same
 start_times as model 1 etc.
 
 Args:
 - recording_path (str): Path to the audio recording file.
-- segment_len (float): Segment length in seconds, which is not necessarily the same as
-  spec_duration. For example, you could have spec_duration=3 and segment_len=5 if you
-  want to generate 5-second labels using 3-second spectrograms.
 - initial_start_times (list(float)): See description above.
 
 Returns:
@@ -1090,6 +1087,17 @@ Returns:
 ```python
 Predictor.get_specs(self)
 ```
+**get_start_times**  
+```python
+Predictor.get_start_times(self, audio_duration, start_seconds, segment_len, overlap=None)
+```
+Return start offset per spectrogram.
+
+- audio_duration (float): total audio duration in seconds
+- start_seconds (float): where to start processing the audio (offset in seconds)
+- segment_len (float): length of segments in seconds
+- overlap (float): amount of segment overlap in seconds
+
 **save_manifest**  
 ```python
 Predictor.save_manifest(self, output_path: str, cfg=None)
