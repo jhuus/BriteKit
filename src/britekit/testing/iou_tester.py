@@ -235,9 +235,7 @@ class IoUTester:
                 lbl_intervals = []
                 if recording in labels and class_code in labels[recording]:
                     raw_lbls = [
-                        iv
-                        for iv in labels[recording][class_code]
-                        if iv[2] >= threshold
+                        iv for iv in labels[recording][class_code] if iv[2] >= threshold
                     ]
                     lbl_intervals = self._merge_adjacent_labels(raw_lbls)
 

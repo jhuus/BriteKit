@@ -538,7 +538,9 @@ def _rpt_iou_cmd(
         util.set_logging(level=logging.DEBUG, timestamp=True)
     else:
         util.set_logging(level=logging.INFO, timestamp=True)
-    rpt_iou(cfg_path, annotations_path, label_dir, output_path, start, end, incr, t1, t2)
+    rpt_iou(
+        cfg_path, annotations_path, label_dir, output_path, start, end, incr, t1, t2
+    )
 
 
 def rpt_labels(
