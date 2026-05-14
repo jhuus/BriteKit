@@ -104,7 +104,7 @@ class TrainingConfig:
     frame_loss_weight: float = 0.5  # Segment_loss_weight = 1 - frame_loss_weight
 
     # Weight for penalizing predictions outside peak regions
-    offpeak_weight: float = 0.002
+    offpeak_weight: float = 0
 
     # Per-recording sampling: if set, randomly select this many specs per recording per epoch
     max_per_recording: Optional[int] = None
