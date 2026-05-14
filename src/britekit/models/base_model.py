@@ -139,8 +139,22 @@ class BaseModel(pl.LightningModule):
             self.cfg.audio.freq_scale = self.training_cfg["audio"]["freq_scale"]
             self.cfg.audio.power = self.training_cfg["audio"]["power"]
             self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
+            self.cfg.audio.top_db = self.training_cfg["audio"].get(
+                "top_db", self.cfg.audio.top_db
+            )
+            self.cfg.audio.db_power = self.training_cfg["audio"].get(
+                "db_power", self.cfg.audio.db_power
+            )
+            self.cfg.audio.log_freq_gain = self.training_cfg["audio"].get(
+                "log_freq_gain", self.cfg.audio.log_freq_gain
+            )
+            self.cfg.audio.mel_norm = self.training_cfg["audio"].get(
+                "mel_norm", self.cfg.audio.mel_norm
+            )
 
             self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
+            self.cfg.train.model_type = self.training_cfg["train"]["model_type"]
+            self.cfg.train.head_type = self.training_cfg["train"].get("head_type")
 
             if "n_fft" in self.training_cfg["audio"]:
                 self.cfg.audio.n_fft = self.training_cfg["audio"]["n_fft"]
