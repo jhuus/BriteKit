@@ -194,7 +194,9 @@ def _analyze_cmd(
     from britekit.core import util
 
     if input_arg is not None and input_path is not None:
-        raise click.UsageError("INPUT_PATH cannot be specified as both a positional argument and --input.")
+        raise click.UsageError(
+            "INPUT_PATH cannot be specified as both a positional argument and --input."
+        )
     input_path = input_arg or input_path
 
     if debug:
