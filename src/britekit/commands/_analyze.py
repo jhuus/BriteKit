@@ -97,6 +97,13 @@ def analyze(
     short_help="Run inference on audio recordings.",
     help=cli_help_from_doc(analyze.__doc__),
 )
+@click.argument(
+    "input_arg",
+    required=False,
+    default=None,
+    type=click.Path(exists=True, file_okay=True, dir_okay=True),
+    metavar="[INPUT_PATH]",
+)
 @click.option(
     "-c",
     "--cfg",
@@ -110,7 +117,7 @@ def analyze(
     "--input",
     "input_path",
     type=click.Path(exists=True, file_okay=True, dir_okay=True),
-    help="Path to input directory or recording.",
+    help="Path to input directory or recording (alternative to positional INPUT_PATH).",
 )
 @click.option(
     "-o",
@@ -170,6 +177,7 @@ def analyze(
     help="If specified, turn on debug logging.",
 )
 def _analyze_cmd(
+    input_arg: Optional[str],
     cfg_path: str,
     input_path: str,
     output_path: str,
@@ -184,6 +192,10 @@ def _analyze_cmd(
 ):
     import logging
     from britekit.core import util
+
+    if input_arg is not None and input_path is not None:
+        raise click.UsageError("INPUT_PATH cannot be specified as both a positional argument and --input.")
+    input_path = input_arg or input_path
 
     if debug:
         util.set_logging(level=logging.DEBUG, timestamp=True)
