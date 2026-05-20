@@ -152,7 +152,7 @@ def ensemble(
                 best_addition = None
                 best_addition_score = 0
 
-                for candidate in remaining_ckpts:
+                for candidate in sorted(remaining_ckpts):
                     test_ensemble = current_ensemble + [candidate]
                     scores = _eval_ensemble(
                         test_ensemble,
