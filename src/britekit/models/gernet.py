@@ -60,6 +60,8 @@ class GerNetModel(BaseModel):
                 hidden_channels,
                 self.num_classes,
                 drop_rate=kwargs.pop("drop_rate", 0.0),
+                lse_temp=kwargs.pop("lse_temp", 0.5),
+                two_way=kwargs.pop("two_way", True),
             )
 
         self.backbone.head = cast(NormMlpClassifierHead, nn.Identity())

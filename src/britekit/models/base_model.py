@@ -155,6 +155,8 @@ class BaseModel(pl.LightningModule):
             self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
             self.cfg.train.model_type = self.training_cfg["train"]["model_type"]
             self.cfg.train.head_type = self.training_cfg["train"].get("head_type")
+            self.cfg.train.lse_temp = self.training_cfg["train"].get("lse_temp", 0.5)
+            self.cfg.train.two_way = self.training_cfg["train"].get("two_way", True)
 
             if "n_fft" in self.training_cfg["audio"]:
                 self.cfg.audio.n_fft = self.training_cfg["audio"]["n_fft"]

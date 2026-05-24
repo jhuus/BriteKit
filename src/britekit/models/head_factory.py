@@ -36,12 +36,16 @@ class ChannelReducer(nn.Module):
         return self.block(x)
 
 
+# Obsolete head kept for backwards compatibility only.
+# Will be removed in an upcoming release.
 class BiTemporalSEDHead(nn.Module):
     """SED head with forward and backward (time-flipped) convolutions for
     bidirectional temporal context, plus channel reduction and attention pooling."""
 
     def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
         super().__init__()
+
+        self.lse_temp = 0.5  # tune in {0.3, 0.5, 1.0}
 
         self.reduce = nn.Sequential(
             nn.Conv1d(in_channels, hidden_channels, kernel_size=1, bias=False),
@@ -80,6 +84,8 @@ class BiTemporalSEDHead(nn.Module):
         return segment_logits, frame_logits
 
 
+# Obsolete head kept for backwards compatibility only.
+# Will be removed in an upcoming release.
 class ReducedSEDHead(nn.Module):
     """SED head with grouped channel reduction, a temporal convolution stack,
     temperature-scaled attention pooling, and optional logit smoothing."""
@@ -149,83 +155,65 @@ class ReducedSEDHead(nn.Module):
         return segment_logits, frame_logits
 
 
-class BasicSEDHead(nn.Module):
-    """Minimal SED head: freq-pool, Conv1d classifier, and attention pooling.
-    No channel reduction—operates directly on backbone channels."""
+class TemporalSEDHead(nn.Module):
+    """Flexible SED head that can be configured as one-way (forward 1D convolutions) or two-way
+    (forward and backward 1D convolutions)."""
 
-    def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
+    def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0, lse_temp=0.5, two_way=True):
         super().__init__()
-        self.temporal_attention = nn.Conv1d(in_channels, 1, kernel_size=1)
-        self.frame_classifier = nn.Sequential(
-            nn.Conv1d(in_channels, hidden_channels, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Conv1d(hidden_channels, num_classes, kernel_size=1),
+
+        self.lse_temp = lse_temp
+        self.two_way = two_way
+
+        self.reduce = nn.Sequential(
+            nn.Conv1d(in_channels, hidden_channels, kernel_size=1, bias=False),
+            nn.BatchNorm1d(hidden_channels),
+            nn.ReLU(inplace=True),
         )
+
+        if two_way:
+            if hidden_channels % 2 != 0:
+                raise ValueError("hidden_channels must be even when two_way=True")
+
+            # Bidirectional convolutions
+            self.conv_fwd = nn.Conv1d(
+                hidden_channels, hidden_channels // 2, kernel_size=3, padding=1, bias=False
+            )
+            self.conv_bwd = nn.Conv1d(
+                hidden_channels, hidden_channels // 2, kernel_size=3, padding=1, bias=False
+            )
+        else:
+            # Single temporal convolution
+            self.temporal_conv = nn.Conv1d(
+                hidden_channels, hidden_channels, kernel_size=3, padding=1, bias=False
+            )
+
+        self.bn = nn.BatchNorm1d(hidden_channels)
+        self.act = nn.ReLU(inplace=True)
+        self.drop = nn.Dropout(dropout)
+
+        self.frame_head = nn.Conv1d(hidden_channels, num_classes, kernel_size=1)
 
     def forward(self, x):
         x = x.mean(dim=2)  # [B, C, F, T] -> [B, C, T]
+        x = self.reduce(x)  # [B, H, T]
 
-        frame_logits = self.frame_classifier(x)  # [B, C, T]
-        attn = torch.softmax(self.temporal_attention(x), dim=-1)  # [B, 1, T]
-        segment_logits = torch.sum(attn * frame_logits, dim=-1)  # [B, C]
+        if self.two_way:
+            fwd = self.conv_fwd(x)
+            bwd = self.conv_bwd(x.flip(-1)).flip(-1)
+            x = self.bn(torch.cat([fwd, bwd], dim=1))
+        else:
+            x = self.bn(self.temporal_conv(x))
 
-        return segment_logits, frame_logits
+        x = self.drop(self.act(x))
 
-
-class LSEPooling(nn.Module):
-
-    def __init__(self, pool_axis: int = -1, temperature: float = 1.0):
-        super().__init__()
-        self.temperature = temperature
-        self.pool_axis = pool_axis
-
-    def forward(self, x):
-        return self.temperature * (
-            torch.logsumexp(x / self.temperature, dim=self.pool_axis)
-            - math.log(x.shape[self.pool_axis])
+        frame_logits = self.frame_head(x)  # [B, num_classes, T]
+        T = frame_logits.shape[-1]
+        segment_logits = self.lse_temp * (
+            torch.logsumexp(frame_logits / self.lse_temp, dim=-1) - math.log(T)
         )
 
-
-class LSEHead(nn.Module):
-    """Log-Sum-Exp (LSE) pooling head. Freq-pools backbone features, applies a
-    per-frame FC classifier, then aggregates over time with LSE pooling — a smooth
-    approximation to max that approaches hard-max as temperature → 0 and soft
-    average-weighted max at temperature = 1."""
-
-    def __init__(
-        self,
-        in_channels: int,
-        num_classes: int,
-        hidden_channels: Optional[int] = None,
-        dropout: float = 0.5,
-        lse_temperature: float = 1.0,
-    ):
-        super().__init__()
-        mid = hidden_channels if hidden_channels is not None else in_channels
-        self.lse_pool = LSEPooling(pool_axis=1, temperature=lse_temperature)
-        self.cls_fc = nn.Sequential(
-            nn.Linear(in_channels, mid),
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout),
-            nn.Linear(mid, num_classes),
-        )
-
-    def forward(self, x):  # x: [B, C, F, T]
-        x = x.mean(dim=2)  # [B, C, T]
-        x = x.transpose(1, 2)  # [B, T, C]
-        timewise_logits = self.cls_fc(x)  # [B, T, num_classes]
-        segment_logits = self.lse_pool(timewise_logits)  # [B, num_classes]
-        frame_logits = timewise_logits.transpose(1, 2)  # [B, num_classes, T]
         return segment_logits, frame_logits
-
-
-def build_lse_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
-) -> nn.Module:
-    return LSEHead(
-        in_channels, num_classes, hidden_channels=hidden_channels, dropout=drop_rate
-    )
 
 
 def is_sed(head_type: Optional[str]):
@@ -243,17 +231,18 @@ def make_head(
     hidden_channels: int,
     num_classes: int,
     drop_rate: float = 0.0,
+    **kwargs,
 ) -> nn.Module:
     """Create a classifier head by name."""
     if head_type not in HEAD_REGISTRY:
         raise ValueError(f"Unknown head type: {head_type}")
     return HEAD_REGISTRY[head_type][0](
-        in_channels, hidden_channels, num_classes, drop_rate
+        in_channels, hidden_channels, num_classes, drop_rate, **kwargs
     )
 
 
 def build_basic_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **_
 ) -> nn.Module:
     # Basic: GlobalPool → Dropout → Linear
     return nn.Sequential(
@@ -265,7 +254,7 @@ def build_basic_head(
 
 
 def build_effnet_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **_
 ) -> nn.Module:
     # Matches EfficientNet head: Conv2d → BN → SiLU → GlobalPool → Linear
     return nn.Sequential(
@@ -280,7 +269,7 @@ def build_effnet_head(
 
 
 def build_hgnet_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **_
 ) -> nn.Module:
     # Matches HGNet: GlobalPool → Conv2d → ReLU → Dropout → Linear
     return nn.Sequential(
@@ -293,22 +282,22 @@ def build_hgnet_head(
     )
 
 
-def build_basic_sed_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
-) -> nn.Module:
-    return BasicSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
-
-
 def build_bitemporal_sed_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **_
 ) -> nn.Module:
     return BiTemporalSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
 
 
 def build_reduced_sed_head(
-    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **_
 ) -> nn.Module:
     return ReducedSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
+
+
+def build_temporal_sed_head(
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **kwargs
+) -> nn.Module:
+    return TemporalSEDHead(in_channels, hidden_channels, num_classes, drop_rate, **kwargs)
 
 
 HEAD_REGISTRY = {
@@ -316,12 +305,11 @@ HEAD_REGISTRY = {
     "basic": (build_basic_head, False),
     "effnet": (build_effnet_head, False),
     "hgnet": (build_hgnet_head, False),
-    "basic_sed": (build_basic_sed_head, True),
     "bitemporal_sed": (build_bitemporal_sed_head, True),
-    "lse_sed": (build_lse_head, True),
     "reduced_sed": (build_reduced_sed_head, True),
     "scalable_sed": (
         build_reduced_sed_head,
         True,
     ),  # old name for reduced_sed - keep for now
+    "temporal_sed": (build_temporal_sed_head, True),
 }
