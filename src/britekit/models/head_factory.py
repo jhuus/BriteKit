@@ -38,6 +38,32 @@ class ChannelReducer(nn.Module):
 
 # Obsolete head kept for backwards compatibility only.
 # Will be removed in an upcoming release.
+class BasicSEDHead(nn.Module):
+    """Minimal SED head: freq-pool, Conv1d classifier, and attention pooling.
+    No channel reduction—operates directly on backbone channels."""
+
+    def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0):
+        super().__init__()
+        self.temporal_attention = nn.Conv1d(in_channels, 1, kernel_size=1)
+        self.frame_classifier = nn.Sequential(
+            nn.Conv1d(in_channels, hidden_channels, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Conv1d(hidden_channels, num_classes, kernel_size=1),
+        )
+
+    def forward(self, x):
+        x = x.mean(dim=2)  # [B, C, F, T] -> [B, C, T]
+
+        frame_logits = self.frame_classifier(x)  # [B, C, T]
+        attn = torch.softmax(self.temporal_attention(x), dim=-1)  # [B, 1, T]
+        segment_logits = torch.sum(attn * frame_logits, dim=-1)  # [B, C]
+
+        return segment_logits, frame_logits
+
+
+# Obsolete head kept for backwards compatibility only.
+# Will be removed in an upcoming release.
 class BiTemporalSEDHead(nn.Module):
     """SED head with forward and backward (time-flipped) convolutions for
     bidirectional temporal context, plus channel reduction and attention pooling."""
@@ -159,7 +185,15 @@ class TemporalSEDHead(nn.Module):
     """Flexible SED head that can be configured as one-way (forward 1D convolutions) or two-way
     (forward and backward 1D convolutions)."""
 
-    def __init__(self, in_channels, hidden_channels, num_classes, dropout=0.0, lse_temp=0.5, two_way=True):
+    def __init__(
+        self,
+        in_channels,
+        hidden_channels,
+        num_classes,
+        dropout=0.0,
+        lse_temp=0.5,
+        two_way=True,
+    ):
         super().__init__()
 
         self.lse_temp = lse_temp
@@ -177,10 +211,18 @@ class TemporalSEDHead(nn.Module):
 
             # Bidirectional convolutions
             self.conv_fwd = nn.Conv1d(
-                hidden_channels, hidden_channels // 2, kernel_size=3, padding=1, bias=False
+                hidden_channels,
+                hidden_channels // 2,
+                kernel_size=3,
+                padding=1,
+                bias=False,
             )
             self.conv_bwd = nn.Conv1d(
-                hidden_channels, hidden_channels // 2, kernel_size=3, padding=1, bias=False
+                hidden_channels,
+                hidden_channels // 2,
+                kernel_size=3,
+                padding=1,
+                bias=False,
             )
         else:
             # Single temporal convolution
@@ -282,6 +324,12 @@ def build_hgnet_head(
     )
 
 
+def build_basic_sed_head(
+    in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **kwargs
+) -> nn.Module:
+    return BasicSEDHead(in_channels, hidden_channels, num_classes, drop_rate)
+
+
 def build_bitemporal_sed_head(
     in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **_
 ) -> nn.Module:
@@ -297,7 +345,9 @@ def build_reduced_sed_head(
 def build_temporal_sed_head(
     in_channels: int, hidden_channels: int, num_classes: int, drop_rate: float, **kwargs
 ) -> nn.Module:
-    return TemporalSEDHead(in_channels, hidden_channels, num_classes, drop_rate, **kwargs)
+    return TemporalSEDHead(
+        in_channels, hidden_channels, num_classes, drop_rate, **kwargs
+    )
 
 
 HEAD_REGISTRY = {
@@ -305,6 +355,7 @@ HEAD_REGISTRY = {
     "basic": (build_basic_head, False),
     "effnet": (build_effnet_head, False),
     "hgnet": (build_hgnet_head, False),
+    "basic_sed": (build_basic_sed_head, True),
     "bitemporal_sed": (build_bitemporal_sed_head, True),
     "reduced_sed": (build_reduced_sed_head, True),
     "scalable_sed": (

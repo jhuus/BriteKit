@@ -49,8 +49,8 @@ class TrainingConfig:
     model_type: str = "effnet.2"  # Use timm.x for timm model "x"
     head_type: Optional[str] = None  # If None, use backbone's default
     hidden_channels: int = 256  # Hidden channels in classifier head
-    lse_temp: float = 0.5 # LSE temperature for temporal_sed head
-    two_way: bool = True # Bi-directional or unidirectional temporal_sed head
+    lse_temp: float = 0.5  # LSE temperature for temporal_sed head
+    two_way: bool = True  # Bi-directional or unidirectional temporal_sed head
     pretrained: bool = False  # Use pretrained weights (applies to timm models)
     load_ckpt_path: Optional[str] = None  # For transfer learning or fine-tuning
     freeze_backbone: bool = False  # Option when transfer learning
