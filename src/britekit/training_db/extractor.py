@@ -123,7 +123,9 @@ class Extractor:
         for recording_dir in recording_paths:
             filename = Path(recording_dir).stem
             if filename not in offsets_per_file:
-                continue
+                filename = Path(recording_dir).name
+                if filename not in offsets_per_file:
+                    continue
 
             if destination_dir is not None:
                 dest_path = os.path.join(destination_dir, Path(recording_dir).name)

@@ -22,6 +22,7 @@ def _plot_recording(
     overlap: float,
     ndims: bool,
     power: Optional[float] = None,
+    offsets_override: Optional[list] = None,
 ):
     from britekit.core.plot import plot_spec
 
@@ -59,9 +60,12 @@ def _plot_recording(
         )
     else:
         # plot individual segments
-        increment = max(0.5, cfg.audio.spec_duration - overlap)
-        last_offset = max(0, recording_seconds - 0.5)
-        offsets = util.get_range(0, last_offset, increment)
+        if offsets_override is not None:
+            offsets = offsets_override
+        else:
+            increment = max(0.5, cfg.audio.spec_duration - overlap)
+            last_offset = max(0, recording_seconds - 0.5)
+            offsets = util.get_range(0, last_offset, increment)
         specs, _ = audio.get_spectrograms(
             offsets, spec_duration=cfg.audio.spec_duration
         )
@@ -268,6 +272,7 @@ def plot_dir(
     all: bool = False,
     overlap: float = 0.0,
     power: float = 1.0,
+    csv_path: Optional[str] = None,
 ):
     """
     Plot spectrograms for all audio recordings in a directory.
@@ -284,6 +289,7 @@ def plot_dir(
     - all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
     - overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
     - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+    - csv_path (str, optional): Path to CSV file with 'recording' and 'offset' columns. If specified, only plot the segments identified in the CSV.
     """
     from britekit.core.audio import Audio
 
@@ -297,14 +303,45 @@ def plot_dir(
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    audio_paths = util.get_audio_files(input_path)
-    if len(audio_paths) == 0:
-        logging.error(f'Error: no recordings found in "{input_path}".')
-        quit()
-
     audio = Audio(cfg=cfg)
-    for audio_path in audio_paths:
-        _plot_recording(cfg, audio, audio_path, output_path, all, overlap, ndims)
+
+    if csv_path is not None:
+        import pandas as pd
+
+        df = pd.read_csv(csv_path)
+        offsets_per_file: dict[str, list] = {}
+        for _, row in df.iterrows():
+            recording = row["recording"]
+            if recording not in offsets_per_file:
+                offsets_per_file[recording] = []
+            offsets_per_file[recording].append(row["offset"])
+
+        for recording_name, offsets in offsets_per_file.items():
+            audio_path = os.path.join(input_path, recording_name)
+            if not os.path.exists(audio_path):
+                logging.warning(f'Recording not found: "{audio_path}"')
+                continue
+            _plot_recording(
+                cfg,
+                audio,
+                audio_path,
+                output_path,
+                False,
+                overlap,
+                ndims,
+                power,
+                offsets_override=offsets,
+            )
+    else:
+        audio_paths = util.get_audio_files(input_path)
+        if len(audio_paths) == 0:
+            logging.error(f'Error: no recordings found in "{input_path}".')
+            quit()
+
+        for audio_path in audio_paths:
+            _plot_recording(
+                cfg, audio, audio_path, output_path, all, overlap, ndims, power
+            )
 
 
 @click.command(
@@ -363,6 +400,13 @@ def plot_dir(
     required=False,
     help="Raise spectrograms to this power. Lower values show more detail.",
 )
+@click.option(
+    "--csv",
+    "csv_path",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    required=False,
+    help="Path to CSV file with 'recording' and 'offset' columns. If specified, only plot those segments.",
+)
 def _plot_dir_cmd(
     cfg_path: str,
     ndims: bool,
@@ -371,9 +415,10 @@ def _plot_dir_cmd(
     all: bool,
     overlap: float,
     power: float = 1.0,
+    csv_path: Optional[str] = None,
 ):
     util.set_logging()
-    plot_dir(cfg_path, ndims, input_path, output_path, all, overlap, power)
+    plot_dir(cfg_path, ndims, input_path, output_path, all, overlap, power, csv_path)
 
 
 def plot_rec(
