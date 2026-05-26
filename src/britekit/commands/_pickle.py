@@ -399,8 +399,8 @@ def pickle_frame(
     "--alpha",
     "alpha",
     type=float,
-    default=0.04,
-    help="Score drop threshold as a fraction of the original score (default 0.04). "
+    default=0.1,
+    help="Score drop threshold as a fraction of the original score (default 0.1). "
     "Lower values are more conservative (wider active regions).",
 )
 @click.option(
@@ -423,7 +423,7 @@ def pickle_frame(
     "pad",
     type=int,
     default=1,
-    help="Number of extra frame labels to add on each side of the active region (default 0). "
+    help="Number of extra frame labels to add on each side of the active region (default 1). "
     "Clamped to segment boundaries.",
 )
 def _pickle_frame_cmd(
