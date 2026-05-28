@@ -143,7 +143,7 @@ The `model_type` parameter can be "timm.x" for any model x supported by [timm](h
 | dla | DLA | Slow and not good for large models, but works well for some very small models. | [here](https://arxiv.org/abs/1707.06484) |
 | effnet | EfficientNetV2 | Medium speed, widely used, useful for all sizes. | [here](https://arxiv.org/abs/2104.00298) |
 | gernet | GENet | Scalable configurations of the timm gernet model. Fast, useful for all but the smallest models. | [here](https://arxiv.org/abs/2006.14090) |
-| hgnet |  HgNetV2| Fast, useful for all but the smallest models. | not published |
+| hgnet |  HgNetV2| Medium-fast, useful for all but the smallest models. | not published |
 | vovnet | VovNet  | Medium-fast, useful for all sizes. | [here](https://arxiv.org/abs/1904.09730) |
 
 For very small models, say with less than 10 classes and just a few thousand training spectrograms, DLA and VovNet are good candidates. As model size increases, DLA becomes slower and less appropriate. Of course, it is best to try different models and model sizes to see which works best for your application.
