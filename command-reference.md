@@ -117,7 +117,7 @@ Options:
 ```
 ### britekit analyze
 ```
-Usage: britekit analyze [OPTIONS]
+Usage: britekit analyze [OPTIONS] [INPUT_PATH]
 
   Run inference on audio recordings to detect and classify sounds.
 
@@ -127,7 +127,8 @@ Usage: britekit analyze [OPTIONS]
 
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
-  -i, --input PATH        Path to input directory or recording.
+  -i, --input PATH        Path to input directory or recording (alternative to
+                          positional INPUT_PATH).
   -o, --output DIRECTORY  Path to output directory (optional, defaults to input
                           directory).
   -r, --rtype TEXT        Output format type. Options are "audacity", "csv", or
@@ -675,15 +676,15 @@ Options:
                          db --occlude.  [required]
   -o, --output TEXT      Output pickle file path.  [required]
   --alpha FLOAT          Score drop threshold as a fraction of the original
-                         score (default 0.04). Lower values are more
-                         conservative (wider active regions).
+                         score (default 0.1). Lower values are more conservative
+                         (wider active regions).
   --csv DIRECTORY        Optional directory for per-class output CSVs with
                          segment IDs and frame labels.
   --names FILE           Optional path to a text file listing CSV filenames (one
                          per line) to process. Default is all CSV files in the
                          input directory.
   --pad INTEGER          Number of extra frame labels to add on each side of the
-                         active region (default 0). Clamped to segment
+                         active region (default 1). Clamped to segment
                          boundaries.
   --help                 Show this message and exit.
 ```
@@ -769,6 +770,8 @@ Options:
   --overlap FLOAT         Spectrogram overlap in seconds. Default = 0.
   --power FLOAT           Raise spectrograms to this power. Lower values show
                           more detail.
+  --csv FILE              Path to CSV file with 'recording' and 'offset'
+                          columns. If specified, only plot those segments.
   --help                  Show this message and exit.
 ```
 ### britekit plot-rec

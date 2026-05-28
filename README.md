@@ -154,14 +154,9 @@ If `head_type` is not specified, BriteKit uses the default classifier head defin
 | basic | A basic MLP classifier head. |
 | effnet | The MLP classifier head used in EfficientNetV2. |
 | hgnet | The MLP classifier head used in HgNetV2. |
-| basic_sed | SED head with attention-weighted frame classification applied directly to backbone features. |
-| bitemporal_sed | SED head that uses bidirectional (forward and backward) convolutions for temporal context. |
-| lse_sed | SED head that uses LogSumExp for pooling. |
-| reduced_sed | SED head with grouped channel reduction, temporal convolution stack, and temperature-scaled attention. |
+| temporal_sed | A SED (sound event detection) head, which outputs more granular scores than MLP heads (per-frame instead of per-segment).  |
 
-The `hidden_channels` parameter controls the size of all three SED heads.
-
-See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information.
+Previous BriteKit versions included other SED head types, which have been superseded by temporal_sed. The `hidden_channels` parameter controls the size of the temporal_sed head. It is also affected by the `lse_temp` and `two_way` parameters. See the discussion of [Backbones and Classifier Heads](#backbones-and-classifier-heads) below for more information on classifier heads.
 
 You can specify `val_portion` > 0 to run validation on a portion of the training data, or `num_folds` > 1 to run k-fold cross-validation. In the latter case, training output will be in logs/fold-0/version_x etc. Otherwise it is under logs/version_x. Output from the first training run is saved in version_0, and the version number is incremented in subsequent runs. To view graphs of the loss and learning rate, type `tensorboard --logdir <log directory>`. This will launch an embedded web server and display a URL that you can use to view graphs such as the learning rate in a web browser.
 

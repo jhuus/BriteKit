@@ -34,7 +34,9 @@
 | --- | --- | --- | --- |
 | `model_type` | `str` | 'effnet.2' | Use timm.x for timm model "x" |
 | `head_type` | `Union[str, NoneType]` | None | If None, use backbone's default |
-| `hidden_channels` | `int` | 256 | Used by some non-default classifier heads |
+| `hidden_channels` | `int` | 256 | Hidden channels in classifier head |
+| `lse_temp` | `float` | 0.5 | LSE temperature for temporal_sed head |
+| `two_way` | `bool` | True | Bi-directional or unidirectional temporal_sed head |
 | `pretrained` | `bool` | False | Use pretrained weights (applies to timm models) |
 | `load_ckpt_path` | `Union[str, NoneType]` | None | For transfer learning or fine-tuning |
 | `freeze_backbone` | `bool` | False | Option when transfer learning |
@@ -68,7 +70,7 @@
 | `drop_path_rate` | `Union[float, NoneType]` | None | Stochastic depth dropout |
 | `sed_fps` | `int` | 4 | Frames per second from SED heads |
 | `frame_loss_weight` | `float` | 0.5 | Segment_loss_weight = 1 - frame_loss_weight |
-| `offpeak_weight` | `float` | 0.002 | Weight for penalizing predictions outside peak regions |
+| `offpeak_weight` | `float` | 0 | Weight for penalizing predictions outside peak regions |
 | `max_per_recording` | `Union[int, NoneType]` | None | Per-recording sampling: if set, randomly select this many specs per recording per epoch |
 | `val_max_per_recording` | `Union[int, NoneType]` | None | Per-recording limit for validation: if set, take the first N specs per recording |
 | `augment` | `bool` | True | Use data augmentation? |

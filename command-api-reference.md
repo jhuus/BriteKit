@@ -622,7 +622,7 @@ Args:
 ### plot_dir
 **Function**  
 ```python
-plot_dir(cfg_path: Optional[str] = None, ndims: bool = False, input_path: str = '', output_path: str = '', all: bool = False, overlap: float = 0.0, power: float = 1.0)
+plot_dir(cfg_path: Optional[str] = None, ndims: bool = False, input_path: str = '', output_path: str = '', all: bool = False, overlap: float = 0.0, power: float = 1.0, csv_path: Optional[str] = None)
 ```
 Plot spectrograms for all audio recordings in a directory.
 
@@ -638,6 +638,7 @@ Args:
 - all (bool): If True, plot each recording as one spectrogram. If False, break into segments.
 - overlap (float): Spectrogram overlap in seconds when breaking recordings into segments. Default is 0.
 - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
+- csv_path (str, optional): Path to CSV file with 'recording' and 'offset' columns. If specified, only plot the segments identified in the CSV.
 
 ### plot_rec
 **Function**  
