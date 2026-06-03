@@ -18,6 +18,8 @@ def extract_all(
     class_code: Optional[str] = None,
     class_name: str = "",
     dir_path: str = "",
+    max_spec: Optional[int] = None,
+    max_rec: Optional[int] = None,
     overlap: Optional[float] = None,
     src_name: Optional[str] = None,
     spec_group: Optional[str] = None,
@@ -37,6 +39,9 @@ def extract_all(
     - class_code (str, optional): Class code for new class creation (e.g., "COYE").
     - class_name (str): Required name of the class for the recordings (e.g., "Common Yellowthroat").
     - dir_path (str): Required path to directory containing audio recordings to process.
+    - max_spec (int, optional): Maximum number of spectrograms to extract per recording. If the
+      recording would yield more, they are sampled evenly across its duration.
+    - max_rec (int, optional): Maximum number of recordings to process.
     - overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
     - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
     - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
@@ -52,7 +57,7 @@ def extract_all(
         extractor = Extractor(
             db, class_name, class_code, cat_name, src_name, overlap, spec_group
         )
-        count = extractor.extract_all(dir_path)
+        count = extractor.extract_all(dir_path, max_spec, max_rec)
         db.optimize()
         logging.info(f"Inserted {count} spectrograms")
 
@@ -94,6 +99,20 @@ def extract_all(
     help="Path to directory containing recordings.",
 )
 @click.option(
+    "--max-spec",
+    "max_spec",
+    type=int,
+    required=False,
+    help="Maximum number of spectrograms to extract per recording, sampled evenly across its duration.",
+)
+@click.option(
+    "--max-rec",
+    "max_rec",
+    type=int,
+    required=False,
+    help="Maximum number of recordings to process.",
+)
+@click.option(
     "--overlap",
     "overlap",
     type=float,
@@ -119,6 +138,8 @@ def _extract_all_cmd(
     class_code: Optional[str],
     class_name: str,
     dir_path: str,
+    max_spec: Optional[int],
+    max_rec: Optional[int],
     overlap: Optional[float],
     src_name: Optional[str],
     spec_group: Optional[str],
@@ -131,6 +152,8 @@ def _extract_all_cmd(
         class_code,
         class_name,
         dir_path,
+        max_spec,
+        max_rec,
         overlap,
         src_name,
         spec_group,
@@ -156,8 +179,8 @@ def extract_by_csv(
     segments and extracts those spectrograms from the original recordings.
     This is useful when you have pre-selected spectrograms (e.g., from manual review
     or search results) and want to extract only those specific segments. The CSV file
-    needs two columns: recording and start_time, where recording is the stem of the
-    recording file name (e.g. XC12345) and start_time is the offset in seconds from the
+    needs two columns: recording and offset, where recording is the stem of the
+    recording file name (e.g. XC12345) and offset is the offset in seconds from the
     start of the recording.
 
     Args:

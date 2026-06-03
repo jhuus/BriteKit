@@ -132,9 +132,11 @@ class Extractor:
                 if not os.path.exists(dest_path):
                     shutil.copy(recording_dir, dest_path)
 
-                recording_dir = dest_path
+                recording_path = dest_path
+            else:
+                recording_path = recording_dir
 
-            logging.info(f"Processing {recording_dir}")
+            logging.info(f"Processing {recording_path}")
             try:
                 self.audio.load(recording_dir)
             except Exception as e:
@@ -142,7 +144,7 @@ class Extractor:
                 continue
 
             num_inserted += self.insert_spectrograms(
-                recording_dir, offsets_per_file[filename]
+                recording_path, offsets_per_file[filename]
             )
 
         return num_inserted
@@ -192,23 +194,35 @@ class Extractor:
 
         return num_inserted
 
-    def extract_all(self, dir_path: str):
+    def extract_all(
+        self,
+        dir_path: str,
+        max_spec: Optional[int] = None,
+        max_rec: Optional[int] = None,
+    ):
         """
         Extract spectrograms for all recordings in the given directory.
 
         Args:
         - dir_path (str): Directory containing recordings.
+        - max_spec (int, optional): Maximum number of spectrograms to extract per recording.
+          If the recording would yield more, they are sampled evenly across its duration.
+        - max_rec (int, optional): Maximum number of recordings to process.
 
         Returns:
             Number of spectrograms inserted.
         """
         num_inserted = 0
+        num_processed = 0
         recording_paths = util.get_audio_files(dir_path)
         for recording_path in recording_paths:
-            filename = Path(recording_path).stem
+            filename = Path(recording_path).name
             if filename in self.filenames:
                 logging.info(f"Skipping {filename} (already in database)")
                 continue
+
+            if max_rec is not None and num_processed >= max_rec:
+                break
 
             logging.info(f"Processing {recording_path}")
             try:
@@ -218,11 +232,13 @@ class Extractor:
                 logging.error(f"Caught exception: {e}")
                 continue
 
+            num_processed += 1
             end_offset = max(self.increment, seconds - self.increment)
             offsets = util.get_range(0, end_offset, self.increment)
-            if len(offsets) == 0:
-                logging.info(f"Skipping {filename} (too short)")
-                continue
+
+            if max_spec is not None and len(offsets) > max_spec:
+                step = (len(offsets) - 1) / max(max_spec - 1, 1)
+                offsets = [offsets[round(i * step)] for i in range(max_spec)]
 
             num_inserted += self.insert_spectrograms(recording_path, offsets)
 
