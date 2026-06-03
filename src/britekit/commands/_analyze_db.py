@@ -119,8 +119,7 @@ class DatabaseAnalyzer:
                 scores = self._get_scores(specs)
                 index = class_index_dict[name]
 
-                if self.occlude:
-                    self._save_class_details(index, scores, specs)
+                self._save_class_details(index, scores, specs)
                 if self.plot:
                     self._plot_specs(name, result.code, scores[:, 0, index], specs)
 
@@ -283,7 +282,7 @@ class DatabaseAnalyzer:
         fp_names = []
         fp_codes = []
         fp_scores = []
-        num_sides = self.num_frames - 1
+        num_sides = self.num_frames - 1 if self.occlude else 0
         left_scores = [[] for _ in range(num_sides)]
         right_scores = [[] for _ in range(num_sides)]
 
