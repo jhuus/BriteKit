@@ -18,6 +18,7 @@ from ._db_delete import (
 from ._dedup import dedup_rec, dedup_seg
 from ._embed import embed
 from ._ensemble import ensemble
+from ._db_copy import copy_class
 from ._extract import extract_all, extract_by_csv, extract_by_image
 
 from ._inat import inat
@@ -45,6 +46,7 @@ __all__ = [
     "ckpt_avg",
     "ckpt_freeze",
     "ckpt_onnx",
+    "copy_class",
     "copy_samples",
     "dedup_rec",
     "dedup_seg",
