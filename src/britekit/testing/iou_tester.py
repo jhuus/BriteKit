@@ -4,6 +4,8 @@ import logging
 import os
 from typing import Optional
 
+import numpy as np
+
 from britekit.core.config_loader import get_config
 from britekit.core import util
 
@@ -129,7 +131,7 @@ class IoUTester:
         ivs = sorted(intervals, key=lambda x: x[0])
         merged = [[ivs[0][0], ivs[0][1]]]
         for s, e in ivs[1:]:
-            if s < merged[-1][1]:
+            if s <= merged[-1][1]:
                 merged[-1][1] = max(merged[-1][1], e)
             else:
                 merged.append([s, e])
@@ -280,6 +282,19 @@ class IoUTester:
             results[recording] = sum(scores) / len(scores) if scores else 0.0
         return results
 
+    def _average_tp_score(self, annotations, labels):
+        """Average score of raw label intervals that overlap at least one annotation."""
+        tp_scores = []
+        for recording, class_dict in annotations.items():
+            for class_code, ann_intervals in class_dict.items():
+                if recording not in labels or class_code not in labels[recording]:
+                    continue
+                for lbl in labels[recording][class_code]:
+                    lbl_iv = (lbl[0], lbl[1])
+                    if any(self._overlaps(ann, lbl_iv) for ann in ann_intervals):
+                        tp_scores.append(lbl[2])
+        return sum(tp_scores) / len(tp_scores) if tp_scores else 0.0
+
     def run(self):
         import pandas as pd
 
@@ -306,6 +321,11 @@ class IoUTester:
 
         iou_t1 = self._compute_iou(annotations, labels, self.t1)
         iou_t2 = self._compute_iou(annotations, labels, self.t2)
+
+        thresholds_arr = np.array([r[0] for r in results])
+        iou_arr = np.array([r[1] for r in results])
+        auc = float(np.trapezoid(iou_arr, thresholds_arr)) if len(results) > 1 else 0.0
+        avg_tp_score = self._average_tp_score(annotations, labels)
 
         pd.DataFrame(results, columns=["threshold", "iou"]).to_csv(
             os.path.join(self.output_dir, "thresholds.csv"),
@@ -334,6 +354,8 @@ class IoUTester:
             f"IoU at t1 ({self.t1:.4f}) = {iou_t1:.4f}",
             f"IoU at t2 ({self.t2:.4f}) = {iou_t2:.4f}",
             f"Maximum IoU = {max_iou:.4f} at threshold = {max_threshold:.4f}",
+            f"IoU AUC = {auc:.4f}",
+            f"Average TP score = {avg_tp_score:.4f}",
         ]
         for line in summary_lines:
             logging.info(line)

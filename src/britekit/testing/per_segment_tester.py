@@ -547,6 +547,12 @@ class PerSegmentTester(BaseTester):
             f"Average of macro-ROC-annotated and micro-ROC-trained = {self.roc_auc_dict['combined_roc_auc_trained']:.4f}\n"
         )
 
+        y_true_flat = self.y_true_annotated.ravel()
+        y_pred_flat = self.y_pred_annotated.ravel()
+        tp_mask = y_true_flat == 1
+        avg_tp_score = float(y_pred_flat[tp_mask].mean()) if tp_mask.any() else 0.0
+        rpt.append(f"Average TP score = {avg_tp_score:.4f}\n")
+
         logging.info("")
         with open(os.path.join(self.output_dir, "summary_report.txt"), "w") as summary:
             for rpt_line in rpt:

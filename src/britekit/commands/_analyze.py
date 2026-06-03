@@ -25,6 +25,7 @@ def analyze(
     overlap: Optional[float] = None,
     segment_len: Optional[float] = None,
     show: bool = False,
+    ckpt_path: Optional[str] = None,
 ):
     """
     Run inference on audio recordings to detect and classify sounds.
@@ -46,6 +47,7 @@ def analyze(
     - segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
         fixed-length; otherwise they are variable-length.
     - show (bool): If true, show the top scores for the first spectrogram, then stop.
+    - ckpt_path (str, optional): Path to checkpoint file or directory, overriding ckpt_folder in config.
     """
 
     # defer slow imports to improve --help performance
@@ -79,6 +81,9 @@ def analyze(
 
         if segment_len is not None:
             cfg.infer.segment_len = segment_len
+
+        if ckpt_path is not None:
+            cfg.misc.ckpt_folder = ckpt_path
 
         device = util.get_device()
         logging.info(f"Using {device.upper()} for inference")
@@ -171,6 +176,12 @@ def analyze(
     help="If specified, show the top scores for the first spectrogram, then stop.",
 )
 @click.option(
+    "--ckpt",
+    "ckpt_path",
+    type=click.Path(exists=True, file_okay=True, dir_okay=True),
+    help="Path to checkpoint file or directory, overriding ckpt_folder in config.",
+)
+@click.option(
     "--debug",
     "debug",
     is_flag=True,
@@ -188,6 +199,7 @@ def _analyze_cmd(
     overlap: Optional[float],
     segment_len: Optional[float],
     show: bool,
+    ckpt_path: Optional[str],
     debug: bool,
 ):
     import logging
@@ -220,4 +232,5 @@ def _analyze_cmd(
         overlap,
         segment_len,
         show,
+        ckpt_path,
     )
