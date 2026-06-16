@@ -422,7 +422,7 @@ def pickle_frame(
     "--pad",
     "pad",
     type=int,
-    default=1,
+    default=0,
     help="Number of extra frame labels to add on each side of the active region (default 1). "
     "Clamped to segment boundaries.",
 )
