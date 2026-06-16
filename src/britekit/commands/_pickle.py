@@ -423,7 +423,7 @@ def pickle_frame(
     "pad",
     type=int,
     default=0,
-    help="Number of extra frame labels to add on each side of the active region (default 1). "
+    help="Number of extra frame labels to add on each side of the active region (default 0). "
     "Clamped to segment boundaries.",
 )
 def _pickle_frame_cmd(
