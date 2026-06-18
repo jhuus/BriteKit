@@ -137,15 +137,43 @@ class AugmentationPipeline:
         return spec
 
     @register_augmentation("shift_horizontal")
-    def shift_horizontal(self, spec, max_shift=6):
+    def shift_horizontal(self, spec, max_shift=6, pad_value=None):
         """
-        Perform a random horizontal shift of the spectrogram
+        Random horizontal shift. If pad_value is None, wrap.
+        Otherwise fill newly exposed frames with pad_value.
         """
         if max_shift <= 0:
             return spec
 
-        roll_frames = random.randint(-max_shift, max_shift)
-        return np.roll(spec, shift=roll_frames, axis=spec.ndim - 1)
+        if pad_value is None:
+            # do a roll
+            roll_frames = random.randint(-max_shift, max_shift)
+            return np.roll(spec, shift=roll_frames, axis=spec.ndim - 1)
+
+        shift = random.randint(-max_shift, max_shift)
+        if shift == 0:
+            return spec
+
+        axis = spec.ndim - 1
+        result = np.full_like(spec, pad_value)
+
+        if shift > 0:
+            # shift right
+            src = [slice(None)] * spec.ndim
+            dst = [slice(None)] * spec.ndim
+            src[axis] = slice(0, -shift)
+            dst[axis] = slice(shift, None)
+            result[tuple(dst)] = spec[tuple(src)]
+        else:
+            # shift left
+            shift = -shift
+            src = [slice(None)] * spec.ndim
+            dst = [slice(None)] * spec.ndim
+            src[axis] = slice(shift, None)
+            dst[axis] = slice(0, -shift)
+            result[tuple(dst)] = spec[tuple(src)]
+
+        return result
 
     @register_augmentation("speckle")
     def speckle(self, spec, std2=0.1):
