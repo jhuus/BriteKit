@@ -4,6 +4,7 @@
 import ctypes
 from functools import partial
 import logging
+import math
 from multiprocessing import Value
 import random
 
@@ -62,7 +63,52 @@ class AugmentationPipeline:
             if params:
                 bound = partial(bound, **params)
 
-            self.augmentations.append((prob, bound))
+            self.augmentations.append((name, prob, bound))
+
+    def _scale_time_index(self, pixel_index, spec_frames, label_frames, rounding):
+        scaled = pixel_index * label_frames / spec_frames
+        if rounding == "floor":
+            return math.floor(scaled)
+        if rounding == "ceil":
+            return math.ceil(scaled)
+        return round(scaled)
+
+    def _roll_frame_labels(self, frame_labels, shift):
+        if shift == 0:
+            return frame_labels
+        if hasattr(frame_labels, "roll"):
+            return frame_labels.roll(shifts=shift, dims=0)
+        return np.roll(frame_labels, shift=shift, axis=0)
+
+    def _shift_frame_labels(self, frame_labels, shift):
+        if shift == 0:
+            return frame_labels
+
+        if hasattr(frame_labels, "new_zeros"):
+            result = frame_labels.new_zeros(frame_labels.shape)
+        else:
+            result = np.zeros_like(frame_labels)
+
+        if abs(shift) >= frame_labels.shape[0]:
+            return result
+
+        if shift > 0:
+            result[shift:] = frame_labels[:-shift]
+        else:
+            shift = -shift
+            result[:-shift] = frame_labels[shift:]
+        return result
+
+    def _mask_frame_labels(self, frame_labels, start, end):
+        if end <= start:
+            return frame_labels
+
+        if hasattr(frame_labels, "clone"):
+            result = frame_labels.clone()
+        else:
+            result = frame_labels.copy()
+        result[start:end] = 0
+        return result
 
     @register_augmentation("add_real_noise")
     def add_real_noise(self, spec, prob_fade2=0.3, min_fade2=0.1, max_fade2=0.8):
@@ -120,11 +166,16 @@ class AugmentationPipeline:
         return gaussian_filter(spec, sigma=sigma)
 
     @register_augmentation("flip_horizontal")
-    def flip_horizontal(self, spec):
+    def flip_horizontal(self, spec, frame_labels=None):
         """
         Flips the spectrogram along the time axis.
         """
-        return np.flip(spec, axis=-1)
+        spec = np.flip(spec, axis=-1)
+        if frame_labels is None:
+            return spec
+        if hasattr(frame_labels, "flip"):
+            return spec, frame_labels.flip(0)
+        return spec, np.flip(frame_labels, axis=0)
 
     @register_augmentation("freq_mask")
     def freq_mask(self, spec, max_width1=8, num_masks1=1):
@@ -137,22 +188,30 @@ class AugmentationPipeline:
         return spec
 
     @register_augmentation("shift_horizontal")
-    def shift_horizontal(self, spec, max_shift=6, pad_value=None):
+    def shift_horizontal(self, spec, max_shift=6, pad_value=None, frame_labels=None):
         """
         Random horizontal shift. If pad_value is None, wrap.
         Otherwise fill newly exposed frames with pad_value.
         """
         if max_shift <= 0:
-            return spec
+            return spec if frame_labels is None else (spec, frame_labels)
+
+        spec_frames = spec.shape[-1]
 
         if pad_value is None:
             # do a roll
             roll_frames = random.randint(-max_shift, max_shift)
-            return np.roll(spec, shift=roll_frames, axis=spec.ndim - 1)
+            spec = np.roll(spec, shift=roll_frames, axis=spec.ndim - 1)
+            if frame_labels is None:
+                return spec
+            label_shift = self._scale_time_index(
+                roll_frames, spec_frames, frame_labels.shape[0], "round"
+            )
+            return spec, self._roll_frame_labels(frame_labels, label_shift)
 
         shift = random.randint(-max_shift, max_shift)
         if shift == 0:
-            return spec
+            return spec if frame_labels is None else (spec, frame_labels)
 
         axis = spec.ndim - 1
         result = np.full_like(spec, pad_value)
@@ -172,8 +231,15 @@ class AugmentationPipeline:
             src[axis] = slice(shift, None)
             dst[axis] = slice(0, -shift)
             result[tuple(dst)] = spec[tuple(src)]
+            shift = -shift
 
-        return result
+        if frame_labels is None:
+            return result
+
+        label_shift = self._scale_time_index(
+            shift, spec_frames, frame_labels.shape[0], "round"
+        )
+        return result, self._shift_frame_labels(frame_labels, label_shift)
 
     @register_augmentation("speckle")
     def speckle(self, spec, std2=0.1):
@@ -185,16 +251,26 @@ class AugmentationPipeline:
         return np.clip(spec, 0, 1)
 
     @register_augmentation("time_mask")
-    def time_mask(self, spec, max_width2=16, num_masks2=1):
+    def time_mask(self, spec, max_width2=16, num_masks2=1, frame_labels=None):
         """Mask random time segments by setting them to zero."""
         t = spec.shape[-1]
         for _ in range(num_masks2):
             w = min(np.random.randint(1, max_width2 + 1), t)
             start = np.random.randint(0, t - w + 1)
             spec[..., :, start : start + w] = 0
-        return spec
+            if frame_labels is not None:
+                label_start = self._scale_time_index(
+                    start, t, frame_labels.shape[0], "floor"
+                )
+                label_end = self._scale_time_index(
+                    start + w, t, frame_labels.shape[0], "ceil"
+                )
+                frame_labels = self._mask_frame_labels(
+                    frame_labels, label_start, label_end
+                )
+        return spec if frame_labels is None else (spec, frame_labels)
 
-    def __call__(self, spec):
+    def __call__(self, spec, frame_labels=None):
         """
         Apply the augmentation pipeline to a spectrogram.
 
@@ -205,12 +281,19 @@ class AugmentationPipeline:
             Augmented spectrogram with values clipped to [0, 1]
         """
         num_augmentations = 0
-        for prob, fn in self.augmentations:
+        for name, prob, fn in self.augmentations:
             if num_augmentations >= self.cfg.train.max_augmentations:
                 break
 
             if random.random() < prob:
-                spec = fn(spec)
+                if frame_labels is not None and name in (
+                    "flip_horizontal",
+                    "shift_horizontal",
+                    "time_mask",
+                ):
+                    spec, frame_labels = fn(spec, frame_labels=frame_labels)
+                else:
+                    spec = fn(spec)
                 num_augmentations += 1
 
         # set max value = 1
@@ -224,4 +307,4 @@ class AugmentationPipeline:
         if random.random() < self.cfg.train.prob_fade1:
             spec *= random.uniform(self.cfg.train.min_fade1, self.cfg.train.max_fade1)
 
-        return spec
+        return spec if frame_labels is None else (spec, frame_labels)

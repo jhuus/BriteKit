@@ -128,10 +128,12 @@ class SpectrogramDataset(Dataset):
                     cutmix_info = (time_range, other_label, original_label)
                     mixup = True
 
-            spec = self.augment(spec)
+            frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
+            spec, frame_labels = self.augment(spec, frame_labels=frame_labels)
+        else:
+            frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
 
         spec_tensor = torch.tensor(spec, dtype=torch.float32)
-        frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
         mixup = torch.tensor(mixup)
 
         return {
