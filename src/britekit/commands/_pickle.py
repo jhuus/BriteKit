@@ -399,8 +399,8 @@ def pickle_frame(
     "--alpha",
     "alpha",
     type=float,
-    default=0.1,
-    help="Score drop threshold as a fraction of the original score (default 0.1). "
+    default=0.05,
+    help="Score drop threshold as a fraction of the original score (default 0.05). "
     "Lower values are more conservative (wider active regions).",
 )
 @click.option(
