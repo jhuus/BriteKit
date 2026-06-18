@@ -114,7 +114,7 @@ def dedup_rec(
         import scipy
 
         SECONDS_FUDGE = 0.1  # treat durations as equal if within this many seconds
-        DISTANCE_FUDGE = 0.001  # treat spectrograms as equal if within this distance
+        DISTANCE_FUDGE = 0.005  # treat spectrograms as equal if within this distance
 
         if (recording1.seconds > recording2.seconds - SECONDS_FUDGE) and (
             recording1.seconds < recording2.seconds + SECONDS_FUDGE
