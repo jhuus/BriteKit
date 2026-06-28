@@ -143,6 +143,12 @@ class TrainingPickler:
         import pandas as pd
         from britekit.training_db.training_data_provider import TrainingDataProvider
 
+        def log_status(message):
+            if not quiet:
+                logging.info(message)
+
+        log_status("Fetching class info.")
+
         # read DB and map class name to DB result
         results = self.db.get_class()
         name_dict = {}
@@ -151,6 +157,7 @@ class TrainingPickler:
 
         # get class names from CSV if specified, else from the DB
         if self.classes_path:
+            log_status(f'Reading class list from "{self.classes_path}"')
             df = pd.read_csv(self.classes_path)
             names = df["Name"].tolist()
         else:
@@ -169,6 +176,7 @@ class TrainingPickler:
             alt_codes.append(name_dict[name].alt_code)
 
         # get dict from spec ID to class names
+        log_status("Fetching segment labels.")
         segment_class_dict = TrainingDataProvider(self.db).segment_class_dict()
         name_order = {name: i for i, name in enumerate(names)}
 
@@ -176,16 +184,23 @@ class TrainingPickler:
         # A segment with multiple labels is included once with all its labels.
         all_specs = []
         used_segment_ids = set()
-        for name in names:
+        total_classes = len(names)
+        for i, name in enumerate(names, start=1):
+            log_status(f'Fetching spectrograms for "{name}" ({i}/{total_classes}).')
             specs = self.db.get_spectrogram_by_class(name, spec_group=self.spec_group)
             for spec in specs:
                 if spec.segment_id not in used_segment_ids:
                     used_segment_ids.add(spec.segment_id)
                     all_specs.append(spec)
+            log_status(
+                f'Found {len(specs)} spectrogram rows for "{name}"; '
+                f"{len(all_specs)} unique segments so far."
+            )
 
         # Apply max_per_class if specified: assign each segment to its earliest
         # class in the names list, then limit each class to max_per_class.
         if self.max_per_class:
+            log_status(f"Applying max_per_class={self.max_per_class}.")
             random.shuffle(all_specs)
             class_counts = {name: 0 for name in names}
             kept = []
@@ -210,8 +225,7 @@ class TrainingPickler:
 
         empty_classes = []
         for name in names:
-            if not quiet:
-                logging.info(f'Fetched {class_counts[name]} spectrograms for "{name}"')
+            log_status(f'Fetched {class_counts[name]} spectrograms for "{name}"')
             if class_counts[name] == 0:
                 empty_classes.append(name)
 
@@ -225,8 +239,7 @@ class TrainingPickler:
 
             raise InputError("Not all specified classes have spectrograms")
 
-        if not quiet:
-            logging.info(f"Total # spectrograms = {total_count}")
+        log_status(f"Total # spectrograms = {total_count}")
 
         # create a dict from class name to index
         class_name_dict = {}
@@ -234,7 +247,9 @@ class TrainingPickler:
             class_name_dict[name] = i
 
         # create lists of class indexes, values, segment IDs and recording IDs for each spectrogram
+        log_status("Building pickle payload.")
         spec_values, class_indexes, segment_ids, recording_ids = [], [], [], []
+        progress_interval = 1000
         for i, spec in enumerate(all_specs):
             spec_values.append(spec.value)
             segment_ids.append(spec.segment_id)
@@ -243,6 +258,11 @@ class TrainingPickler:
             for name in segment_class_dict[spec.segment_id]:
                 if name in class_name_dict:
                     class_indexes[i].append(class_name_dict[name])
+            processed = i + 1
+            if processed % progress_interval == 0 or processed == total_count:
+                log_status(
+                    f"Built pickle payload for {processed}/{total_count} spectrograms."
+                )
 
         # create and save the pickle file
         pickle_dict = {}
@@ -255,8 +275,8 @@ class TrainingPickler:
         pickle_dict["spec_segment_ids"] = segment_ids
         pickle_dict["spec_recording_ids"] = recording_ids
 
-        pickle_file = open(self.output_path, "wb")
-        pickle.dump(pickle_dict, pickle_file)
+        log_status(f'Writing pickle file to "{self.output_path}"')
+        with open(self.output_path, "wb") as pickle_file:
+            pickle.dump(pickle_dict, pickle_file)
 
-        if not quiet:
-            logging.info(f'Saved data in "{self.output_path}"')
+        log_status(f'Saved data in "{self.output_path}"')
