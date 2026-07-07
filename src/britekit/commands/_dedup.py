@@ -418,7 +418,6 @@ def dedup_seg(
     default=0.99,
     help="Treat as duplicates if cosine similarity >= threshold. Default = 0.99.",
 )
-@click.option("--name", "class_name", type=str, required=True, help="Class name")
 @click.option(
     "--noplot",
     "no_plot",
