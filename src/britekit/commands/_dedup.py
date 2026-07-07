@@ -290,7 +290,7 @@ def dedup_seg(
         os.makedirs(output_path)
 
     # Get recordings from the database
-    logging.info("Opening database")
+    logging.info(f"Opening database for class {class_name}")
     db = TrainingDatabase(db_path)
     provider = TrainingDataProvider(db)
     specgroup_id = provider.specgroup_id(spec_group)
