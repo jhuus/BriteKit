@@ -57,6 +57,7 @@ class BaseTester:
         self.trained_classes = []
         self.recordings = None
         self.label_regex = None
+        self.labels_by_segment = {}
         self.segment_len = None
         self.overlap = None
         self.per_recording = False
@@ -151,9 +152,14 @@ class BaseTester:
         overlap = self.overlap if overlap is None else overlap
 
         if segment_len is not None and overlap is not None:
+            self.labels_by_segment = {}
             for recording in self.labels_per_recording:
+                self.labels_by_segment[recording] = {}
                 for label in self.labels_per_recording[recording]:
-                    label.segment = label.start // (segment_len - overlap)
+                    label.segment = int(label.start // (segment_len - overlap))
+                    self.labels_by_segment[recording].setdefault(
+                        label.segment, []
+                    ).append(label)
 
         if trim_overlap:
             # eliminate the overlap between labels to avoid over-counting
@@ -177,57 +183,47 @@ class BaseTester:
             This method sets self.y_pred_trained_df and self.y_pred_annotated_df
         """
 
+        import numpy as np
         import pandas as pd
 
         self.segments_per_recording = segments_per_recording
 
-        # set segment_dict[recording][segment][class_codes] = score (if there is a matching label)
-        segment_dict = {}
-        for recording in self.labels_per_recording:
-            segment_dict[recording] = {}
-            if recording in self.segments_per_recording:
-                for segment in self.segments_per_recording[recording]:
-                    segment_dict[recording][segment] = {}
-
-            for label in self.labels_per_recording[recording]:
-                if label.segment in segment_dict[recording]:
-                    if (
-                        use_max_score
-                        and label.class_code in segment_dict[recording][label.segment]
-                    ):
-                        segment_dict[recording][label.segment][label.class_code] = max(
-                            label.score,
-                            segment_dict[recording][label.segment][label.class_code],
-                        )
-                    else:
-                        segment_dict[recording][label.segment][
-                            label.class_code
-                        ] = label.score
-
-        # do trained classes (superset of annotated classes)
-        rows = []
+        # Build the dense score matrix directly. The previous implementation first
+        # created nested dictionaries and then scanned every trained class for every
+        # segment before converting the resulting Python lists to a dataframe.
+        row_ids = []
+        row_indexes = {}
         for recording in sorted(self.labels_per_recording.keys()):
-            for segment in sorted(segment_dict[recording].keys()):
-                row = [f"{recording}-{segment}"]
-                row.extend([0 for class_code in self.trained_classes])
-                for i, class_code in enumerate(self.trained_classes):
-                    if class_code in segment_dict[recording][segment]:
-                        row[self.trained_class_indexes[class_code] + 1] = segment_dict[
-                            recording
-                        ][segment][class_code]
+            if recording not in self.segments_per_recording:
+                continue
+            for segment in sorted(self.segments_per_recording[recording]):
+                row_indexes[(recording, segment)] = len(row_ids)
+                row_ids.append(f"{recording}-{segment}")
 
-                rows.append(row)
+        scores = np.zeros((len(row_ids), len(self.trained_classes)), dtype=np.float32)
+        populated = np.zeros_like(scores, dtype=bool) if use_max_score else None
+        for recording, labels in self.labels_per_recording.items():
+            for label in labels:
+                row_index = row_indexes.get((recording, label.segment))
+                if row_index is None:
+                    continue
+                column_index = self.trained_class_indexes[label.class_code]
+                if use_max_score and populated[row_index, column_index]:
+                    scores[row_index, column_index] = max(
+                        scores[row_index, column_index], label.score
+                    )
+                else:
+                    scores[row_index, column_index] = label.score
+                    if populated is not None:
+                        populated[row_index, column_index] = True
 
-        self.y_pred_trained_df = pd.DataFrame(rows, columns=[""] + self.trained_classes)
+        self.y_pred_trained_df = pd.DataFrame(scores, columns=self.trained_classes)
+        self.y_pred_trained_df.insert(0, "", row_ids)
 
         # create version for annotated classes only
-        self.y_pred_annotated_df = self.y_pred_trained_df.copy()
-        for i, column in enumerate(self.y_pred_annotated_df.columns):
-            if i == 0:
-                continue  # skip the index column
-
-            if column not in self.annotated_class_set:
-                self.y_pred_annotated_df = self.y_pred_annotated_df.drop(column, axis=1)
+        self.y_pred_annotated_df = self.y_pred_trained_df.loc[
+            :, [""] + self.annotated_classes
+        ].copy()
 
     def set_class_indexes(self):
         """
@@ -366,6 +362,52 @@ class BaseTester:
     # ============================================================================
     # Public methods - Statistics and metrics
     # ============================================================================
+
+    def get_auc_metric(self, metric, y_pred_trained=None):
+        """Calculate one AUC metric without producing unused statistics or curves."""
+        import numpy as np
+        from sklearn import metrics
+
+        if y_pred_trained is None:
+            y_pred_trained = self.y_pred_trained
+
+        annotated_columns = [
+            self.trained_class_indexes[class_code]
+            for class_code in self.annotated_classes
+        ]
+        y_pred_annotated = y_pred_trained[:, annotated_columns]
+
+        if metric == "macro_pr":
+            return metrics.average_precision_score(
+                self.y_true_annotated, y_pred_annotated, average="macro"
+            )
+        if metric == "micro_pr":
+            return metrics.average_precision_score(
+                self.y_true_trained, y_pred_trained, average="micro"
+            )
+        if metric == "micro_roc":
+            return metrics.roc_auc_score(
+                self.y_true_trained, y_pred_trained, average="micro"
+            )
+        if metric == "macro_roc":
+            y_true_annotated = self.y_true_annotated
+            # ROC-AUC is undefined for a class containing only positive samples.
+            if np.any(np.sum(y_true_annotated, axis=0) == y_true_annotated.shape[0]):
+                y_true_annotated = np.append(
+                    y_true_annotated,
+                    np.zeros((1, y_true_annotated.shape[1])),
+                    axis=0,
+                )
+                y_pred_annotated = np.append(
+                    y_pred_annotated,
+                    np.zeros((1, y_pred_annotated.shape[1])),
+                    axis=0,
+                )
+            return metrics.roc_auc_score(
+                y_true_annotated, y_pred_annotated, average="macro"
+            )
+
+        raise ValueError(f"Invalid AUC metric: {metric}")
 
     def get_pr_auc_stats(self):
         """
@@ -892,7 +934,7 @@ class BaseTester:
                     continue
 
                 for segment in self.segments_per_recording[recording]:
-                    for label in self.labels_per_recording[recording]:
+                    for label in self.labels_by_segment[recording].get(segment, []):
                         if (
                             label.class_code in self.annotated_class_indexes
                             and segment == label.segment
@@ -1043,10 +1085,7 @@ class BaseTester:
                 for i, class_code in enumerate(self.trained_classes):
                     detected_classes[class_code] = False
 
-                for label in self.labels_per_recording[recording]:
-                    if use_segment != label.segment:
-                        continue
-
+                for label in self.labels_by_segment[recording].get(use_segment, []):
                     if (
                         label.class_code in self.trained_class_indexes
                         and label.score >= threshold
