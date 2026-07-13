@@ -53,6 +53,7 @@ class PerSegmentTester(BaseTester):
         cutoff: float = 0.6,
         coef: Optional[float] = None,
         inter: Optional[float] = None,
+        save_matrices: bool = True,
     ):
         """
         Initialize the PerSegmentTester.
@@ -69,6 +70,7 @@ class PerSegmentTester(BaseTester):
         self.calibration_cutoff = cutoff
         self.coefficient = coef
         self.intercept = inter
+        self.save_matrices = save_matrices
 
         self.cfg = get_config()
 
@@ -192,15 +194,16 @@ class PerSegmentTester(BaseTester):
             dtype={"recording": str, "class": str},
             keep_default_na=False,
         )
-        for i, row in df.iterrows():
-            recording = row["recording"]
+        annotation_rows = df[
+            ["recording", "class", "start_time", "end_time"]
+        ].itertuples(index=False, name=None)
+        for recording, class_code, start_time, end_time in annotation_rows:
             if not recording:
                 break
 
             if recording not in self.annotations:
                 self.annotations[recording] = []
 
-            class_code = row["class"]
             if not class_code:
                 # useful when including a recording with no annotations
                 continue
@@ -217,7 +220,7 @@ class PerSegmentTester(BaseTester):
 
                 continue  # exclude from saved annotations
 
-            annotation = Annotation(row["start_time"], row["end_time"], class_code)
+            annotation = Annotation(start_time, end_time, class_code)
             self.annotations[recording].append(annotation)
             self.annotated_class_set.add(annotation.class_code)
 
@@ -231,10 +234,8 @@ class PerSegmentTester(BaseTester):
         import numpy as np
         import pandas as pd
 
-        # set segment_dict[recording][segment] = {classes in that segment},
-        # where each segment is 3 seconds (self.segment_len) long
         self.segments_per_recording = {}
-        segment_dict = {}
+        valid_recordings = []
         for recording in self.annotations:
             if recording not in self.recording_duration:
                 logging.error(
@@ -251,42 +252,38 @@ class PerSegmentTester(BaseTester):
             ).tolist()
 
             num_segments = len(offsets)
-            self.segments_per_recording[recording] = [i for i in range(num_segments)]
-            segment_dict[recording] = {}
-            for segment in range(num_segments):
-                segment_dict[recording][segment] = {}
+            self.segments_per_recording[recording] = list(range(num_segments))
+            valid_recordings.append(recording)
 
-            for annotation in self.annotations[recording]:
-                segments = self.get_segments(annotation.start_time, annotation.end_time)
-                for segment in segments:
-                    if segment in segment_dict[recording]:
-                        segment_dict[recording][segment][annotation.class_code] = 1
-
-        # convert to 2D array with a row per segment and a column per class;
-        # set cells to 1 if class is present and 0 if not present
-        self.recordings = []  # base class needs array with recording per row
-        rows = []
-        for recording in sorted(segment_dict.keys()):
-            for segment in sorted(segment_dict[recording].keys()):
+        # Build the ground-truth matrix directly rather than creating a nested
+        # dictionary and scanning every trained class for every segment.
+        self.recordings = []
+        row_ids = []
+        row_indexes = {}
+        for recording in sorted(valid_recordings):
+            for segment in self.segments_per_recording[recording]:
                 self.recordings.append(recording)
-                row = [f"{recording}-{segment}"]
-                row.extend([0 for class_code in self.trained_classes])
-                for i, class_code in enumerate(self.trained_classes):
-                    if class_code in segment_dict[recording][segment]:
-                        row[self.trained_class_indexes[class_code] + 1] = 1
+                row_indexes[(recording, segment)] = len(row_ids)
+                row_ids.append(f"{recording}-{segment}")
 
-                rows.append(row)
+        values = np.zeros((len(row_ids), len(self.trained_classes)), dtype=np.uint8)
+        for recording in valid_recordings:
+            for annotation in self.annotations[recording]:
+                column_index = self.trained_class_indexes[annotation.class_code]
+                for segment in self.get_segments(
+                    annotation.start_time, annotation.end_time
+                ):
+                    row_index = row_indexes.get((recording, segment))
+                    if row_index is not None:
+                        values[row_index, column_index] = 1
 
-        self.y_true_trained_df = pd.DataFrame(rows, columns=[""] + self.trained_classes)
+        self.y_true_trained_df = pd.DataFrame(values, columns=self.trained_classes)
+        self.y_true_trained_df.insert(0, "", row_ids)
 
         # create version for annotated classes only
-        self.y_true_annotated_df = self.y_true_trained_df.copy()
-        for i, column in enumerate(self.y_true_annotated_df.columns):
-            if i == 0:
-                continue  # skip the index column
-
-            if column not in self.annotated_class_set:
-                self.y_true_annotated_df = self.y_true_annotated_df.drop(column, axis=1)
+        self.y_true_annotated_df = self.y_true_trained_df.loc[
+            :, [""] + self.annotated_classes
+        ].copy()
 
     def _output_pr_per_threshold(self, threshold, precision, recall, name):
         """
@@ -761,18 +758,19 @@ class PerSegmentTester(BaseTester):
         )
         self.convert_to_numpy()
 
-        self.y_true_annotated_df.to_csv(
-            os.path.join(self.output_dir, "y_true_annotated.csv"), index=False
-        )
-        self.y_pred_annotated_df.to_csv(
-            os.path.join(self.output_dir, "y_pred_annotated.csv"), index=False
-        )
-        self.y_true_trained_df.to_csv(
-            os.path.join(self.output_dir, "y_true_trained.csv"), index=False
-        )
-        self.y_pred_trained_df.to_csv(
-            os.path.join(self.output_dir, "y_pred_trained.csv"), index=False
-        )
+        if self.save_matrices:
+            self.y_true_annotated_df.to_csv(
+                os.path.join(self.output_dir, "y_true_annotated.csv"), index=False
+            )
+            self.y_pred_annotated_df.to_csv(
+                os.path.join(self.output_dir, "y_pred_annotated.csv"), index=False
+            )
+            self.y_true_trained_df.to_csv(
+                os.path.join(self.output_dir, "y_true_trained.csv"), index=False
+            )
+            self.y_pred_trained_df.to_csv(
+                os.path.join(self.output_dir, "y_pred_trained.csv"), index=False
+            )
         self.check_if_arrays_match()
 
     def plot_calibration_curve(self, y_true, y_pred, a, b, n_bins=15):

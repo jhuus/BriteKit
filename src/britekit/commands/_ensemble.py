@@ -13,46 +13,56 @@ from britekit.core.config_loader import get_config
 from britekit.core import util
 
 
-def _eval_ensemble(
-    ensemble, dataframe_dict, annotations_path, recordings_path, inference_output_dir
-):
-    import pandas as pd
-    from britekit.testing.per_segment_tester import PerSegmentTester
+def _build_prediction_mapping(tester, metadata_df):
+    """Map long-format prediction rows to the tester's dense prediction matrix."""
+    import numpy as np
 
-    # create a dataframe with the average scores for the ensemble
-    avg_df: pd.DataFrame = dataframe_dict[ensemble[0]].copy()
-    avg_df["score"] = sum(
-        dataframe_dict[ckpt_path]["score"] for ckpt_path in ensemble
-    ) / len(ensemble)
+    row_indexes = {
+        row_id: index for index, row_id in enumerate(tester.y_pred_trained_df[""])
+    }
+    step = tester.segment_len - tester.overlap
+    coordinate_sources = {}
+    rows = metadata_df.itertuples(index=False, name=None)
+    for source_index, (recording, class_code, start_time, _) in enumerate(rows):
+        segment = int(start_time // step)
+        row_index = row_indexes.get(f"{recording}-{segment}")
+        if row_index is None:
+            continue
+        column_index = tester.trained_class_indexes[class_code]
+        flat_index = row_index * len(tester.trained_classes) + column_index
+        # Match init_y_pred(use_max_score=False): the last duplicate wins.
+        coordinate_sources[flat_index] = source_index
 
-    # save the dataframe to the usual inference output location
-    scores_csv_path = str(Path(inference_output_dir) / "scores.csv")
-    avg_df.to_csv(scores_csv_path, index=False)
+    if not coordinate_sources:
+        raise ValueError("No prediction rows matched the test segments")
 
-    with tempfile.TemporaryDirectory() as output_dir:
-        util.set_logging(level=logging.ERROR)  # suppress logging during test reporting
-        min_score = 0.8  # arbitrary threshold
-        tester = PerSegmentTester(
-            annotations_path,
-            recordings_path,
-            inference_output_dir,
-            output_dir,
-            min_score,
-        )
-        tester.initialize()
+    flat_indexes = np.fromiter(coordinate_sources.keys(), dtype=np.int64)
+    source_indexes = np.fromiter(coordinate_sources.values(), dtype=np.int64)
+    return source_indexes, flat_indexes
 
-        pr_stats = tester.get_pr_auc_stats()
-        roc_stats = tester.get_roc_auc_stats()
-        util.set_logging()  # restore logging
 
-        scores = {
-            "macro_pr": pr_stats["macro_pr_auc"],
-            "micro_pr": pr_stats["micro_pr_auc_trained"],
-            "macro_roc": roc_stats["macro_roc_auc"],
-            "micro_roc": roc_stats["micro_roc_auc_trained"],
-        }
+def _eval_scores(scores, tester, metric, source_indexes, flat_indexes):
+    """Evaluate one in-memory score vector using one requested scalar metric."""
+    import numpy as np
 
-    return scores
+    y_pred = np.zeros_like(tester.y_pred_trained, dtype=np.float32)
+    # convert_to_numpy() commonly produces a Fortran-contiguous array after
+    # dropping the dataframe's identifier column. ravel() uses C order and
+    # returns a copy for that layout, so assigning through it can silently leave
+    # y_pred full of zeros. flat always assigns into the original array.
+    y_pred.flat[flat_indexes] = scores[source_indexes]
+    return float(tester.get_auc_metric(metric, y_pred))
+
+
+def _eval_ensemble(ensemble, score_dict, tester, metric, source_indexes, flat_indexes):
+    """Average an ensemble's checkpoint scores and evaluate the selected metric."""
+    import numpy as np
+
+    scores = np.zeros_like(score_dict[ensemble[0]], dtype=np.float64)
+    for ckpt_path in ensemble:
+        scores += score_dict[ckpt_path]
+    scores /= len(ensemble)
+    return _eval_scores(scores, tester, metric, source_indexes, flat_indexes)
 
 
 def ensemble(
@@ -90,12 +100,20 @@ def ensemble(
     import random
     import shutil
 
+    import numpy as np
     import pandas as pd
 
     from britekit.core.analyzer import Analyzer
+    from britekit.testing.per_segment_tester import PerSegmentTester
 
     if metric not in ["macro_pr", "micro_pr", "macro_roc", "micro_roc"]:
         logging.error(f"Error: invalid metric ({metric})")
+        return
+    if ensemble_size < 1:
+        logging.error("Error: ensemble size must be at least 1")
+        return
+    if num_tries < 1:
+        logging.error("Error: number of tries must be at least 1")
         return
 
     cfg = get_config(cfg_path)
@@ -113,114 +131,163 @@ def ensemble(
     if not recordings_path:
         recordings_path = str(Path(annotations_path).parent)
 
-    with tempfile.TemporaryDirectory() as ensemble_dir:
-        cfg.misc.ckpt_folder = ensemble_dir
-        cfg.infer.min_score = 0
+    original_ckpt_folder = cfg.misc.ckpt_folder
+    original_min_score = cfg.infer.min_score
+    best_score = float("-inf")
+    best_ensemble = None
+    try:
+        with tempfile.TemporaryDirectory() as ensemble_dir:
+            cfg.misc.ckpt_folder = ensemble_dir
+            cfg.infer.min_score = 0
 
-        # get a dataframe of predictions per checkpoint
-        label_dir = "ensemble_evaluation_labels"
-        inference_output_dir = str(Path(recordings_path) / label_dir)
-        scores_csv_path = str(Path(inference_output_dir) / "scores.csv")
-        dataframe_dict = {}
-        for ckpt_path in ckpt_paths:
-            ckpt_name = Path(ckpt_path).name
-            logging.info(f"Running inference with {ckpt_name}")
-            dest_path = str(Path(ensemble_dir) / ckpt_name)
-            shutil.copyfile(ckpt_path, dest_path)
+            # Run inference once per checkpoint. Keep shared row metadata once and
+            # retain only compact score arrays for ensemble evaluation.
+            inference_output_dir = str(Path(ensemble_dir) / "inference")
+            scores_csv_path = str(Path(inference_output_dir) / "scores.csv")
+            score_dict = {}
+            metadata_df = None
+            metadata_columns = ["recording", "name", "start_time", "end_time"]
+            for ckpt_path in ckpt_paths:
+                ckpt_name = Path(ckpt_path).name
+                logging.info(f"Running inference with {ckpt_name}")
+                dest_path = str(Path(ensemble_dir) / ckpt_name)
+                shutil.copyfile(ckpt_path, dest_path)
 
-            util.set_logging(level=logging.ERROR)  # suppress logging during inference
-            Analyzer().run(recordings_path, inference_output_dir, rtype="csv")
-            util.set_logging()
+                util.set_logging(level=logging.ERROR)
+                try:
+                    Analyzer().run(recordings_path, inference_output_dir, rtype="csv")
+                finally:
+                    util.set_logging()
 
-            df = pd.read_csv(scores_csv_path)
-            dataframe_dict[ckpt_path] = df
-            os.remove(dest_path)
-
-        best_score = 0
-        best_ensemble = None
-        count = 1
-        total_combinations = math.comb(len(ckpt_paths), ensemble_size)
-        if greedy:
-            # Use a greedy algorithm. That is, find the best single checkpoint, then loop,
-            # adding the checkpoint that improves the ensemble the most at each stage until
-            # the requested size is reached.
-            logging.info("Using greedy algorithm")
-            current_ensemble: list = []
-            remaining_ckpts = set(ckpt_paths)
-
-            for i in range(ensemble_size):
-                best_addition = None
-                best_addition_score = 0
-
-                for candidate in sorted(remaining_ckpts):
-                    test_ensemble = current_ensemble + [candidate]
-                    scores = _eval_ensemble(
-                        test_ensemble,
-                        dataframe_dict,
-                        annotations_path,
-                        recordings_path,
-                        inference_output_dir,
+                df = pd.read_csv(scores_csv_path)
+                checkpoint_metadata = df.loc[:, metadata_columns].reset_index(drop=True)
+                if metadata_df is None:
+                    metadata_df = checkpoint_metadata
+                elif not metadata_df.equals(checkpoint_metadata):
+                    raise ValueError(
+                        f"Prediction rows for {ckpt_name} do not match the other checkpoints"
                     )
-                    logging.info(
-                        f"Step {i + 1}/{ensemble_size}, testing {Path(candidate).name}: score = {scores[metric]:.4f}"
-                    )
-                    if scores[metric] > best_addition_score:
-                        best_addition_score = scores[metric]
-                        best_addition = candidate
-
-                assert best_addition is not None
-                current_ensemble.append(best_addition)
-                remaining_ckpts.remove(best_addition)
-                logging.info(
-                    f"Added {Path(best_addition).name}, ensemble score = {best_addition_score:.4f}"
+                score_dict[ckpt_path] = df["score"].to_numpy(
+                    dtype=np.float64, copy=True
                 )
+                os.remove(dest_path)
 
-            best_ensemble = tuple(current_ensemble)
-            best_score = best_addition_score
-        elif total_combinations <= num_tries:
-            # Exhaustive search
-            logging.info("Doing exhaustive search")
-            for ensemble in itertools.combinations(ckpt_paths, ensemble_size):
-                scores = _eval_ensemble(
-                    ensemble,
-                    dataframe_dict,
+            assert metadata_df is not None
+
+            # Initialize static ground truth, segment metadata, and class mappings
+            # once. Candidate ensembles only replace the prediction scores.
+            util.set_logging(level=logging.ERROR)
+            try:
+                tester = PerSegmentTester(
                     annotations_path,
                     recordings_path,
                     inference_output_dir,
+                    str(Path(ensemble_dir) / "tester_output"),
+                    threshold=0.8,
+                    save_matrices=False,
                 )
-                logging.info(
-                    f"For ensemble {count} of {total_combinations}, score = {scores[metric]:.4f}"
-                )
-                if scores[metric] > best_score:
-                    best_score = scores[metric]
-                    best_ensemble = ensemble
+                tester.initialize()
+            finally:
+                util.set_logging()
 
-                count += 1
-        else:
-            # Random sampling without replacement
-            logging.info("Doing random sampling")
-            seen: set = set()
-            while len(seen) < num_tries:
-                ensemble = tuple(sorted(random.sample(ckpt_paths, ensemble_size)))
-                if ensemble not in seen:
-                    seen.add(ensemble)
-                    scores = _eval_ensemble(
-                        ensemble,
-                        dataframe_dict,
-                        annotations_path,
-                        recordings_path,
-                        inference_output_dir,
+            source_indexes, flat_indexes = _build_prediction_mapping(
+                tester, metadata_df
+            )
+
+            count = 1
+            total_combinations = math.comb(len(ckpt_paths), ensemble_size)
+            if greedy:
+                # Find the best single checkpoint, then add the checkpoint that
+                # improves the ensemble most. Reuse the selected checkpoints' sum.
+                logging.info("Using greedy algorithm")
+                current_ensemble: list = []
+                remaining_ckpts = set(ckpt_paths)
+                current_score_sum = np.zeros_like(
+                    score_dict[ckpt_paths[0]], dtype=np.float64
+                )
+
+                for i in range(ensemble_size):
+                    best_addition = None
+                    best_addition_score = float("-inf")
+
+                    for candidate in sorted(remaining_ckpts):
+                        candidate_scores = (
+                            current_score_sum + score_dict[candidate]
+                        ) / (i + 1)
+                        score = _eval_scores(
+                            candidate_scores,
+                            tester,
+                            metric,
+                            source_indexes,
+                            flat_indexes,
+                        )
+                        logging.info(
+                            f"Step {i + 1}/{ensemble_size}, testing {Path(candidate).name}: score = {score:.4f}"
+                        )
+                        if score > best_addition_score:
+                            best_addition_score = score
+                            best_addition = candidate
+
+                    assert best_addition is not None
+                    current_ensemble.append(best_addition)
+                    remaining_ckpts.remove(best_addition)
+                    current_score_sum += score_dict[best_addition]
+                    logging.info(
+                        f"Added {Path(best_addition).name}, ensemble score = {best_addition_score:.4f}"
+                    )
+
+                best_ensemble = tuple(current_ensemble)
+                best_score = best_addition_score
+            elif total_combinations <= num_tries:
+                logging.info("Doing exhaustive search")
+                for candidate_ensemble in itertools.combinations(
+                    ckpt_paths, ensemble_size
+                ):
+                    score = _eval_ensemble(
+                        candidate_ensemble,
+                        score_dict,
+                        tester,
+                        metric,
+                        source_indexes,
+                        flat_indexes,
                     )
                     logging.info(
-                        f"For ensemble {count} of {num_tries}, score = {scores[metric]:.4f}"
+                        f"For ensemble {count} of {total_combinations}, score = {score:.4f}"
                     )
-                    if scores[metric] > best_score:
-                        best_score = scores[metric]
-                        best_ensemble = ensemble
+                    if score > best_score:
+                        best_score = score
+                        best_ensemble = candidate_ensemble
 
-                count += 1
+                    count += 1
+            else:
+                logging.info("Doing random sampling")
+                seen: set = set()
+                while len(seen) < num_tries:
+                    candidate_ensemble = tuple(
+                        sorted(random.sample(ckpt_paths, ensemble_size))
+                    )
+                    if candidate_ensemble not in seen:
+                        seen.add(candidate_ensemble)
+                        score = _eval_ensemble(
+                            candidate_ensemble,
+                            score_dict,
+                            tester,
+                            metric,
+                            source_indexes,
+                            flat_indexes,
+                        )
+                        logging.info(
+                            f"For ensemble {count} of {num_tries}, score = {score:.4f}"
+                        )
+                        if score > best_score:
+                            best_score = score
+                            best_ensemble = candidate_ensemble
 
-        shutil.rmtree(inference_output_dir)
+                    count += 1
+    finally:
+        cfg.misc.ckpt_folder = original_ckpt_folder
+        cfg.infer.min_score = original_min_score
+        util.set_logging()
 
     logging.info(f"Best score = {best_score:.4f}")
 
