@@ -7,7 +7,7 @@ from typing import List, Optional, Any
 import uuid
 
 import numpy as np
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 from timm.optim import create_optimizer_v2
 import torch
 from torch import nn
