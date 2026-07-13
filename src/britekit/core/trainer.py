@@ -19,7 +19,7 @@ class Trainer:
         - prefix (str, optional): Prefix to add to checkpoint names.
         """
 
-        import pytorch_lightning as pl
+        import lightning.pytorch as pl
         import torch
 
         self.prefix = prefix
@@ -39,9 +39,9 @@ class Trainer:
         """
         Run training as specified in configuration.
         """
-        import pytorch_lightning as pl
-        from pytorch_lightning.callbacks import ModelCheckpoint, TQDMProgressBar
-        from pytorch_lightning.loggers import TensorBoardLogger
+        import lightning.pytorch as pl
+        from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
+        from lightning.pytorch.loggers import TensorBoardLogger
         import torch
 
         from britekit.core.data_module import DataModule
@@ -189,9 +189,9 @@ class Trainer:
         """
         Suggest a learning rate and produce a plot.
         """
-        import pytorch_lightning as pl
-        from pytorch_lightning.callbacks import TQDMProgressBar
-        from pytorch_lightning.tuner import Tuner
+        import lightning.pytorch as pl
+        from lightning.pytorch.callbacks import TQDMProgressBar
+        from lightning.pytorch.tuner import Tuner
 
         from britekit.core.data_module import DataModule
         from britekit.models import model_loader
