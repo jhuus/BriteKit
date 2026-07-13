@@ -4,7 +4,7 @@
 import logging
 from pathlib import Path
 from importlib.resources import files as pkg_files
-from importlib.abc import Traversable
+from importlib.resources.abc import Traversable
 from typing import Iterator, Optional, Tuple, List, cast
 
 import click
