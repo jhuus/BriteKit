@@ -92,7 +92,7 @@ def ckpt_freeze(input_path: str = ""):
     Args:
     - input_path (str): Required path to a checkpoint file, or a directory of checkpoint files, to freeze.
     """
-    import pytorch_lightning as pl
+    import lightning.pytorch as pl
     from britekit.models.model_loader import load_from_checkpoint
 
     if os.path.isdir(input_path):
