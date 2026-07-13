@@ -7,7 +7,7 @@ name = "britekit"
 dynamic = ["version"]
 description = 'Core functions for bioacoustic recognizers.'
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 keywords = []
 authors = [
@@ -16,33 +16,48 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython",
-  "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
   "click>=8.1,<8.4",
-  "numpy>=2.0,<2.5",
+
+  "numpy>=2.0,<2.5; python_version < '3.14'",
+  "numpy>=2.3.3,<2.5; python_version >= '3.14'",
+
   "onnx>=1.18,<2.0",
-  "pandas>=2.0,<2.5",
+
+  "pandas>=2.0,<2.5; python_version < '3.14'",
+  "pandas>=2.3.3,<2.5; python_version >= '3.14'",
+
   "pyinaturalist>=0.20,<1.0",
   "soundfile>=0.13,<1.0",
+
   "torch>=2.5,<2.12",
   "torchaudio>=2.5,<2.12",
   "torchvision>=0.20,<0.27",
-  "librosa>=0.10,<2.0",
+
+  "librosa>=0.11,<2.0",
   "lightning>=2.5,<2.7",
-  "matplotlib>=3.8,<3.11",
+
+  "matplotlib>=3.8,<3.11; python_version < '3.14'",
+  "matplotlib>=3.10.5,<3.11; python_version >= '3.14'",
+
   "omegaconf>=2.3,<3.0",
-  "pytorch_lightning>=2.5,<2.7",
-  "scipy>=1.13,<2.0",
+
+  "scipy>=1.13,<2.0; python_version < '3.14'",
+  "scipy>=1.16.1,<2.0; python_version >= '3.14'",
+
   "tensorboard>=2.19,<3.0",
   "timm>=1.0.17,<2.0",
   "yt-dlp>=2025.6.25",
-  "faiss-cpu>=1.10",
+
+  "faiss-cpu>=1.10; python_version < '3.14'",
+  "faiss-cpu>=1.12; python_version >= '3.14'",
 ]
 
 [project.scripts]
