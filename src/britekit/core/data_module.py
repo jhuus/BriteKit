@@ -6,7 +6,7 @@ import pickle
 import random
 from typing import Any, List, Optional, Tuple
 
-from pytorch_lightning import LightningDataModule
+from lightning.pytorch import LightningDataModule
 from torch.utils.data import Sampler
 
 from britekit.core.config_loader import get_config
