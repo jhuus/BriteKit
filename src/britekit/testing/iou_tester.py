@@ -77,11 +77,23 @@ class IoUTester:
                 (float(row["start_time"]), float(row["end_time"]))
             )
 
+        for class_dict in annotations.values():
+            for intervals in class_dict.values():
+                intervals.sort(key=lambda interval: interval[0])
+
         return annotations
 
-    def _load_labels(self):
+    def _load_labels(self, annotations=None):
         """Return {recording: {class_code: [(start, end, score)]}} from label files."""
-        label_df = util.inference_output_to_dataframe(self.label_dir)
+        recording_classes = None
+        if annotations is not None:
+            recording_classes = {
+                recording: set(class_dict)
+                for recording, class_dict in annotations.items()
+            }
+        label_df = util.inference_output_to_dataframe(
+            self.label_dir, recording_classes=recording_classes
+        )
         labels: dict = {}
         for _, row in label_df.iterrows():
             recording = row["recording"]
@@ -96,6 +108,10 @@ class IoUTester:
                 (float(row["start_time"]), float(row["end_time"]), float(row["score"]))
             )
 
+        for class_dict in labels.values():
+            for intervals in class_dict.values():
+                intervals.sort(key=lambda interval: interval[0])
+
         return labels
 
     @staticmethod
@@ -108,9 +124,10 @@ class IoUTester:
         """
         if not lbl_intervals:
             return []
-        sorted_lbls = sorted(lbl_intervals, key=lambda x: x[0])
-        merged = [list(sorted_lbls[0])]
-        for s, e, score in sorted_lbls[1:]:
+        # Label intervals are sorted once when loaded. Filtering by threshold
+        # preserves that order, avoiding a sort for every threshold.
+        merged = [list(lbl_intervals[0])]
+        for s, e, score in lbl_intervals[1:]:
             if s <= merged[-1][1]:
                 merged[-1][1] = max(merged[-1][1], e)
                 merged[-1][2] = max(merged[-1][2], score)
@@ -168,11 +185,23 @@ class IoUTester:
         """
         ann_neighbors = [[] for _ in ann_intervals]
         lbl_neighbors = [[] for _ in lbl_intervals]
+        # Both lists are sorted by start time. Advance past labels that end
+        # before each annotation, then inspect only labels that could overlap.
+        # This replaces the previous all-pairs O(A * L) scan.
+        first_possible_label = 0
         for i, ann in enumerate(ann_intervals):
-            for j, lbl in enumerate(lbl_intervals):
-                if self._overlaps(ann, lbl):
+            while (
+                first_possible_label < len(lbl_intervals)
+                and lbl_intervals[first_possible_label][1] <= ann[0]
+            ):
+                first_possible_label += 1
+
+            j = first_possible_label
+            while j < len(lbl_intervals) and lbl_intervals[j][0] < ann[1]:
+                if self._overlaps(ann, lbl_intervals[j]):
                     ann_neighbors[i].append(j)
                     lbl_neighbors[j].append(i)
+                j += 1
 
         ann_visited = [False] * len(ann_intervals)
         lbl_visited = [False] * len(lbl_intervals)
@@ -226,12 +255,16 @@ class IoUTester:
 
         return scores
 
-    def _compute_iou(self, annotations, labels, threshold):
-        """Mean IoU across all annotated (recording, class) pairs at the given threshold."""
+    def _compute_iou_details(self, annotations, labels, threshold):
+        """Return overall and per-recording IoU at the given threshold."""
         all_scores = []
-        logging.debug(f"threshold={threshold:.4f}")
+        scores_by_recording = {}
+        debug = logging.getLogger().isEnabledFor(logging.DEBUG)
+        if debug:
+            logging.debug("threshold=%.4f", threshold)
 
         for recording, class_dict in annotations.items():
+            recording_scores = []
             for class_code, ann_intervals in class_dict.items():
                 raw_lbls = []
                 lbl_intervals = []
@@ -241,46 +274,48 @@ class IoUTester:
                     ]
                     lbl_intervals = self._merge_adjacent_labels(raw_lbls)
 
-                logging.debug(
-                    f"  {recording} / {class_code}:"
-                    f"\n    annotations : {ann_intervals}"
-                    f"\n    labels (raw): {raw_lbls}"
-                    f"\n    labels (merged): {[(s, e) for s, e, _ in lbl_intervals]}"
-                )
+                if debug:
+                    logging.debug(
+                        f"  {recording} / {class_code}:"
+                        f"\n    annotations : {ann_intervals}"
+                        f"\n    labels (raw): {raw_lbls}"
+                        f"\n    labels (merged): {[(s, e) for s, e, _ in lbl_intervals]}"
+                    )
 
                 scores = self._iou_scores_for_pair(ann_intervals, lbl_intervals)
-                logging.debug(f"    component scores: {[f'{s:.4f}' for s in scores]}")
+                if debug:
+                    logging.debug(
+                        f"    component scores: {[f'{s:.4f}' for s in scores]}"
+                    )
                 all_scores.extend(scores)
+                recording_scores.extend(scores)
+
+            scores_by_recording[recording] = (
+                sum(recording_scores) / len(recording_scores)
+                if recording_scores
+                else 0.0
+            )
 
         if not all_scores:
-            logging.debug("  no scores — returning 0.0")
-            return 0.0
+            if debug:
+                logging.debug("  no scores — returning 0.0")
+            return 0.0, scores_by_recording
 
         mean_iou = sum(all_scores) / len(all_scores)
-        logging.debug(
-            f"  all scores: {[f'{s:.4f}' for s in all_scores]}"
-            f"\n  mean IoU: {mean_iou:.4f}"
-        )
-        return mean_iou
+        if debug:
+            logging.debug(
+                f"  all scores: {[f'{s:.4f}' for s in all_scores]}"
+                f"\n  mean IoU: {mean_iou:.4f}"
+            )
+        return mean_iou, scores_by_recording
+
+    def _compute_iou(self, annotations, labels, threshold):
+        """Mean IoU across all annotated (recording, class) pairs at the given threshold."""
+        return self._compute_iou_details(annotations, labels, threshold)[0]
 
     def _compute_iou_per_recording(self, annotations, labels, threshold):
         """Mean IoU per recording across all annotated classes at the given threshold."""
-        results = {}
-        for recording, class_dict in annotations.items():
-            scores = []
-            for class_code, ann_intervals in class_dict.items():
-                lbl_intervals = []
-                if recording in labels and class_code in labels[recording]:
-                    lbl_intervals = self._merge_adjacent_labels(
-                        [
-                            iv
-                            for iv in labels[recording][class_code]
-                            if iv[2] >= threshold
-                        ]
-                    )
-                scores.extend(self._iou_scores_for_pair(ann_intervals, lbl_intervals))
-            results[recording] = sum(scores) / len(scores) if scores else 0.0
-        return results
+        return self._compute_iou_details(annotations, labels, threshold)[1]
 
     def _average_tp_score(self, annotations, labels):
         """Average score of raw label intervals that overlap at least one annotation."""
@@ -305,22 +340,36 @@ class IoUTester:
         annotations = self._load_annotations()
 
         logging.info("Loading labels")
-        labels = self._load_labels()
+        labels = self._load_labels(annotations)
 
         # Build thresholds without floating-point drift
         n = round((self.end - self.start) / self.incr) + 1
         thresholds = [round(self.start + i * self.incr, 6) for i in range(n)]
 
         results = []
+        per_recording_by_threshold = {}
         for threshold in thresholds:
-            iou = self._compute_iou(annotations, labels, threshold)
+            iou, per_recording = self._compute_iou_details(
+                annotations, labels, threshold
+            )
             results.append((threshold, iou))
+            per_recording_by_threshold[threshold] = per_recording
 
         max_iou = max(r[1] for r in results) if results else 0.0
         max_threshold = next(r[0] for r in results if r[1] == max_iou)
 
-        iou_t1 = self._compute_iou(annotations, labels, self.t1)
-        iou_t2 = self._compute_iou(annotations, labels, self.t2)
+        results_by_threshold = dict(results)
+
+        def get_threshold_details(threshold):
+            if threshold in results_by_threshold:
+                return (
+                    results_by_threshold[threshold],
+                    per_recording_by_threshold[threshold],
+                )
+            return self._compute_iou_details(annotations, labels, threshold)
+
+        iou_t1, per_t1 = get_threshold_details(self.t1)
+        iou_t2, per_t2 = get_threshold_details(self.t2)
 
         thresholds_arr = np.array([r[0] for r in results])
         iou_arr = np.array([r[1] for r in results])
@@ -333,9 +382,7 @@ class IoUTester:
             float_format="%.4f",
         )
 
-        per_t1 = self._compute_iou_per_recording(annotations, labels, self.t1)
-        per_t2 = self._compute_iou_per_recording(annotations, labels, self.t2)
-        per_peak = self._compute_iou_per_recording(annotations, labels, max_threshold)
+        per_peak = per_recording_by_threshold[max_threshold]
         recordings_df = pd.DataFrame(
             {
                 "recording": sorted(per_peak.keys()),
