@@ -300,7 +300,11 @@ class Predictor:
             # this ensures that all frames in the first segment get a full ensemble;
             # apply to every batch (not just the first) so that a 12-model ensemble
             # scores the same as the average of two 6-model ensembles
-            if i % len(initial_start_times) != 0 and curr_start < spec_duration:
+            if (
+                i % len(initial_start_times) != 0
+                and curr_start < spec_duration
+                and curr_start > 0
+            ):
                 start_times = [curr_start - spec_duration] + start_times
 
             logging.debug(
