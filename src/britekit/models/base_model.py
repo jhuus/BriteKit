@@ -120,7 +120,13 @@ class BaseModel(pl.LightningModule):
 
         checkpoint["identifier"] = self.identifier
         checkpoint["training_date"] = self.training_date
-        checkpoint["training_cfg"] = util.cfg_to_pure(self.cfg)
+        training_cfg: Any = util.cfg_to_pure(self.cfg)
+        # Lightning stores a zero-based epoch in each checkpoint.  Record the
+        # number of epochs actually completed by this checkpoint rather than
+        # the configured maximum so downstream manifests describe the model
+        # that was loaded (which may be an earlier retained checkpoint).
+        training_cfg["train"]["num_epochs"] = checkpoint["epoch"] + 1
+        checkpoint["training_cfg"] = training_cfg
         checkpoint["britekit_version"] = britekit_version
 
     def on_load_checkpoint(self, checkpoint):
@@ -128,6 +134,11 @@ class BaseModel(pl.LightningModule):
             self.identifier = checkpoint["identifier"]
             self.training_date = checkpoint["training_date"]
             self.training_cfg = checkpoint["training_cfg"]
+
+            # Checkpoints created before num_epochs represented the configured
+            # maximum still contain Lightning's actual zero-based epoch.
+            if "epoch" in checkpoint:
+                self.training_cfg["train"]["num_epochs"] = checkpoint["epoch"] + 1
 
             self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
             self.cfg.audio.spec_height = self.training_cfg["audio"]["spec_height"]
