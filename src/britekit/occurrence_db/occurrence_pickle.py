@@ -2,7 +2,10 @@
 
 import os
 import pickle
+from types import SimpleNamespace
 from typing import Optional
+
+from britekit.occurrence_db.occurrence_pickle_v2 import FORMAT_NAME, FORMAT_VERSION
 
 
 class OccurrencePickleProvider:
@@ -20,10 +23,83 @@ class OccurrencePickleProvider:
         except Exception as e:
             raise ValueError(f"Unexpected error loading pickle file {pickle_path}: {e}")
 
+        if isinstance(self.data, dict) and self.data.get("format") == FORMAT_NAME:
+            version = self.data.get("version")
+            if version != FORMAT_VERSION:
+                raise ValueError(
+                    f"Unsupported occurrence pickle version {version}; "
+                    f"expected {FORMAT_VERSION}"
+                )
+            self._initialize_v2()
+        else:
+            self.format_version = 1
+            self.counties = list(self.data["counties"].values())
+            self.class_names = set(self.data["classes"])
+
         self.county_cache = {}  # cache (latitude/longitude) -> county
         self.occurrences = {}  # cache occurrence values in a region
         self.smoothed = {}  # cache smoothed values in a region
         self.max = {}  # cache max values in a region
+
+    def _initialize_v2(self) -> None:
+        import numpy as np
+
+        try:
+            self.format_version = FORMAT_VERSION
+            self.counties = [
+                SimpleNamespace(
+                    index=index,
+                    code=area[0],
+                    name=area[1],
+                    min_x=area[2],
+                    max_x=area[3],
+                    min_y=area[4],
+                    max_y=area[5],
+                )
+                for index, area in enumerate(self.data["areas"])
+            ]
+            self.class_names = set(self.data["class_names"])
+            self.class_name_to_index = {
+                name: index for index, name in enumerate(self.data["class_names"])
+            }
+            self.area_offsets = np.asarray(self.data["area_offsets"], dtype=np.int64)
+            self.class_indices = np.asarray(self.data["class_indices"], dtype=np.int32)
+            self.values = np.asarray(self.data["values"], dtype=np.float16)
+        except (KeyError, TypeError, ValueError, IndexError) as error:
+            raise ValueError(
+                f"Invalid occurrence pickle v{FORMAT_VERSION}: {error}"
+            ) from error
+
+        if self.values.ndim != 2 or self.values.shape[1] != 48:
+            raise ValueError("Invalid occurrence pickle v2 weekly-value matrix")
+        if len(self.area_offsets) != len(self.counties) + 1:
+            raise ValueError("Invalid occurrence pickle v2 area offsets")
+        if len(self.class_indices) != len(self.values):
+            raise ValueError("Invalid occurrence pickle v2 occurrence indexes")
+
+    def _occurrence_values(self, county, class_name):  # type: ignore[no-untyped-def]
+        """Return raw values for one area/class, or None when absent."""
+        if self.format_version == 1:
+            return self.data["occurrences"][county.code].get(class_name)
+
+        import numpy as np
+
+        class_index = self.class_name_to_index.get(class_name)
+        if class_index is None:
+            return None
+        start = self.area_offsets[county.index]
+        end = self.area_offsets[county.index + 1]
+        relative = np.searchsorted(self.class_indices[start:end], class_index)
+        position = start + relative
+        if position >= end or self.class_indices[position] != class_index:
+            return None
+        return self.values[position]
+
+    def _maximum_value(self, county, class_name, occurrence_values):  # type: ignore[no-untyped-def]
+        if self.format_version == 1:
+            return self.data["max"][county.code][class_name]
+
+        return occurrence_values.max().item()
 
     def find_county(self, latitude: float, longitude: float):
         """
@@ -40,10 +116,13 @@ class OccurrencePickleProvider:
         if (latitude, longitude) in self.county_cache:
             return self.county_cache[(latitude, longitude)]
 
-        for county_code in self.data["counties"]:
-            county = self.data["counties"][county_code]
+        for county in self.counties:
             if (
-                latitude >= county.min_y
+                county.min_y is not None
+                and county.max_y is not None
+                and county.min_x is not None
+                and county.max_x is not None
+                and latitude >= county.min_y
                 and latitude <= county.max_y
                 and longitude >= county.min_x
                 and longitude <= county.max_x
@@ -65,9 +144,9 @@ class OccurrencePickleProvider:
             List of matching county objects.
         """
         counties = []
-        for county_code in self.data["counties"]:
-            if county_code.startswith(region_code):
-                counties.append(self.data["counties"][county_code])
+        for county in self.counties:
+            if county.code.startswith(region_code):
+                counties.append(county)
 
         return counties
 
@@ -137,42 +216,49 @@ class OccurrencePickleProvider:
             if len(counties) == 0:
                 location_found = False
 
-        class_found = class_name in self.data["classes"]
+        class_found = class_name in self.class_names
         if not location_found or not class_found:
             return location_found, class_found, None
 
         if len(counties) == 1:
-            if class_name in self.data["occurrences"][counties[0].code]:
+            occurrence_values = self._occurrence_values(counties[0], class_name)
+            if occurrence_values is not None:
                 if week_num is None:
                     if counties[0].code not in self.max:
                         self.max[counties[0].code] = {}
-                    self.max[counties[0].code][class_name] = self.data["max"][
-                        counties[0].code
-                    ][class_name]
-                    return True, True, self.data["max"][counties[0].code][class_name]
+                    value = self._maximum_value(
+                        counties[0], class_name, occurrence_values
+                    )
+                    self.max[counties[0].code][class_name] = value
+                    return True, True, value
                 elif smoothed:
                     if counties[0].code not in self.smoothed:
                         self.smoothed[counties[0].code] = {}
-                    self.smoothed[counties[0].code][class_name] = self.data["smoothed"][
-                        counties[0].code
-                    ][class_name]
+                    values = (
+                        self.data["smoothed"][counties[0].code][class_name]
+                        if self.format_version == 1
+                        else np.maximum(
+                            occurrence_values,
+                            np.maximum(
+                                np.roll(occurrence_values, 1),
+                                np.roll(occurrence_values, -1),
+                            ),
+                        )
+                    )
+                    self.smoothed[counties[0].code][class_name] = values
                     return (
                         True,
                         True,
-                        self.data["smoothed"][counties[0].code][class_name][week_num],
+                        values[week_num],
                     )
                 else:
                     if counties[0].code not in self.occurrences:
                         self.occurrences[counties[0].code] = {}
-                    self.occurrences[counties[0].code][class_name] = self.data[
-                        "occurrences"
-                    ][counties[0].code][class_name]
+                    self.occurrences[counties[0].code][class_name] = occurrence_values
                     return (
                         True,
                         True,
-                        self.data["occurrences"][counties[0].code][class_name][
-                            week_num
-                        ],
+                        occurrence_values[week_num],
                     )
             else:
                 return True, False, None
@@ -183,14 +269,28 @@ class OccurrencePickleProvider:
             max_val = 0.0
             matches = 0
             for county in counties:
-                if class_name in self.data["occurrences"][county.code]:
+                occurrence_values = self._occurrence_values(county, class_name)
+                if occurrence_values is not None:
                     matches += 1
                     if week_num is None:
-                        max_val += self.data["max"][county.code][class_name]
+                        max_val += self._maximum_value(
+                            county, class_name, occurrence_values
+                        )
                     elif smoothed:
-                        smoothed_vals += self.data["smoothed"][county.code][class_name]
+                        if self.format_version == 1:
+                            smoothed_vals += self.data["smoothed"][county.code][
+                                class_name
+                            ]
+                        else:
+                            smoothed_vals += np.maximum(
+                                occurrence_values,
+                                np.maximum(
+                                    np.roll(occurrence_values, 1),
+                                    np.roll(occurrence_values, -1),
+                                ),
+                            )
                     else:
-                        occurrences += self.data["occurrences"][county.code][class_name]
+                        occurrences += occurrence_values
 
             if matches > 0:
                 if week_num is None:

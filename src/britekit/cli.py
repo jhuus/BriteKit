@@ -19,6 +19,7 @@ from .commands._analyze import _analyze_cmd
 from .commands._analyze_db import _analyze_db_cmd
 from .commands._audioset import _audioset_cmd
 from .commands._calibrate import _calibrate_cmd
+from .commands._compile_location_catalog import _compile_location_catalog_cmd
 from .commands._ckpt_ops import _ckpt_avg_cmd, _ckpt_freeze_cmd, _ckpt_onnx_cmd
 from .commands._db_add import (
     _add_cat_cmd,
@@ -46,6 +47,7 @@ from .commands._extract import (
 )
 from .commands._inat import _inat_cmd
 from .commands._init import _init_cmd
+from .commands._migrate_occurrence import _migrate_occurrence_cmd
 from .commands._pickle import (
     _pickle_frame_cmd,
     _pickle_occurrence_cmd,
@@ -97,6 +99,7 @@ cli.add_command(_analyze_db_cmd)
 cli.add_command(_audioset_cmd)
 
 cli.add_command(_calibrate_cmd)
+cli.add_command(_compile_location_catalog_cmd)
 cli.add_command(_ckpt_avg_cmd)
 cli.add_command(_ckpt_freeze_cmd)
 cli.add_command(_ckpt_onnx_cmd)
@@ -122,6 +125,7 @@ cli.add_command(_find_lr_cmd)
 
 cli.add_command(_inat_cmd)
 cli.add_command(_init_cmd)
+cli.add_command(_migrate_occurrence_cmd)
 
 cli.add_command(_pickle_frame_cmd)
 cli.add_command(_pickle_occurrence_cmd)

@@ -28,12 +28,31 @@ class OccurrencePickler:
         from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
 
         self.cfg = get_config()
+        self.db_path = db_path
         self.output_path = output_path
 
         if not os.path.exists(db_path):
             raise InputError(f'Database "{db_path}" not found')
 
-        self.db = OccurrenceDatabase(db_path)
+        self.schema_version = self._schema_version(db_path)
+        self.db = OccurrenceDatabase(db_path) if self.schema_version == 1 else None
+
+    @staticmethod
+    def _schema_version(db_path: str) -> int:
+        import sqlite3
+
+        with sqlite3.connect(
+            f"file:{os.path.abspath(db_path)}?mode=ro", uri=True
+        ) as db:
+            try:
+                row = db.execute("SELECT Version FROM SchemaVersion").fetchone()
+            except sqlite3.OperationalError:
+                return 1
+        if row is not None and row[0] == 1:
+            return 1
+        if row is None or row[0] != 2:
+            raise InputError(f"Unsupported occurrence database schema: {row}")
+        return 2
 
     def _smooth(self, occurrences):
         """Smooth by setting each weekly value to the max of adjacent values."""
@@ -55,7 +74,24 @@ class OccurrencePickler:
     def pickle(self, quiet=False):
         """Create the pickle file as specified."""
 
+        if self.schema_version == 2:
+            from britekit.occurrence_db.occurrence_pickle_v2 import (
+                compile_occurrence_pickle_v2,
+            )
+
+            report = compile_occurrence_pickle_v2(self.db_path, self.output_path)
+            if not quiet:
+                logging.info(
+                    "Saved compact occurrence data for %s areas and %s classes in %s",
+                    report.area_count,
+                    report.class_count,
+                    self.output_path,
+                )
+            return
+
         import numpy as np
+
+        assert self.db is not None
 
         # add county info
         logging.info("Fetching county info.")

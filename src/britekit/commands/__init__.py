@@ -4,6 +4,7 @@ from ._analyze import analyze
 from ._analyze_db import analyze_db
 from ._audioset import audioset
 from ._calibrate import calibrate
+from ._compile_location_catalog import compile_location_catalog
 from ._ckpt_ops import ckpt_avg, ckpt_freeze, ckpt_onnx
 from ._db_add import add_cat, add_class, add_src, add_stype
 from ._db_delete import (
@@ -23,6 +24,7 @@ from ._extract import extract_all, extract_by_csv, extract_by_image
 
 from ._inat import inat
 from ._init import init
+from ._migrate_occurrence import migrate_occurrence
 from ._pickle import pickle_frame, pickle_occurrence, pickle_train
 from ._plot import plot_db, plot_dir, plot_occlude, plot_rec, plot_test
 from ._reextract import reextract
@@ -43,6 +45,7 @@ __all__ = [
     "analyze_db",
     "audioset",
     "calibrate",
+    "compile_location_catalog",
     "ckpt_avg",
     "ckpt_freeze",
     "ckpt_onnx",
@@ -65,6 +68,7 @@ __all__ = [
     "find_lr",
     "inat",
     "init",
+    "migrate_occurrence",
     "pickle_frame",
     "pickle_occurrence",
     "pickle_train",

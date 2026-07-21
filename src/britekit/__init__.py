@@ -32,6 +32,7 @@ from britekit.core.tuner import Tuner
 from britekit.models.model_loader import load_new_model
 from britekit.models.model_loader import load_from_checkpoint
 from britekit.occurrence_db.occurrence_db import OccurrenceDatabase
+from britekit.occurrence_db.occurrence_database_v2 import OccurrenceDatabaseV2
 from britekit.occurrence_db.occurrence_data_provider import OccurrenceDataProvider
 from britekit.occurrence_db.occurrence_pickle import OccurrencePickleProvider
 from britekit.testing.per_block_tester import PerBlockTester
@@ -53,6 +54,7 @@ __all__ = [
     "BaseConfig",
     "Extractor",
     "OccurrenceDatabase",
+    "OccurrenceDatabaseV2",
     "OccurrenceDataProvider",
     "OccurrencePickleProvider",
     "OccurrencePickler",
