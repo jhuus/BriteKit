@@ -25,6 +25,7 @@ from typing import cast, Dict, List, Optional, Type
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 # -------------------------------------------------
@@ -159,6 +160,48 @@ class ConvBnAct(nn.Module):
         x = self.bn(x)
         x = self.act(x)
         return x
+
+
+# -------------------------------------------------
+# Optional thick stem: scaled HGNetV2 two-branch stem
+# -------------------------------------------------
+class ThickStem(nn.Module):
+    """Two-branch stem that replaces the standard stem and first stage."""
+
+    def __init__(
+        self,
+        in_ch: int,
+        mid_ch: int,
+        conv_ch: int,
+        out_ch: int,
+        act_layer: Type[nn.Module] = nn.ReLU,
+    ):
+        super().__init__()
+        self.stem1 = ConvBnAct(
+            in_ch, mid_ch, kernel_size=3, stride=2, act_layer=act_layer
+        )
+        self.stem2a = ConvBnAct(mid_ch, mid_ch // 2, kernel_size=2, act_layer=act_layer)
+        self.stem2b = ConvBnAct(mid_ch // 2, mid_ch, kernel_size=2, act_layer=act_layer)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=1, ceil_mode=True)
+        self.stem3 = ConvBnAct(
+            mid_ch * 2,
+            conv_ch,
+            kernel_size=3,
+            stride=2,
+            act_layer=act_layer,
+        )
+        self.stem4 = ConvBnAct(conv_ch, out_ch, kernel_size=1, act_layer=act_layer)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.stem1(x)
+        x = F.pad(x, (0, 1, 0, 1))
+        conv_branch = self.stem2a(x)
+        conv_branch = F.pad(conv_branch, (0, 1, 0, 1))
+        conv_branch = self.stem2b(conv_branch)
+        pool_branch = self.pool(x)
+        x = torch.cat((pool_branch, conv_branch), dim=1)
+        x = self.stem3(x)
+        return self.stem4(x)
 
 
 # -------------------------------------------------
@@ -326,6 +369,7 @@ class BKNetBaseModel(nn.Module):
         num_blocks: List[int]          # number of blocks per stage
         stage_strides: List[int]       # stride for first block of each stage (optional, default [2,2,2,2,1])
         stage_depthwise: List[bool]    # whether to use depthwise 3x3 in bottleneck (optional, default all False)
+        thick_stem: bool               # use a two-branch stem in place of stage 0 (default False)
 
     When stage_mid_chs[i] == 0, that stage uses BasicBlocks.
     When stage_mid_chs[i] > 0, that stage uses Bottleneck blocks with that mid_ch.
@@ -358,6 +402,7 @@ class BKNetBaseModel(nn.Module):
         stage_out_chs: List[int] = cfg["stage_out_chs"]
         stage_mid_chs: List[int] = cfg["stage_mid_chs"]
         num_blocks: List[int] = cfg["num_blocks"]
+        thick_stem: bool = cfg.get("thick_stem", False)
 
         num_stages = len(stage_out_chs)
 
@@ -395,14 +440,26 @@ class BKNetBaseModel(nn.Module):
         # -------------------------
         # Stem: single conv with stride 2
         # -------------------------
-        self.stem = ConvBnAct(
-            in_chans, stem_ch, kernel_size=3, stride=2, act_layer=act_layer
-        )
+        if thick_stem:
+            self.stem = cast(
+                ConvBnAct,
+                ThickStem(
+                    in_ch=in_chans,
+                    mid_ch=stem_ch,
+                    conv_ch=cfg.get("thick_stem_conv_ch", 32),
+                    out_ch=stage_out_chs[0],
+                    act_layer=act_layer,
+                ),
+            )
+        else:
+            self.stem = ConvBnAct(
+                in_chans, stem_ch, kernel_size=3, stride=2, act_layer=act_layer
+            )
 
         # -------------------------
         # Stages
         # -------------------------
-        stages = []
+        stages: List[nn.Module] = []
         in_ch = stem_ch
         block_idx_global = 0  # For linear drop path scaling
 
@@ -412,6 +469,12 @@ class BKNetBaseModel(nn.Module):
             n_blocks = num_blocks[stage_idx]
             first_stride = stage_strides[stage_idx]
             use_depthwise = stage_depthwise[stage_idx]
+
+            if thick_stem and stage_idx == 0:
+                stages.append(nn.Identity())
+                in_ch = out_ch
+                block_idx_global += n_blocks
+                continue
 
             stage_blocks = []
             for block_idx in range(n_blocks):

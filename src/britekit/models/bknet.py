@@ -125,6 +125,7 @@ def _get_act_layer(name: str) -> Type[nn.Module]:
 #   stage_mid_chs: list    - middle channels for bottleneck (0 = BasicBlock)
 #   num_blocks: list       - number of blocks per stage
 #   stage_strides: list    - stride for first block of each stage (default: [2,2,...,2,1])
+#   thick_stem: bool       - use two-branch stem in place of stage 0 (default: False)
 #   final_ch: int          - final 1x1 conv expansion (optional)
 #   act_layer: str         - activation function name (default: "relu")
 #
@@ -306,3 +307,14 @@ MODEL_REGISTRY = {
         act_layer="relu",
     ),
 }
+
+# Add a thick-stem counterpart for every base model. The intermediate stem
+# width scales with the first stage, matching the tested bknet.5t width of 32.
+for model_num in range(1, 16):
+    base_config = MODEL_REGISTRY[f"bknet.{model_num}"]
+    stage_out_chs = cast(List[int], base_config["stage_out_chs"])
+    MODEL_REGISTRY[f"bknet.{model_num}t"] = {
+        **base_config,
+        "thick_stem": True,
+        "thick_stem_conv_ch": stage_out_chs[0] // 2,
+    }
