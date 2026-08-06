@@ -89,6 +89,7 @@ def dedup_rec(
     class_name: str = "",
     delete: bool = False,
     spec_group: str = "default",
+    max_dist: float = 0.02,
 ) -> None:
     """
     Find and optionally delete duplicate recordings in the training database.
@@ -96,7 +97,7 @@ def dedup_rec(
     This command scans the database for recordings of the same class that appear to be duplicates.
     It uses a two-stage detection approach:
     1. Compare recording durations (within 0.1 seconds tolerance)
-    2. Compare spectrogram embeddings of the first few spectrograms (within 0.02 cosine distance)
+    2. Compare spectrogram embeddings of the first few spectrograms (within the specified cosine distance)
 
     Duplicates are identified by comparing the first 3 spectrogram embeddings from each recording
     using cosine distance.
@@ -107,6 +108,7 @@ def dedup_rec(
     - class_name (str): Required name of the class to scan for duplicates (e.g., "Common Yellowthroat").
     - delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
     - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
+    - max_dist (float): Maximum cosine distance for matching spectrogram embeddings. Defaults to 0.02.
     """
 
     # return true iff the two recordings appear to be duplicates
@@ -114,7 +116,6 @@ def dedup_rec(
         import scipy
 
         SECONDS_FUDGE = 0.1  # treat durations as equal if within this many seconds
-        DISTANCE_FUDGE = 0.02  # treat spectrograms as equal if within this distance
 
         if (recording1.seconds > recording2.seconds - SECONDS_FUDGE) and (
             recording1.seconds < recording2.seconds + SECONDS_FUDGE
@@ -127,7 +128,7 @@ def dedup_rec(
                     distance = scipy.spatial.distance.cosine(
                         recording1.embeddings[i], recording2.embeddings[i]
                     )
-                    if distance > DISTANCE_FUDGE:
+                    if distance > max_dist:
                         return False
 
                 return True
@@ -206,15 +207,23 @@ def dedup_rec(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
+@click.option(
+    "--dist",
+    "max_dist",
+    type=float,
+    default=0.02,
+    help="Maximum cosine distance for matching embeddings. Default = 0.02.",
+)
 def _dedup_rec_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
     class_name: str,
     delete: bool,
     spec_group: str,
+    max_dist: float,
 ) -> None:
     util.set_logging()
-    dedup_rec(cfg_path, db_path, class_name, delete, spec_group)
+    dedup_rec(cfg_path, db_path, class_name, delete, spec_group, max_dist)
 
 
 def dedup_seg(
