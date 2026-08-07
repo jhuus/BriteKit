@@ -12,6 +12,9 @@ import click
 from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core import util
 
+MIN_ALL_IMAGE_WIDTH = 640
+MAX_ALL_IMAGE_WIDTH = 4000
+
 
 def _plot_recording(
     cfg: BaseConfig,
@@ -35,8 +38,12 @@ def _plot_recording(
     recording_seconds = len(signal) / rate
     if all:
         # plot the whole recording in one spectrogram
-        specs, _ = audio.get_spectrograms([0], spec_duration=recording_seconds)
-        if specs is None:
+        specs, _ = audio.get_spectrograms(
+            [0],
+            spec_duration=recording_seconds,
+            skip_cache=recording_seconds < 1,
+        )
+        if specs is None or len(specs) == 0:
             logging.error(f'Error: failed to extract spectrogram from "{input_path}".')
             return
 
@@ -46,8 +53,12 @@ def _plot_recording(
 
         image_path = os.path.join(output_path, Path(input_path).stem + ".jpeg")
         base_width = cfg.audio.spec_width
-        image_width = min(
-            4000, int(base_width * recording_seconds / cfg.audio.spec_duration) // 2
+        image_width = max(
+            MIN_ALL_IMAGE_WIDTH,
+            min(
+                MAX_ALL_IMAGE_WIDTH,
+                int(base_width * recording_seconds / cfg.audio.spec_duration) // 2,
+            ),
         )
         image_height = 300
         plot_spec(
