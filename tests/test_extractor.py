@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from unittest.mock import Mock, patch
 import pytest
 from britekit import Extractor, TrainingDatabase
 
@@ -44,3 +45,53 @@ def test_extract_all(db: TrainingDatabase):
     assert db.get_segment_count() == 4
     assert db.get_segment_class_count() == 4
     assert db.get_specvalue_count() == 4
+
+
+def test_extract_all_can_include_existing_recordings():
+    extractor = Extractor.__new__(Extractor)
+    extractor.filenames = {"existing.wav"}
+    extractor.increment = 1
+    extractor.audio = Mock()
+    extractor.audio.seconds.return_value = 10
+    extractor.insert_spectrograms = Mock(return_value=2)
+
+    with patch(
+        "britekit.training_db.extractor.util.get_audio_files",
+        return_value=["/recordings/existing.wav"],
+    ):
+        assert extractor.extract_all("/recordings", include_existing=False) == 0
+        assert extractor.extract_all("/recordings", include_existing=True) == 2
+
+    extractor.insert_spectrograms.assert_called_once()
+
+
+def test_extract_all_randomizes_recordings_and_offsets():
+    extractor = Extractor.__new__(Extractor)
+    extractor.filenames = set()
+    extractor.increment = 1
+    extractor.audio = Mock()
+    extractor.audio.seconds.return_value = 10
+    extractor.insert_spectrograms = Mock(return_value=2)
+    recording_paths = [f"/recordings/{name}.wav" for name in ("a", "b", "c")]
+
+    with (
+        patch(
+            "britekit.training_db.extractor.util.get_audio_files",
+            return_value=recording_paths,
+        ),
+        patch("britekit.training_db.extractor.random.shuffle") as shuffle,
+        patch(
+            "britekit.training_db.extractor.random.sample",
+            side_effect=lambda offsets, count: offsets[-count:],
+        ) as sample,
+    ):
+        count = extractor.extract_all(
+            "/recordings", max_spec=2, max_rec=2, randomize=True
+        )
+
+    assert count == 4
+    shuffle.assert_called_once()
+    assert sample.call_count == 2
+    assert extractor.insert_spectrograms.call_count == 2
+    for call in extractor.insert_spectrograms.call_args_list:
+        assert call.args[1] == [8, 9]

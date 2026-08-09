@@ -218,6 +218,10 @@ class BaseModel(pl.LightningModule):
         seg_labels = batch["segment_labels"]
         raw_labels = batch["segment_labels"]
         frame_labels = batch.get("frame_labels")  # (B, 12, num_classes) or None
+        teacher_labels = batch.get("teacher_segment_labels")
+        teacher_frame_labels = batch.get("teacher_frame_labels")
+        hard_segment_mask = batch.get("hard_segment_mask")
+        frame_label_mask = batch.get("frame_label_mask")
 
         if self.multi_label:
             seg_labels = (
@@ -232,7 +236,15 @@ class BaseModel(pl.LightningModule):
 
         seg_logits, frame_logits = self(input)
         loss = self._calc_loss(
-            seg_logits, frame_logits, seg_labels, raw_labels, frame_labels
+            seg_logits,
+            frame_logits,
+            seg_labels,
+            raw_labels,
+            frame_labels,
+            teacher_labels,
+            teacher_frame_labels,
+            hard_segment_mask,
+            frame_label_mask,
         )
 
         if frame_logits is not None and self.cfg.train.offpeak_weight > 0:
@@ -494,9 +506,40 @@ class BaseModel(pl.LightningModule):
         self.cfg = cfg
 
     def _calc_loss(
-        self, seg_logits, frame_logits, seg_labels, raw_labels, frame_labels=None
+        self,
+        seg_logits,
+        frame_logits,
+        seg_labels,
+        raw_labels,
+        frame_labels=None,
+        teacher_labels=None,
+        teacher_frame_labels=None,
+        hard_segment_mask=None,
+        frame_label_mask=None,
     ):
-        segment_loss = self.loss_fn(seg_logits, seg_labels)
+        segment_losses = self._loss_per_sample(seg_logits, seg_labels)
+
+        if teacher_labels is not None:
+            weight = self.cfg.train.distillation_weight
+            temperature = self.cfg.train.distillation_temperature
+            if not 0 <= weight <= 1:
+                raise ValueError("distillation_weight must be between 0 and 1")
+            if temperature <= 0:
+                raise ValueError("distillation_temperature must be greater than 0")
+            softened_targets = self._soften_targets(teacher_labels, temperature)
+            teacher_losses = self._loss_per_sample(
+                seg_logits / temperature, softened_targets
+            )
+            teacher_losses *= temperature**2
+            blended_losses = (1 - weight) * segment_losses + weight * teacher_losses
+            if hard_segment_mask is not None:
+                segment_losses = torch.where(
+                    hard_segment_mask.bool(), blended_losses, teacher_losses
+                )
+            else:
+                segment_losses = blended_losses
+        elif hard_segment_mask is not None and not hard_segment_mask.bool().all():
+            raise ValueError("Teacher-only samples require teacher segment labels")
 
         if self.use_sed:
             assert frame_logits is not None
@@ -509,18 +552,63 @@ class BaseModel(pl.LightningModule):
                 frame_labels = fl.permute(0, 2, 1)  # (B, T, C)
             else:
                 frame_labels = seg_labels.unsqueeze(-1).expand(B, C, T).transpose(1, 2)
-            frame_loss = F.binary_cross_entropy_with_logits(
-                frame_logits.transpose(1, 2), frame_labels, reduction="mean"
+            frame_losses = F.binary_cross_entropy_with_logits(
+                frame_logits.transpose(1, 2), frame_labels, reduction="none"
             )
-            segment_loss_weight = 1 - self.cfg.train.frame_loss_weight
-            loss = (
-                segment_loss_weight * segment_loss
-                + self.cfg.train.frame_loss_weight * frame_loss
-            )
+            frame_losses = frame_losses.mean(dim=(1, 2))
+
+            if teacher_frame_labels is not None:
+                teacher_frames = teacher_frame_labels.permute(0, 2, 1)
+                teacher_frames = F.interpolate(
+                    teacher_frames, size=T, mode="linear", align_corners=False
+                ).permute(0, 2, 1)
+                temperature = self.cfg.train.distillation_temperature
+                softened_frames = self._soften_targets(teacher_frames, temperature)
+                teacher_frame_losses = F.binary_cross_entropy_with_logits(
+                    frame_logits.transpose(1, 2) / temperature,
+                    softened_frames,
+                    reduction="none",
+                ).mean(dim=(1, 2))
+                teacher_frame_losses *= temperature**2
+                if frame_label_mask is not None:
+                    frame_losses = torch.where(
+                        frame_label_mask.bool(), frame_losses, teacher_frame_losses
+                    )
+            elif frame_label_mask is not None and not frame_label_mask.bool().all():
+                raise ValueError("Teacher-only samples require teacher frame labels")
+
+            frame_weight = self.cfg.train.frame_loss_weight
+            sample_losses = (
+                1 - frame_weight
+            ) * segment_losses + frame_weight * frame_losses
+            loss = sample_losses.mean()
         else:
-            loss = segment_loss
+            loss = segment_losses.mean()
 
         return loss
+
+    @staticmethod
+    def _soften_targets(targets, temperature):
+        eps = torch.finfo(targets.dtype).eps
+        target_logits = torch.logit(targets.clamp(eps, 1 - eps))
+        return torch.sigmoid(target_logits / temperature)
+
+    def _loss_per_sample(self, logits, labels):
+        """Calculate classification loss while retaining the batch dimension."""
+        if self.multi_label:
+            losses = F.binary_cross_entropy_with_logits(
+                logits, labels, reduction="none"
+            )
+            if self.loss_fn.weight is not None:
+                losses = losses * self.loss_fn.weight.to(losses.device)
+            return losses.mean(dim=1)
+
+        return F.cross_entropy(
+            logits,
+            labels,
+            weight=self.loss_fn.weight,
+            reduction="none",
+        )
 
     def _ensure_tensor(self, x, device=None):
         if isinstance(x, np.ndarray):

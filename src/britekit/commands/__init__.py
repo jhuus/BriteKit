@@ -30,6 +30,7 @@ from ._plot import plot_db, plot_dir, plot_occlude, plot_rec, plot_test
 from ._reextract import reextract
 from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_iou, rpt_labels, rpt_test
 from ._search import search
+from ._teacher_targets import teacher_targets
 from ._train import train, find_lr
 from ._tune import tune
 from ._wav2mp3 import wav2mp3
@@ -86,6 +87,7 @@ __all__ = [
     "rpt_labels",
     "rpt_test",
     "search",
+    "teacher_targets",
     "train",
     "tune",
     "wav2mp3",

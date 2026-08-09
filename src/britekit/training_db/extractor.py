@@ -3,6 +3,7 @@
 import glob
 import logging
 import os
+import random
 import re
 import shutil
 from pathlib import Path
@@ -199,6 +200,8 @@ class Extractor:
         dir_path: str,
         max_spec: Optional[int] = None,
         max_rec: Optional[int] = None,
+        include_existing: bool = False,
+        randomize: bool = False,
     ):
         """
         Extract spectrograms for all recordings in the given directory.
@@ -206,8 +209,11 @@ class Extractor:
         Args:
         - dir_path (str): Directory containing recordings.
         - max_spec (int, optional): Maximum number of spectrograms to extract per recording.
-          If the recording would yield more, they are sampled evenly across its duration.
+          If the recording would yield more, they are sampled evenly, or randomly when
+          randomize is enabled.
         - max_rec (int, optional): Maximum number of recordings to process.
+        - include_existing (bool): Also extract new offsets from recordings already in the database.
+        - randomize (bool): Randomize recording order and spectrogram offsets.
 
         Returns:
             Number of spectrograms inserted.
@@ -215,9 +221,18 @@ class Extractor:
         num_inserted = 0
         num_processed = 0
         recording_paths = util.get_audio_files(dir_path)
+        if not include_existing:
+            recording_paths = [
+                path
+                for path in recording_paths
+                if Path(path).name not in self.filenames
+            ]
+        if randomize:
+            random.shuffle(recording_paths)
+
         for recording_path in recording_paths:
             filename = Path(recording_path).name
-            if filename in self.filenames:
+            if not include_existing and filename in self.filenames:
                 logging.info(f"Skipping {filename} (already in database)")
                 continue
 
@@ -237,8 +252,11 @@ class Extractor:
             offsets = util.get_range(0, end_offset, self.increment)
 
             if max_spec is not None and len(offsets) > max_spec:
-                step = (len(offsets) - 1) / max(max_spec - 1, 1)
-                offsets = [offsets[round(i * step)] for i in range(max_spec)]
+                if randomize:
+                    offsets = sorted(random.sample(offsets, max_spec))
+                else:
+                    step = (len(offsets) - 1) / max(max_spec - 1, 1)
+                    offsets = [offsets[round(i * step)] for i in range(max_spec)]
 
             num_inserted += self.insert_spectrograms(recording_path, offsets)
 

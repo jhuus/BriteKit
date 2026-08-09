@@ -123,6 +123,20 @@ class DataModule(LightningDataModule):
             except Exception as e:
                 logging.warning(f"Failed to load frame-label pickle: {e}. Ignoring.")
 
+        teacher_targets = None
+        teacher_frame_targets = None
+        if (
+            self.cfg.train.teacher_only_if_no_frame
+            and not self.cfg.train.teacher_targets_pickle
+        ):
+            raise ValueError("teacher_only_if_no_frame requires teacher_targets_pickle")
+        if self.cfg.train.teacher_targets_pickle:
+            teacher_targets, teacher_frame_targets = self._load_teacher_targets(
+                self.cfg.train.teacher_targets_pickle,
+                self.train_class_codes,
+                self.segment_ids,
+            )
+
         self.full_dataset = SpectrogramDataset(
             self.specs,
             self.labels,
@@ -132,6 +146,8 @@ class DataModule(LightningDataModule):
             segment_ids=self.segment_ids,
             recording_ids=self.recording_ids,
             frame_label_dict=frame_label_dict,
+            teacher_targets=teacher_targets,
+            teacher_frame_targets=teacher_frame_targets,
         )
 
         # Load test data
@@ -247,6 +263,91 @@ class DataModule(LightningDataModule):
             segment_ids,
             recording_ids,
         )
+
+    def _load_teacher_targets(self, path, class_codes, segment_ids):
+        """Load soft targets and reorder them to match the training pickle."""
+        import numpy as np
+
+        if segment_ids is None:
+            raise ValueError(
+                "Training pickle must contain segment IDs when distillation is enabled"
+            )
+        with open(path, "rb") as file:
+            data = pickle.load(file)
+
+        required = ("format_version", "class_codes", "segment_ids", "probabilities")
+        missing = [key for key in required if key not in data]
+        if missing:
+            raise ValueError(f"Teacher-target pickle missing required keys: {missing}")
+        if data["format_version"] != 2:
+            raise ValueError(
+                f"Unsupported teacher-target format version: {data['format_version']}"
+            )
+        if list(data["class_codes"]) != list(class_codes):
+            raise ValueError(
+                "Teacher-target class codes and ordering do not match training data"
+            )
+
+        target_ids = list(data["segment_ids"])
+        probabilities = np.asarray(data["probabilities"], dtype=np.float32)
+        expected_shape = (len(target_ids), len(class_codes))
+        if probabilities.shape != expected_shape:
+            raise ValueError(
+                f"Teacher probabilities have shape {probabilities.shape}, expected {expected_shape}"
+            )
+        if not np.isfinite(probabilities).all() or np.any(
+            (probabilities < 0) | (probabilities > 1)
+        ):
+            raise ValueError("Teacher probabilities must be finite and between 0 and 1")
+        if "frame_probabilities" not in data:
+            raise ValueError(
+                "Teacher-target pickle does not contain frame probabilities"
+            )
+        frame_probabilities = np.asarray(data["frame_probabilities"])
+        if not np.issubdtype(frame_probabilities.dtype, np.floating):
+            raise ValueError("Teacher frame probabilities must be floating point")
+        expected_frame_prefix = (len(target_ids), len(class_codes))
+        if (
+            frame_probabilities.ndim != 3
+            or frame_probabilities.shape[:2] != expected_frame_prefix
+        ):
+            raise ValueError(
+                "Teacher frame probabilities must have shape "
+                f"({len(target_ids)}, {len(class_codes)}, frames), got "
+                f"{frame_probabilities.shape}"
+            )
+        if not np.isfinite(frame_probabilities).all() or np.any(
+            (frame_probabilities < 0) | (frame_probabilities > 1)
+        ):
+            raise ValueError(
+                "Teacher frame probabilities must be finite and between 0 and 1"
+            )
+        if len(target_ids) != len(set(target_ids)):
+            raise ValueError("Teacher-target pickle contains duplicate segment IDs")
+
+        target_indexes = {segment_id: i for i, segment_id in enumerate(target_ids)}
+        missing_ids = [
+            segment_id for segment_id in segment_ids if segment_id not in target_indexes
+        ]
+        if missing_ids:
+            raise ValueError(
+                f"Teacher targets are missing {len(missing_ids)} training segment IDs"
+            )
+
+        if target_ids == list(segment_ids):
+            ordered = probabilities
+            ordered_frames = frame_probabilities
+        else:
+            order = [target_indexes[segment_id] for segment_id in segment_ids]
+            ordered = probabilities[order]
+            ordered_frames = frame_probabilities[order]
+        logging.info(
+            "Loaded teacher targets with segment shape %s and frame shape %s from %s",
+            ordered.shape,
+            ordered_frames.shape,
+            path,
+        )
+        return ordered, ordered_frames
 
     def class_weights(self):
         import numpy as np

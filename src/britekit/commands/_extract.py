@@ -23,6 +23,8 @@ def extract_all(
     overlap: Optional[float] = None,
     src_name: Optional[str] = None,
     spec_group: Optional[str] = None,
+    include_existing: bool = False,
+    randomize: bool = False,
 ) -> None:
     """
     Extract all spectrograms from audio recordings and insert them into the training database.
@@ -40,11 +42,13 @@ def extract_all(
     - class_name (str): Required name of the class for the recordings (e.g., "Common Yellowthroat").
     - dir_path (str): Required path to directory containing audio recordings to process.
     - max_spec (int, optional): Maximum number of spectrograms to extract per recording. If the
-      recording would yield more, they are sampled evenly across its duration.
+      recording would yield more, they are sampled evenly, or randomly with randomize enabled.
     - max_rec (int, optional): Maximum number of recordings to process.
     - overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
     - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
     - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+    - include_existing (bool): Also extract new offsets from recordings already in the database.
+    - randomize (bool): Randomize recording selection and spectrogram offsets.
     """
     from britekit.training_db.extractor import Extractor
     from britekit.training_db.training_db import TrainingDatabase
@@ -57,7 +61,9 @@ def extract_all(
         extractor = Extractor(
             db, class_name, class_code, cat_name, src_name, overlap, spec_group
         )
-        count = extractor.extract_all(dir_path, max_spec, max_rec)
+        count = extractor.extract_all(
+            dir_path, max_spec, max_rec, include_existing, randomize
+        )
         db.optimize()
         logging.info(f"Inserted {count} spectrograms")
 
@@ -103,7 +109,7 @@ def extract_all(
     "max_spec",
     type=int,
     required=False,
-    help="Maximum number of spectrograms to extract per recording, sampled evenly across its duration.",
+    help="Maximum spectrograms per recording; sampled evenly by default or randomly with --random.",
 )
 @click.option(
     "--max-rec",
@@ -131,6 +137,17 @@ def extract_all(
     required=False,
     help="Spectrogram group name. Defaults to 'default'.",
 )
+@click.option(
+    "--include-existing",
+    is_flag=True,
+    help="Also extract new offsets from recordings already in the database.",
+)
+@click.option(
+    "--random",
+    "randomize",
+    is_flag=True,
+    help="Randomize recording selection and spectrogram offsets.",
+)
 def _extract_all_cmd(
     cfg_path: Optional[str],
     db_path: Optional[str],
@@ -143,6 +160,8 @@ def _extract_all_cmd(
     overlap: Optional[float],
     src_name: Optional[str],
     spec_group: Optional[str],
+    include_existing: bool,
+    randomize: bool,
 ) -> None:
     util.set_logging()
     extract_all(
@@ -157,6 +176,8 @@ def _extract_all_cmd(
         overlap,
         src_name,
         spec_group,
+        include_existing,
+        randomize,
     )
 
 

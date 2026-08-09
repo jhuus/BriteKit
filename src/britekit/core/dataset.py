@@ -35,6 +35,8 @@ class SpectrogramDataset(Dataset):
         segment_ids: Optional[List[int]] = None,
         recording_ids: Optional[List[int]] = None,
         frame_label_dict: Optional[Dict[int, np.ndarray]] = None,
+        teacher_targets: Optional[np.ndarray] = None,
+        teacher_frame_targets: Optional[np.ndarray] = None,
     ):
         # Input validation
         if not compressed_specs or not class_indexes:
@@ -66,8 +68,29 @@ class SpectrogramDataset(Dataset):
         self.segment_ids = segment_ids
         self.recording_ids = recording_ids
         self.frame_label_dict = frame_label_dict
+        if teacher_targets is not None and teacher_targets.shape != (
+            len(compressed_specs),
+            num_classes,
+        ):
+            raise ValueError(
+                "teacher_targets must have shape "
+                f"({len(compressed_specs)}, {num_classes}), got {teacher_targets.shape}"
+            )
+        self.teacher_targets = teacher_targets
 
         self.cfg = get_config()
+        num_frames = round(self.cfg.audio.spec_duration * self.cfg.train.sed_fps)
+        if teacher_frame_targets is not None and teacher_frame_targets.shape != (
+            len(compressed_specs),
+            num_classes,
+            num_frames,
+        ):
+            raise ValueError(
+                "teacher_frame_targets must have shape "
+                f"({len(compressed_specs)}, {num_classes}, {num_frames}), got "
+                f"{teacher_frame_targets.shape}"
+            )
+        self.teacher_frame_targets = teacher_frame_targets
 
         # get indexes of all specs that contain only noise
         self.noise_indexes = []
@@ -94,6 +117,17 @@ class SpectrogramDataset(Dataset):
         label_indexes = self.class_indexes[idx]
         label_tensor = torch.zeros(self.num_classes, dtype=torch.float)
         label_tensor[label_indexes] = 1.0
+        teacher_tensor = (
+            torch.from_numpy(self.teacher_targets[idx].copy())
+            if self.teacher_targets is not None
+            else None
+        )
+        teacher_frame_tensor = (
+            torch.from_numpy(self.teacher_frame_targets[idx].astype(np.float32)).T
+            if self.teacher_frame_targets is not None
+            else None
+        )
+        has_frame_label = self._has_frame_label(idx)
 
         mixup = False
         cutmix_info = (
@@ -106,13 +140,39 @@ class SpectrogramDataset(Dataset):
             ):
                 r = random.random()
                 if r < self.cfg.train.prob_simple_merge:
-                    spec, label_tensor = self._merge_specs(
+                    spec, label_tensor, other_index = self._merge_specs(
                         spec, label_tensor, self.class_indexes[idx]
+                    )
+                    if teacher_tensor is not None:
+                        other = torch.from_numpy(self.teacher_targets[other_index])
+                        teacher_tensor = 1 - (1 - teacher_tensor) * (1 - other)
+                    if teacher_frame_tensor is not None:
+                        other_frames = torch.from_numpy(
+                            self.teacher_frame_targets[other_index].astype(np.float32)
+                        ).T
+                        teacher_frame_tensor = 1 - (1 - teacher_frame_tensor) * (
+                            1 - other_frames
+                        )
+                    has_frame_label = has_frame_label and self._has_frame_label(
+                        other_index
                     )
                     mixup = True
                 elif r < self.cfg.train.prob_simple_merge + self.cfg.train.prob_mixup:
-                    spec, label_tensor = self._mixup(
+                    spec, label_tensor, other_index, lam = self._mixup(
                         spec, label_tensor, self.class_indexes[idx]
+                    )
+                    if teacher_tensor is not None:
+                        other = torch.from_numpy(self.teacher_targets[other_index])
+                        teacher_tensor = lam * teacher_tensor + (1 - lam) * other
+                    if teacher_frame_tensor is not None:
+                        other_frames = torch.from_numpy(
+                            self.teacher_frame_targets[other_index].astype(np.float32)
+                        ).T
+                        teacher_frame_tensor = (
+                            lam * teacher_frame_tensor + (1 - lam) * other_frames
+                        )
+                    has_frame_label = has_frame_label and self._has_frame_label(
+                        other_index
                     )
                     mixup = True
                 elif (
@@ -122,26 +182,54 @@ class SpectrogramDataset(Dataset):
                     + self.cfg.train.prob_cutmix
                 ):
                     original_label = label_tensor.clone()
-                    spec, label_tensor, time_range, other_label = self._cutmix(
-                        spec, label_tensor, self.class_indexes[idx]
+                    spec, label_tensor, time_range, other_label, other_index, lam = (
+                        self._cutmix(spec, label_tensor, self.class_indexes[idx])
+                    )
+                    if teacher_tensor is not None:
+                        other = torch.from_numpy(self.teacher_targets[other_index])
+                        teacher_tensor = lam * teacher_tensor + (1 - lam) * other
+                    if teacher_frame_tensor is not None:
+                        other_frames = torch.from_numpy(
+                            self.teacher_frame_targets[other_index].astype(np.float32)
+                        ).T
+                        teacher_frame_tensor = (
+                            lam * teacher_frame_tensor + (1 - lam) * other_frames
+                        )
+                    has_frame_label = has_frame_label and self._has_frame_label(
+                        other_index
                     )
                     cutmix_info = (time_range, other_label, original_label)
                     mixup = True
 
             frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
-            spec, frame_labels = self.augment(spec, frame_labels=frame_labels)
+            if teacher_frame_tensor is None:
+                spec, frame_labels = self.augment(spec, frame_labels=frame_labels)
+            else:
+                combined_frames = torch.cat((frame_labels, teacher_frame_tensor), dim=1)
+                spec, combined_frames = self.augment(spec, frame_labels=combined_frames)
+                frame_labels = combined_frames[:, : self.num_classes]
+                teacher_frame_tensor = combined_frames[:, self.num_classes :]
         else:
             frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
 
         spec_tensor = torch.tensor(spec, dtype=torch.float32)
         mixup = torch.tensor(mixup)
 
-        return {
+        item = {
             "input": spec_tensor,
             "segment_labels": label_tensor,
             "mixup": mixup,
             "frame_labels": frame_labels,
         }
+        if self.cfg.train.teacher_only_if_no_frame:
+            supervision_mask = float(has_frame_label)
+            item["hard_segment_mask"] = torch.tensor(supervision_mask)
+            item["frame_label_mask"] = torch.tensor(supervision_mask)
+        if teacher_tensor is not None:
+            item["teacher_segment_labels"] = teacher_tensor
+        if teacher_frame_tensor is not None:
+            item["teacher_frame_labels"] = teacher_frame_tensor
+        return item
 
     def get_random_noise(self):
         """
@@ -156,6 +244,13 @@ class SpectrogramDataset(Dataset):
     # =============================================================================
     # Private Helper Methods
     # =============================================================================
+
+    def _has_frame_label(self, idx):
+        return (
+            self.frame_label_dict is not None
+            and self.segment_ids is not None
+            and self.segment_ids[idx] in self.frame_label_dict
+        )
 
     def _get_frame_labels(self, idx, label_tensor, mixup, cutmix_info=None):
         """
@@ -240,6 +335,8 @@ class SpectrogramDataset(Dataset):
         return (
             lam * spec + (1 - lam) * other_spec,
             lam * label_tensor + (1 - lam) * other_label_tensor,
+            other_index,
+            lam,
         )
 
     def _cutmix(self, spec, label_tensor, class_indexes):
@@ -283,7 +380,7 @@ class SpectrogramDataset(Dataset):
         actual_lam = 1 - (x2 - x1) * (y2 - y1) / (freq * time)
         mixed_label = actual_lam * label_tensor + (1 - actual_lam) * other_label
 
-        return spec, mixed_label, (y1, y2), other_label
+        return spec, mixed_label, (y1, y2), other_label, other_index, actual_lam
 
     def _merge_specs(self, spec, label_tensor, class_indexes):
         """
@@ -306,4 +403,4 @@ class SpectrogramDataset(Dataset):
         other_label_tensor = torch.zeros(self.num_classes, dtype=torch.float)
         other_label_tensor[other_indexes] = 1.0
 
-        return spec + other_spec, label_tensor + other_label_tensor
+        return spec + other_spec, label_tensor + other_label_tensor, other_index

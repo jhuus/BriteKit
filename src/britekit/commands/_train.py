@@ -18,6 +18,7 @@ def train(
     prefix: Optional[str] = None,
     seed: Optional[int] = None,
     frame_label_pickle: Optional[str] = None,
+    teacher_targets_pickle: Optional[str] = None,
 ):
     """
     Train a bioacoustic recognition model using the specified configuration.
@@ -36,6 +37,7 @@ def train(
     - prefix (str, optional): Prefix to add to checkpoint names.
     - seed (int, optional): Integer seed.
     - frame_label_pickle (str, optional): Path to frame-label pickle for SED training.
+    - teacher_targets_pickle (str, optional): Path to soft segment targets for distillation.
     """
     from britekit.core.trainer import Trainer
 
@@ -44,6 +46,8 @@ def train(
         cfg.train.seed = seed
     if frame_label_pickle is not None:
         cfg.train.frame_label_pickle = frame_label_pickle
+    if teacher_targets_pickle is not None:
+        cfg.train.teacher_targets_pickle = teacher_targets_pickle
     try:
         start_time = time.time()
         Trainer(prefix=prefix).run()
@@ -85,11 +89,19 @@ def train(
     required=False,
     help="Path to frame-label pickle for SED training.",
 )
+@click.option(
+    "--teacher-targets",
+    "teacher_targets_pickle",
+    type=click.Path(exists=True, dir_okay=False),
+    required=False,
+    help="Path to soft segment targets for distillation.",
+)
 def _train_cmd(
     cfg_path: str,
     prefix: str,
     seed: int,
     frame_label_pickle: str,
+    teacher_targets_pickle: str,
 ):
     util.set_logging()
 
@@ -104,7 +116,7 @@ def _train_cmd(
             "For example, use cu126 for CUDA 12.6."
         )
 
-    train(cfg_path, prefix, seed, frame_label_pickle)
+    train(cfg_path, prefix, seed, frame_label_pickle, teacher_targets_pickle)
 
 
 def find_lr(cfg_path: str, num_batches: int):
