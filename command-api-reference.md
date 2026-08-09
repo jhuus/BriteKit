@@ -66,7 +66,7 @@ Args:
 ### analyze
 **Function**  
 ```python
-analyze(cfg_path: Optional[str] = None, input_path: str = '', output_path: str = '', rtype: str = 'audacity', start_seconds: float = 0, min_score: Optional[float] = None, num_threads: Optional[int] = None, overlap: Optional[float] = None, segment_len: Optional[float] = None, show: bool = False)
+analyze(cfg_path: Optional[str] = None, input_path: str = '', output_path: str = '', rtype: str = 'audacity', start_seconds: float = 0, min_score: Optional[float] = None, num_threads: Optional[int] = None, overlap: Optional[float] = None, segment_len: Optional[float] = None, show: bool = False, ckpt_path: Optional[str] = None)
 ```
 Run inference on audio recordings to detect and classify sounds.
 
@@ -87,6 +87,7 @@ Args:
 - segment_len (float, optional): Fixed segment length in seconds. If specified, labels are
     fixed-length; otherwise they are variable-length.
 - show (bool): If true, show the top scores for the first spectrogram, then stop.
+- ckpt_path (str, optional): Path to checkpoint file or directory, overriding ckpt_folder in config.
 
 ### analyze_db
 **Function**  
@@ -212,17 +213,41 @@ Args:
 - cfg_path (str, optional): Path to YAML file defining config overrides.
 - input_path (str): Required path to a checkpoint file, or a directory of checkpoint files, to convert.
 
+### compile_location_catalog
+**Function**  
+```python
+compile_location_catalog(input_path: str, output_path: str) -> britekit.occurrence_db.location_catalog.LocationCatalogReport
+```
+Compile GUI location metadata from a schema-v2 occurrence database.
+
+### copy_class
+**Function**  
+```python
+copy_class(src_db_path: str, dest_db_path: str, class_name: str) -> None
+```
+Copy a class and all its associated records from one training database to another.
+
+Copies the class record along with its category, all associated recordings (and their
+sources), segments, spectrograms, and SegmentClass links. Records that already exist
+in the destination database (matched by name or filename+source) are reused rather than
+duplicated. The class must not already exist in the destination database.
+
+Args:
+- src_db_path (str): Path to the source training database.
+- dest_db_path (str): Path to the destination training database.
+- class_name (str): Name of the class to copy.
+
 ### dedup_rec
 **Function**  
 ```python
-dedup_rec(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: str = '', delete: bool = False, spec_group: str = 'default') -> None
+dedup_rec(cfg_path: Optional[str] = None, db_path: Optional[str] = None, class_name: str = '', delete: bool = False, spec_group: str = 'default', max_dist: float = 0.02) -> None
 ```
 Find and optionally delete duplicate recordings in the training database.
 
 This command scans the database for recordings of the same class that appear to be duplicates.
 It uses a two-stage detection approach:
 1. Compare recording durations (within 0.1 seconds tolerance)
-2. Compare spectrogram embeddings of the first few spectrograms (within 0.02 cosine distance)
+2. Compare spectrogram embeddings of the first few spectrograms (within the specified cosine distance)
 
 Duplicates are identified by comparing the first 3 spectrogram embeddings from each recording
 using cosine distance.
@@ -233,6 +258,7 @@ Args:
 - class_name (str): Required name of the class to scan for duplicates (e.g., "Common Yellowthroat").
 - delete (bool): If True, remove duplicate recordings from the database. If False, only report them.
 - spec_group (str): Spectrogram group name to use for embedding comparison. Defaults to "default".
+- max_dist (float): Maximum cosine distance for matching spectrogram embeddings. Defaults to 0.02.
 
 ### dedup_seg
 **Function**  
@@ -405,7 +431,7 @@ Args:
 ### extract_all
 **Function**  
 ```python
-extract_all(cfg_path: Optional[str] = None, db_path: Optional[str] = None, cat_name: Optional[str] = None, class_code: Optional[str] = None, class_name: str = '', dir_path: str = '', overlap: Optional[float] = None, src_name: Optional[str] = None, spec_group: Optional[str] = None) -> None
+extract_all(cfg_path: Optional[str] = None, db_path: Optional[str] = None, cat_name: Optional[str] = None, class_code: Optional[str] = None, class_name: str = '', dir_path: str = '', max_spec: Optional[int] = None, max_rec: Optional[int] = None, overlap: Optional[float] = None, src_name: Optional[str] = None, spec_group: Optional[str] = None, include_existing: bool = False, randomize: bool = False) -> None
 ```
 Extract all spectrograms from audio recordings and insert them into the training database.
 
@@ -421,9 +447,14 @@ Args:
 - class_code (str, optional): Class code for new class creation (e.g., "COYE").
 - class_name (str): Required name of the class for the recordings (e.g., "Common Yellowthroat").
 - dir_path (str): Required path to directory containing audio recordings to process.
+- max_spec (int, optional): Maximum number of spectrograms to extract per recording. If the
+  recording would yield more, they are sampled evenly, or randomly with randomize enabled.
+- max_rec (int, optional): Maximum number of recordings to process.
 - overlap (float, optional): Spectrogram overlap in seconds. Defaults to config value.
 - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
 - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+- include_existing (bool): Also extract new offsets from recordings already in the database.
+- randomize (bool): Randomize recording selection and spectrogram offsets.
 
 ### extract_by_csv
 **Function**  
@@ -436,8 +467,8 @@ This command parses a CSV file to identify the corresponding audio
 segments and extracts those spectrograms from the original recordings.
 This is useful when you have pre-selected spectrograms (e.g., from manual review
 or search results) and want to extract only those specific segments. The CSV file
-needs two columns: recording and start_time, where recording is the stem of the
-recording file name (e.g. XC12345) and start_time is the offset in seconds from the
+needs two columns: recording and offset, where recording is the stem of the
+recording file name (e.g. XC12345) and offset is the offset in seconds from the
 start of the recording.
 
 Args:
@@ -537,6 +568,18 @@ Args:
 
 Examples:
     britekit init --dest .
+
+### migrate_occurrence
+**Function**  
+```python
+migrate_occurrence(input_path: str, output_path: str, metadata_path: str) -> britekit.occurrence_db.occurrence_migration.OccurrenceMigrationReport
+```
+Migrate an occurrence database from schema v1 to schema v2.
+
+Args:
+- input_path: Existing schema-v1 occurrence database.
+- output_path: New schema-v2 database to create.
+- metadata_path: JSON file defining parent areas and level labels.
 
 ### pickle_frame
 **Function**  
@@ -640,6 +683,30 @@ Args:
 - power (float): Raise spectrograms to this power for visualization. Lower values show more detail. Default is 1.0.
 - csv_path (str, optional): Path to CSV file with 'recording' and 'offset' columns. If specified, only plot the segments identified in the CSV.
 
+### plot_occlude
+**Function**  
+```python
+plot_occlude(input_path: str, output_path: str, cfg_path: Optional[str] = None, db_path: Optional[str] = None, alpha: float = 0.1, pad: int = 0, spec_group: str = 'default', rec: Optional[str] = None)
+```
+Plot spectrograms with occlusion-derived frame labels.
+
+Given a CSV generated by analyze-db --occlude, this command computes the same
+frame labels as pickle-frame and saves one spectrogram image per CSV row. Frames
+labelled 1 are highlighted in orange; frames labelled 0 are shaded blue.
+
+Args:
+- input_path (str): CSV file generated by analyze-db --occlude.
+- output_path (str): Directory where spectrogram images will be saved.
+- cfg_path (str, optional): Path to YAML file defining config overrides.
+- db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
+- alpha (float, optional): Score drop threshold as a fraction of the original score
+    (default 0.1). Lower values are more conservative (wider active regions).
+- pad (int, optional): Number of extra frame labels to add on each side of the active
+    region (default 0). Clamped to segment boundaries.
+- spec_group (str, optional): Spectrogram group name. Defaults to 'default'.
+- rec (str, optional): Recording filename to plot. If specified, only segments from
+    this recording are processed.
+
 ### plot_rec
 **Function**  
 ```python
@@ -740,14 +807,14 @@ Args:
 rpt_epochs(cfg_path: Optional[str] = '', input_path: str = '', annotations_path: str = '', output_path: str = '')
 ```
 Given a checkpoint directory and a test, run every checkpoint against the test
-and measure the macro-averaged ROC and AP scores, and then plot them.
+and measure the micro-averaged PR-AUC and ROC-AUC scores, and then plot them.
 This is useful to determine the number of training epochs needed.
 
 Args:
 - cfg_path (str, optional): Path to YAML file defining config overrides.
 - input_path (str): Required checkpoint directory generated by training.
 - annotations_path (str): Required path to CSV file containing ground truth annotations.
-- output_path (str): Required directory where the graph image will be saved.
+- output_path (str): Required directory where the graph image and CSV will be saved.
 
 ### rpt_iou
 **Function**  
@@ -800,7 +867,7 @@ Args:
 ### rpt_test
 **Function**  
 ```python
-rpt_test(cfg_path: Optional[str] = None, granularity: str = 'segment', annotations_path: str = '', label_dir: str = '', output_path: str = '', recordings_path: Optional[str] = None, min_score: Optional[float] = None, block_size: int = 60, precision: float = 0.95)
+rpt_test(cfg_path: Optional[str] = None, granularity: str = 'segment', annotations_path: str = '', label_dir: str = '', output_path: str = '', recordings_path: Optional[str] = None, min_score: Optional[float] = None, block_size: int = 60, precision: float = 0.95, save_matrices: bool = True)
 ```
 Generate comprehensive test metrics and reports comparing model predictions to ground truth.
 
@@ -823,6 +890,7 @@ Args:
 - min_score (float, optional): Provide detailed reports for this confidence threshold.
 - block_size (int, optional): block_size in seconds (default=60).
 - precision (float): For recording granularity, report true positive seconds at this precision. Default is 0.95.
+- save_matrices (bool): Write intermediate y_true/y_pred matrix CSVs for segment tests. Default is True.
 
 ### search
 **Function**  
@@ -849,10 +917,31 @@ Args:
 - class_name2 (str, optional): Class name in the exclusion database. Defaults to the search class name.
 - spec_group (str): Spectrogram group name in the database. Defaults to 'default'.
 
+### teacher_targets
+**Function**  
+```python
+teacher_targets(train_pickle_path: str, checkpoint_path: str, output_path: str, cfg_path: Optional[str] = None, batch_size: int = 256, device: Optional[str] = None) -> None
+```
+Generate soft segment and frame targets from a checkpoint or ensemble.
+
+The input must be a BriteKit training pickle containing stable segment IDs.
+Stored spectrograms are expanded and passed to the teacher without training
+augmentation. For an ensemble directory, probabilities are averaged across
+all checkpoints. SED frame probabilities are stored when the teachers provide
+them. Calibration and application-level filtering are not applied.
+
+Args:
+- train_pickle_path (str): Path to the BriteKit training pickle.
+- checkpoint_path (str): Path to a teacher checkpoint or ensemble directory.
+- output_path (str): Path for the generated teacher-target pickle.
+- cfg_path (str, optional): Path to YAML configuration overrides.
+- batch_size (int): Number of spectrograms per inference batch.
+- device (str, optional): Inference device, such as cpu, cuda, or mps.
+
 ### train
 **Function**  
 ```python
-train(cfg_path: Optional[str] = None, prefix: Optional[str] = None, seed: Optional[int] = None, frame_label_pickle: Optional[str] = None)
+train(cfg_path: Optional[str] = None, prefix: Optional[str] = None, seed: Optional[int] = None, frame_label_pickle: Optional[str] = None, teacher_targets_pickle: Optional[str] = None)
 ```
 Train a bioacoustic recognition model using the specified configuration.
 
@@ -870,6 +959,7 @@ Args:
 - prefix (str, optional): Prefix to add to checkpoint names.
 - seed (int, optional): Integer seed.
 - frame_label_pickle (str, optional): Path to frame-label pickle for SED training.
+- teacher_targets_pickle (str, optional): Path to soft segment targets for distillation.
 
 ### tune
 **Function**  

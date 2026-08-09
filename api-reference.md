@@ -5,6 +5,7 @@
 - [Extractor](#extractor)
 - [OccurrenceDataProvider](#occurrencedataprovider)
 - [OccurrenceDatabase](#occurrencedatabase)
+- [OccurrenceDatabaseV2](#occurrencedatabasev2)
 - [OccurrencePickleProvider](#occurrencepickleprovider)
 - [OccurrencePickler](#occurrencepickler)
 - [PerBlockTester](#perblocktester)
@@ -170,12 +171,18 @@ Attributes:
 
 **extract_all**  
 ```python
-Extractor.extract_all(self, dir_path: str)
+Extractor.extract_all(self, dir_path: str, max_spec: Optional[int] = None, max_rec: Optional[int] = None, include_existing: bool = False, randomize: bool = False)
 ```
 Extract spectrograms for all recordings in the given directory.
 
 Args:
 - dir_path (str): Directory containing recordings.
+- max_spec (int, optional): Maximum number of spectrograms to extract per recording.
+  If the recording would yield more, they are sampled evenly, or randomly when
+  randomize is enabled.
+- max_rec (int, optional): Maximum number of recordings to process.
+- include_existing (bool): Also extract new offsets from recordings already in the database.
+- randomize (bool): Randomize recording order and spectrogram offsets.
 
 Returns:
 
@@ -433,6 +440,72 @@ Insert a county record and return the ID.
 OccurrenceDatabase.insert_occurrences(self, county_id, class_id, value)
 ```
 Insert an occurrence record for a given county and class.
+
+### OccurrenceDatabaseV2
+**Class**  
+```python
+OccurrenceDatabaseV2(db_path: str | pathlib.Path, *, create: bool = False)
+```
+SQLite interface for occurrence schema version 2.
+
+This class intentionally lives beside the v1 ``OccurrenceDatabase`` while
+the compiled occurrence format and inference provider are transitioned.
+
+**Public methods & properties**
+
+**close**  
+```python
+OccurrenceDatabaseV2.close(self) -> None
+```
+**get_all_areas**  
+```python
+OccurrenceDatabaseV2.get_all_areas(self)
+```
+**get_area**  
+```python
+OccurrenceDatabaseV2.get_area(self, code: str)
+```
+**get_children**  
+```python
+OccurrenceDatabaseV2.get_children(self, parent_code: str)
+```
+**get_descendants**  
+```python
+OccurrenceDatabaseV2.get_descendants(self, code: str)
+```
+**get_occurrences**  
+```python
+OccurrenceDatabaseV2.get_occurrences(self, area_id: int, class_name: str)
+```
+**insert_area**  
+```python
+OccurrenceDatabaseV2.insert_area(self, *, code: str, name: str, level: int, area_type: str, selectable: bool, parent_code: Optional[str] = None, min_longitude: Optional[float] = None, max_longitude: Optional[float] = None, min_latitude: Optional[float] = None, max_latitude: Optional[float] = None, display_order: int = 0) -> int
+```
+**insert_class**  
+```python
+OccurrenceDatabaseV2.insert_class(self, name: str, *, class_id: Optional[int] = None) -> int
+```
+**insert_compressed_occurrences**  
+```python
+OccurrenceDatabaseV2.insert_compressed_occurrences(self, area_id: int, class_id: int, value: bytes) -> None
+```
+**insert_level**  
+```python
+OccurrenceDatabaseV2.insert_level(self, country_code: str, level: int, singular_name: str, plural_name: str) -> None
+```
+**insert_occurrences**  
+```python
+OccurrenceDatabaseV2.insert_occurrences(self, area_id: int, class_id: int, value) -> None
+```
+**set_region_pack**  
+```python
+OccurrenceDatabaseV2.set_region_pack(self, code: str, name: str, data_version: str, taxonomy_version: Optional[str] = None) -> None
+```
+**validate**  
+```python
+OccurrenceDatabaseV2.validate(self) -> list[str]
+```
+Return integrity problems; an empty list means the database is valid.
 
 ### OccurrencePickleProvider
 **Class**  
@@ -745,7 +818,7 @@ Note:
 ### PerSegmentTester
 **Class**  
 ```python
-PerSegmentTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, calibrate: bool = False, cutoff: float = 0.6, coef: Optional[float] = None, inter: Optional[float] = None)
+PerSegmentTester(annotation_path: str, recording_dir: str, label_dir: str, output_dir: str, threshold: float, calibrate: bool = False, cutoff: float = 0.6, coef: Optional[float] = None, inter: Optional[float] = None, save_matrices: bool = True)
 ```
 Calculate test metrics when individual sounds are annotated in the ground truth data.
 Annotations are read as a CSV with four columns: recording, class, start_time and end_time.

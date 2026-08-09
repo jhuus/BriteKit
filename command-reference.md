@@ -12,6 +12,8 @@
 | [britekit ckpt-avg](#britekit-ckpt-avg) | Average the weights of several checkpoints. |
 | [britekit ckpt-freeze](#britekit-ckpt-freeze) | Freeze the backbone weights of a checkpoint. |
 | [britekit ckpt-onnx](#britekit-ckpt-onnx) | Convert a checkpoint to onnx format for use with openvino. |
+| [britekit compile-location-catalog](#britekit-compile-location-catalog) | Compile a lightweight administrative-area catalog. |
+| [britekit copy-class](#britekit-copy-class) | Copy a class and its records from one database to another. |
 | [britekit dedup-rec](#britekit-dedup-rec) | Find and optionally delete duplicate recordings in a database. |
 | [britekit dedup-seg](#britekit-dedup-seg) | Find and optionally delete duplicate segments in a database. |
 | [britekit del-cat](#britekit-del-cat) | Delete a category (class group) and its classes from a database. |
@@ -29,11 +31,13 @@
 | [britekit find-lr](#britekit-find-lr) | Suggest a learning rate. |
 | [britekit inat](#britekit-inat) | Download recordings from iNaturalist. |
 | [britekit init](#britekit-init) | Create default directory structure including sample files. |
+| [britekit migrate-occurrence](#britekit-migrate-occurrence) | Migrate an occurrence database to the hierarchical schema. |
 | [britekit pickle-frame](#britekit-pickle-frame) | Create a frame-label pickle from analyze-db occlusion sensitivity CSVs. |
 | [britekit pickle-occurrence](#britekit-pickle-occurrence) | Convert an occurrence database to a pickle file for use in inference. |
 | [britekit pickle-train](#britekit-pickle-train) | Convert a training database to a pickle file for use in training. |
 | [britekit plot-db](#britekit-plot-db) | Plot spectrograms from a database. |
 | [britekit plot-dir](#britekit-plot-dir) | Plot spectrograms from a directory of recordings. |
+| [britekit plot-occlude](#britekit-plot-occlude) | Plot analyze-db occlusion frame labels on spectrograms. |
 | [britekit plot-rec](#britekit-plot-rec) | Plot spectrograms from a specific recording. |
 | [britekit plot-test](#britekit-plot-test) | Plot spectrograms for a class or all classes based on test annotations. |
 | [britekit reextract](#britekit-reextract) | Re-generate the spectrograms in a database, and add them to the database. |
@@ -44,6 +48,7 @@
 | [britekit rpt-labels](#britekit-rpt-labels) | Summarize the output of an inference run. |
 | [britekit rpt-test](#britekit-rpt-test) | Generate metrics and reports from test results. |
 | [britekit search](#britekit-search) | Search a database for spectrograms similar to one given. |
+| [britekit teacher-targets](#britekit-teacher-targets) | Generate soft training targets from a model ensemble. |
 | [britekit train](#britekit-train) | Run training. |
 | [britekit tune](#britekit-tune) | Tune hyperparameters using exhaustive or random search. |
 | [britekit wav2mp3](#britekit-wav2mp3) | Convert uncompressed audio or flac to mp3. |
@@ -146,6 +151,8 @@ Options:
                           length.
   --show                  If specified, show the top scores for the first
                           spectrogram, then stop.
+  --ckpt PATH             Path to checkpoint file or directory, overriding
+                          ckpt_folder in config.
   --debug                 If specified, turn on debug logging.
   --help                  Show this message and exit.
 ```
@@ -289,6 +296,34 @@ Options:
                     convert to ONNX format  [required]
   --help            Show this message and exit.
 ```
+### britekit compile-location-catalog
+```
+Usage: britekit compile-location-catalog [OPTIONS]
+
+Options:
+  --input FILE   Schema-v2 occurrence database.  [required]
+  --output FILE  Location catalog database to create.  [required]
+  --help         Show this message and exit.
+```
+### britekit copy-class
+```
+Usage: britekit copy-class [OPTIONS]
+
+  Copy a class and all its associated records from one training database to
+  another.
+
+  Copies the class record along with its category, all associated recordings
+  (and their sources), segments, spectrograms, and SegmentClass links. Records
+  that already exist in the destination database (matched by name or
+  filename+source) are reused rather than duplicated. The class must not already
+  exist in the destination database.
+
+Options:
+  --src-db FILE   Path to the source training database.  [required]
+  --dest-db FILE  Path to the destination training database.  [required]
+  --name TEXT     Name of the class to copy.  [required]
+  --help          Show this message and exit.
+```
 ### britekit dedup-rec
 ```
 Usage: britekit dedup-rec [OPTIONS]
@@ -298,7 +333,7 @@ Usage: britekit dedup-rec [OPTIONS]
   This command scans the database for recordings of the same class that appear
   to be duplicates. It uses a two-stage detection approach: 1. Compare recording
   durations (within 0.1 seconds tolerance) 2. Compare spectrogram embeddings of
-  the first few spectrograms (within 0.02 cosine distance)
+  the first few spectrograms (within the specified cosine distance)
 
   Duplicates are identified by comparing the first 3 spectrogram embeddings from
   each recording using cosine distance.
@@ -310,6 +345,8 @@ Options:
   --name TEXT     Class name  [required]
   --del           If specified, remove duplicate recordings from the database.
   --sgroup TEXT   Spectrogram group name. Defaults to 'default'.
+  --dist FLOAT    Maximum cosine distance for matching embeddings. Default =
+                  0.02.
   --help          Show this message and exit.
 ```
 ### britekit dedup-seg
@@ -332,17 +369,8 @@ Options:
   --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
   --threshold FLOAT       Treat as duplicates if cosine similarity >= threshold.
                           Default = 0.99.
-  --name TEXT             Class name  [required]
   --noplot                If specified, do not plot spectrograms.
   --help                  Show this message and exit.
-/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1193: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
-  parser = self.make_parser(ctx)
-/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1186: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
-  self.parse_args(ctx, args)
-/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1002: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
-  pieces = self.collect_usage_pieces(ctx)
-/home/jhuus/.local/share/hatch/env/virtual/britekit/qI3_bvVE/britekit/lib/python3.12/site-packages/click/core.py:1104: UserWarning: The parameter --name is used more than once. Remove its duplicate as parameters should be unique.
-  self.format_options(ctx, formatter)
 ```
 ### britekit del-cat
 ```
@@ -523,18 +551,25 @@ Usage: britekit extract-all [OPTIONS]
   specified class doesn't exist, it will be automatically created.
 
 Options:
-  -c, --cfg PATH   Path to YAML file defining config overrides.
-  -d, --db TEXT    Path to the training database.
-  --cat TEXT       Category name, e.g. 'bird' for when new class is added.
-                   Defaults to 'default'.
-  --code TEXT      Class code for when new class is added.
-  --name TEXT      Class name.  [required]
-  --dir DIRECTORY  Path to directory containing recordings.  [required]
-  --overlap FLOAT  Spectrogram overlap in seconds. Defaults to value in the
-                   config file.
-  --src TEXT       Source name for inserted recordings. Defaults to 'default'.
-  --sgroup TEXT    Spectrogram group name. Defaults to 'default'.
-  --help           Show this message and exit.
+  -c, --cfg PATH      Path to YAML file defining config overrides.
+  -d, --db TEXT       Path to the training database.
+  --cat TEXT          Category name, e.g. 'bird' for when new class is added.
+                      Defaults to 'default'.
+  --code TEXT         Class code for when new class is added.
+  --name TEXT         Class name.  [required]
+  --dir DIRECTORY     Path to directory containing recordings.  [required]
+  --max-spec INTEGER  Maximum spectrograms per recording; sampled evenly by
+                      default or randomly with --random.
+  --max-rec INTEGER   Maximum number of recordings to process.
+  --overlap FLOAT     Spectrogram overlap in seconds. Defaults to value in the
+                      config file.
+  --src TEXT          Source name for inserted recordings. Defaults to
+                      'default'.
+  --sgroup TEXT       Spectrogram group name. Defaults to 'default'.
+  --include-existing  Also extract new offsets from recordings already in the
+                      database.
+  --random            Randomize recording selection and spectrogram offsets.
+  --help              Show this message and exit.
 ```
 ### britekit extract-by-csv
 ```
@@ -546,9 +581,9 @@ Usage: britekit extract-by-csv [OPTIONS]
   and extracts those spectrograms from the original recordings. This is useful
   when you have pre-selected spectrograms (e.g., from manual review or search
   results) and want to extract only those specific segments. The CSV file needs
-  two columns: recording and start_time, where recording is the stem of the
-  recording file name (e.g. XC12345) and start_time is the offset in seconds
-  from the start of the recording.
+  two columns: recording and offset, where recording is the stem of the
+  recording file name (e.g. XC12345) and offset is the offset in seconds from
+  the start of the recording.
 
 Options:
   -c, --cfg PATH        Path to YAML file defining config overrides.
@@ -659,6 +694,17 @@ Options:
   --dest DIRECTORY  Root directory to copy under (default is working directory).
   --help            Show this message and exit.
 ```
+### britekit migrate-occurrence
+```
+Usage: britekit migrate-occurrence [OPTIONS]
+
+Options:
+  --input FILE     Schema-v1 occurrence database.  [required]
+  --output FILE    Schema-v2 occurrence database to create.  [required]
+  --metadata FILE  JSON file defining region-pack and administrative-area
+                   metadata.  [required]
+  --help           Show this message and exit.
+```
 ### britekit pickle-frame
 ```
 Usage: britekit pickle-frame [OPTIONS]
@@ -676,15 +722,15 @@ Options:
                          db --occlude.  [required]
   -o, --output TEXT      Output pickle file path.  [required]
   --alpha FLOAT          Score drop threshold as a fraction of the original
-                         score (default 0.1). Lower values are more conservative
-                         (wider active regions).
+                         score (default 0.05). Lower values are more
+                         conservative (wider active regions).
   --csv DIRECTORY        Optional directory for per-class output CSVs with
                          segment IDs and frame labels.
   --names FILE           Optional path to a text file listing CSV filenames (one
                          per line) to process. Default is all CSV files in the
                          input directory.
   --pad INTEGER          Number of extra frame labels to add on each side of the
-                         active region (default 1). Clamped to segment
+                         active region (default 0). Clamped to segment
                          boundaries.
   --help                 Show this message and exit.
 ```
@@ -772,6 +818,35 @@ Options:
                           more detail.
   --csv FILE              Path to CSV file with 'recording' and 'offset'
                           columns. If specified, only plot those segments.
+  --help                  Show this message and exit.
+```
+### britekit plot-occlude
+```
+Usage: britekit plot-occlude [OPTIONS]
+
+  Plot spectrograms with occlusion-derived frame labels.
+
+  Given a CSV generated by analyze-db --occlude, this command computes the same
+  frame labels as pickle-frame and saves one spectrogram image per CSV row.
+  Frames labelled 1 are highlighted in orange; frames labelled 0 are shaded
+  blue.
+
+Options:
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  -i, --input FILE        CSV file generated by analyze-db --occlude.
+                          [required]
+  -o, --output DIRECTORY  Directory where spectrogram images will be saved.
+                          [required]
+  -d, --db TEXT           Path to the training database.
+  --alpha FLOAT           Score drop threshold as a fraction of the original
+                          score (default 0.05). Lower values are more
+                          conservative (wider active regions).
+  --pad INTEGER           Number of extra frame labels to add on each side of
+                          the active region (default 0). Clamped to segment
+                          boundaries.
+  --sgroup TEXT           Spectrogram group name. Defaults to 'default'.
+  --rec TEXT              Recording filename to plot. If specified, only
+                          segments from this recording are processed.
   --help                  Show this message and exit.
 ```
 ### britekit plot-rec
@@ -887,8 +962,8 @@ Options:
 Usage: britekit rpt-epochs [OPTIONS]
 
   Given a checkpoint directory and a test, run every checkpoint against the test
-  and measure the macro-averaged ROC and AP scores, and then plot them. This is
-  useful to determine the number of training epochs needed.
+  and measure the micro-averaged PR-AUC and ROC-AUC scores, and then plot them.
+  This is useful to determine the number of training epochs needed.
 
 Options:
   -c, --cfg PATH          Path to YAML file defining config overrides.
@@ -972,24 +1047,27 @@ Usage: britekit rpt-test [OPTIONS]
   behavior.
 
 Options:
-  -c, --cfg PATH              Path to YAML file defining config overrides.
-  -g, --granularity TEXT      Test annotation and reporting granularity
-                              ("recording", "block" or "segment"). Default =
-                              "segment".
-  -a, --annotations FILE      Path to CSV file containing annotations or ground
-                              truth).  [required]
-  -l, --labels TEXT           Directory containing Audacity labels. If a
-                              subdirectory of recordings directory, only the
-                              subdirectory name is needed.  [required]
-  -o, --output DIRECTORY      Path to output directory.  [required]
-  -r, --recordings DIRECTORY  Recordings directory. Default is directory
-                              containing annotations file.
-  -m, --min_score FLOAT       Provide detailed reports for this threshold.
-  -b, --block INTEGER         Block size in seconds, when granularity=block
-                              (default=60).
-  --precision FLOAT           For granularity=recording, report TP seconds at
-                              this precision (default=.95).
-  --help                      Show this message and exit.
+  -c, --cfg PATH                  Path to YAML file defining config overrides.
+  -g, --granularity TEXT          Test annotation and reporting granularity
+                                  ("recording", "block" or "segment"). Default =
+                                  "segment".
+  -a, --annotations FILE          Path to CSV file containing annotations or
+                                  ground truth).  [required]
+  -l, --labels TEXT               Directory containing Audacity labels. If a
+                                  subdirectory of recordings directory, only the
+                                  subdirectory name is needed.  [required]
+  -o, --output DIRECTORY          Path to output directory.  [required]
+  -r, --recordings DIRECTORY      Recordings directory. Default is directory
+                                  containing annotations file.
+  -m, --min_score FLOAT           Provide detailed reports for this threshold.
+  -b, --block INTEGER             Block size in seconds, when granularity=block
+                                  (default=60).
+  --precision FLOAT               For granularity=recording, report TP seconds
+                                  at this precision (default=.95).
+  --save-matrices / --skip-matrices
+                                  Write intermediate y_true/y_pred matrix CSVs
+                                  for segment tests (default: enabled).
+  --help                          Show this message and exit.
 ```
 ### britekit search
 ```
@@ -1026,6 +1104,27 @@ Options:
                           on y-axis.
   --help                  Show this message and exit.
 ```
+### britekit teacher-targets
+```
+Usage: britekit teacher-targets [OPTIONS] TRAIN_PICKLE_PATH
+
+  Generate soft segment and frame targets from a checkpoint or ensemble.
+
+  The input must be a BriteKit training pickle containing stable segment IDs.
+  Stored spectrograms are expanded and passed to the teacher without training
+  augmentation. For an ensemble directory, probabilities are averaged across all
+  checkpoints. SED frame probabilities are stored when the teachers provide
+  them. Calibration and application-level filtering are not applied.
+
+Options:
+  --checkpoints PATH          Teacher checkpoint or directory containing an
+                              ensemble.  [required]
+  -o, --output FILE           Output teacher-target pickle.  [required]
+  -c, --cfg FILE              Path to YAML configuration overrides.
+  --batch-size INTEGER RANGE  [default: 256; x>=1]
+  --device [cpu|cuda|mps]
+  --help                      Show this message and exit.
+```
 ### britekit train
 ```
 Usage: britekit train [OPTIONS]
@@ -1042,11 +1141,12 @@ Usage: britekit train [OPTIONS]
   evaluation.
 
 Options:
-  -c, --cfg PATH       Path to YAML file defining config overrides.
-  --prefix TEXT        Optional prefix to add to checkpoint names.
-  --seed INTEGER       Integer seed.
-  --frame-labels PATH  Path to frame-label pickle for SED training.
-  --help               Show this message and exit.
+  -c, --cfg PATH          Path to YAML file defining config overrides.
+  --prefix TEXT           Optional prefix to add to checkpoint names.
+  --seed INTEGER          Integer seed.
+  --frame-labels PATH     Path to frame-label pickle for SED training.
+  --teacher-targets FILE  Path to soft segment targets for distillation.
+  --help                  Show this message and exit.
 ```
 ### britekit tune
 ```
