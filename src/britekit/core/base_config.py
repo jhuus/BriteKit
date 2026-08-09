@@ -117,6 +117,9 @@ class TrainingConfig:
     # Per-recording sampling: if set, randomly select this many specs per recording per epoch
     max_per_recording: Optional[int] = None
 
+    # Do not limit specs for classes represented by fewer than this many recordings
+    max_per_recording_min_recordings: Optional[int] = None
+
     # Per-recording limit for validation: if set, take the first N specs per recording
     val_max_per_recording: Optional[int] = None
 

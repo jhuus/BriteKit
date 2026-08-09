@@ -15,14 +15,29 @@ from britekit.core.config_loader import get_config
 class PerRecordingSampler(Sampler):
     """
     Samples up to max_per_recording spectrogram indices per recording per epoch.
-    Indices are drawn randomly and the final list is shuffled.
+    Samples belonging to classes with fewer than min_recordings distinct recordings
+    are always retained. Other indices are drawn randomly and the final list is
+    shuffled.
     """
 
     def __init__(
-        self, indices: List[int], recording_ids: List[int], max_per_recording: int
+        self,
+        indices: List[int],
+        recording_ids: List[int],
+        class_indexes: List[List[int]],
+        max_per_recording: int,
+        min_recordings: Optional[int] = None,
     ):
+        if max_per_recording <= 0:
+            raise ValueError("max_per_recording must be positive")
+        if min_recordings is not None and min_recordings <= 0:
+            raise ValueError("max_per_recording_min_recordings must be positive")
+        if len(recording_ids) != len(class_indexes):
+            raise ValueError("recording_ids and class_indexes must have equal lengths")
+
         self.indices = indices
         self.recording_ids = recording_ids
+        self.class_indexes = class_indexes
         self.max_per_recording = max_per_recording
 
         # Group subset indices by recording ID
@@ -32,16 +47,44 @@ class PerRecordingSampler(Sampler):
             groups.setdefault(rec_id, []).append(idx)
         self.groups = list(groups.values())
 
+        self.protected_classes = set()
+        if min_recordings is not None:
+            class_recordings: dict = {}
+            for idx in indices:
+                rec_id = recording_ids[idx]
+                for class_index in class_indexes[idx]:
+                    class_recordings.setdefault(class_index, set()).add(rec_id)
+            self.protected_classes = {
+                class_index
+                for class_index, recordings in class_recordings.items()
+                if len(recordings) < min_recordings
+            }
+
     def __iter__(self):
         selected = []
         for group in self.groups:
-            k = min(self.max_per_recording, len(group))
-            selected.extend(random.sample(group, k))
+            protected = [
+                idx
+                for idx in group
+                if self.protected_classes.intersection(self.class_indexes[idx])
+            ]
+            unprotected = [idx for idx in group if idx not in protected]
+            k = min(self.max_per_recording, len(unprotected))
+            selected.extend(protected)
+            selected.extend(random.sample(unprotected, k))
         random.shuffle(selected)
         return iter(selected)
 
     def __len__(self):
-        total = sum(min(self.max_per_recording, len(g)) for g in self.groups)
+        total = 0
+        for group in self.groups:
+            protected_count = sum(
+                bool(self.protected_classes.intersection(self.class_indexes[idx]))
+                for idx in group
+            )
+            total += protected_count + min(
+                self.max_per_recording, len(group) - protected_count
+            )
         return total
 
 
@@ -75,6 +118,11 @@ class DataModule(LightningDataModule):
             if len(specs) != len(labels):
                 raise ValueError(
                     f"Mismatch between specs ({len(specs)}) and labels ({len(labels)}) lengths"
+                )
+            if recording_ids is not None and len(recording_ids) != len(specs):
+                raise ValueError(
+                    "Mismatch between specs "
+                    f"({len(specs)}) and recording IDs ({len(recording_ids)}) lengths"
                 )
 
             self.train_class_names = class_names
@@ -453,15 +501,23 @@ class DataModule(LightningDataModule):
             raise ValueError("Training data not prepared. Call prepare_fold() first.")
 
         max_per_recording = self.cfg.train.max_per_recording
-        if max_per_recording is not None and self.recording_ids is not None:
+        if max_per_recording is not None:
+            if self.recording_ids is None:
+                raise ValueError(
+                    "max_per_recording requires a training pickle containing "
+                    "recording IDs"
+                )
             # Subset indices are original-dataset indices; sampler must output
             # subset-relative indices (0..len(subset)-1) for the DataLoader.
             train_indices = list(self.train_data.indices)
             subset_recording_ids = [self.recording_ids[i] for i in train_indices]
+            subset_class_indexes = [self.labels[i] for i in train_indices]
             sampler = PerRecordingSampler(
                 list(range(len(train_indices))),
                 subset_recording_ids,
+                subset_class_indexes,
                 max_per_recording,
+                self.cfg.train.max_per_recording_min_recordings,
             )
             return DataLoader(
                 self.train_data,
