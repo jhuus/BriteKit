@@ -6,12 +6,13 @@
 import logging
 import os
 from pathlib import Path
+import time
 from typing import Optional
 
 import click
 
 from britekit.core.config_loader import get_config
-from britekit.core.util import cli_help_from_doc, set_logging
+from britekit.core.util import cli_help_from_doc, format_elapsed_time, set_logging
 
 
 class DatabaseAnalyzer:
@@ -99,9 +100,23 @@ class DatabaseAnalyzer:
         fp3_names = []
         fp3_means = []
 
-        # loop on classes
         with TrainingDatabase(self.db_path) as db:
-            for name in class_names:
+            # Fetch only metadata here so the ETA can be weighted by the amount of
+            # inference work without loading every spectrogram into memory at once.
+            spectrogram_counts = {
+                name: len(
+                    db.get_spectrogram_by_class(
+                        name, include_value=False, spec_group=self.spec_group
+                    )
+                )
+                for name in class_names
+            }
+            total_spectrograms = sum(spectrogram_counts.values())
+            processed_spectrograms = 0
+            analysis_start = time.monotonic()
+            class_count = len(class_names)
+
+            for class_number, name in enumerate(class_names, start=1):
                 results = db.get_class({"name": name})
                 if len(results) == 0:
                     logging.error(
@@ -154,6 +169,24 @@ class DatabaseAnalyzer:
                 else:
                     fp3_names.append("")
                     fp3_means.append("")
+
+                processed_spectrograms += len(specs)
+                remaining_spectrograms = total_spectrograms - processed_spectrograms
+                if processed_spectrograms == 0:
+                    remaining_text = "calculating"
+                else:
+                    elapsed = time.monotonic() - analysis_start
+                    estimated_remaining = (
+                        elapsed / processed_spectrograms * remaining_spectrograms
+                    )
+                    remaining_text = format_elapsed_time(0, estimated_remaining)
+                logging.info(
+                    "Completed class %d/%d (%s). Estimated time remaining = %s",
+                    class_number,
+                    class_count,
+                    name,
+                    remaining_text,
+                )
 
         df = pd.DataFrame()
         df["Name"] = names
