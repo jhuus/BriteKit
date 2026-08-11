@@ -151,7 +151,9 @@ def xeno(
                 downloaded += 1
 
                 if max_downloads > 0 and downloaded >= max_downloads:
-                    return
+                    break
+
+    logging.info(f"Downloaded {downloaded} recordings")
 
 
 @click.command(
