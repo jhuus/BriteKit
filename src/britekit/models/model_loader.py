@@ -89,7 +89,11 @@ def load_new_model(
     ).to(device)
 
 
-def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = None):
+def load_from_checkpoint(
+    checkpoint_path: str,
+    multi_label: Optional[bool] = None,
+    apply_training_config: bool = True,
+):
     # defer these imports to improve --help performance
     import torch
 
@@ -111,13 +115,11 @@ def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = Non
         model_type = ckpt["hyper_parameters"]["model_type"]
         if model_type.startswith("timm."):
             if multi_label is None:
-                return TimmModel.load_from_checkpoint(checkpoint_path, strict=False).to(
-                    device
-                )
+                model = TimmModel.load_from_checkpoint(checkpoint_path, strict=False)
             else:
-                return TimmModel.load_from_checkpoint(
+                model = TimmModel.load_from_checkpoint(
                     checkpoint_path, multi_label=multi_label, strict=False
-                ).to(device)
+                )
         elif model_type.startswith("bk"):
             model_class = BKNetModel
         elif model_type.startswith("dla"):
@@ -139,13 +141,16 @@ def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = Non
         else:
             raise ModelError(f'Unable to load model with unknown type "{model_type}"')
 
-        if multi_label is None:
-            return model_class.load_from_checkpoint(checkpoint_path, strict=False).to(
-                device
-            )
-        else:
-            return model_class.load_from_checkpoint(
-                checkpoint_path, multi_label=multi_label, strict=False
-            ).to(device)
+        if not model_type.startswith("timm."):
+            if multi_label is None:
+                model = model_class.load_from_checkpoint(checkpoint_path, strict=False)
+            else:
+                model = model_class.load_from_checkpoint(
+                    checkpoint_path, multi_label=multi_label, strict=False
+                )
+
+        if apply_training_config:
+            model.apply_training_config(get_config())
+        return model.to(device)
     else:
         raise ModelError("Checkpoint file has no model_type information.")

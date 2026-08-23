@@ -39,6 +39,23 @@ def test_loading_old_checkpoint_corrects_completed_epochs():
     assert model.training_cfg["train"]["num_epochs"] == 43
 
 
+def test_loading_checkpoint_does_not_mutate_runtime_config():
+    cfg = BaseConfig()
+    training_cfg = util.cfg_to_pure(deepcopy(cfg))
+    training_cfg["audio"]["sampling_rate"] = 32000
+    checkpoint = {
+        "identifier": "model-id",
+        "training_date": "2026-07-14",
+        "training_cfg": training_cfg,
+    }
+    model = SimpleNamespace(cfg=cfg)
+
+    BaseModel.on_load_checkpoint(model, checkpoint)
+
+    assert cfg.audio.sampling_rate == BaseConfig().audio.sampling_rate
+    assert model.training_cfg["audio"]["sampling_rate"] == 32000
+
+
 def test_manifest_uses_checkpoint_completed_epochs(tmp_path):
     training_cfg = util.cfg_to_pure(BaseConfig())
     training_cfg["train"]["num_epochs"] = 43

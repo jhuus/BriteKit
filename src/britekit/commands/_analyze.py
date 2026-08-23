@@ -5,7 +5,7 @@
 import os
 from pathlib import Path
 import time
-from typing import Optional
+from typing import Any, cast, Optional
 
 import click
 
@@ -56,6 +56,15 @@ def analyze(
     from britekit.core.analyzer import Analyzer
 
     cfg = get_config(cfg_path)
+    audio_overrides = {}
+    if cfg_path is not None:
+        from omegaconf import OmegaConf
+
+        raw_cfg = OmegaConf.load(cfg_path)
+        if "audio" in raw_cfg:
+            audio_overrides = cast(
+                dict[str, Any], OmegaConf.to_container(raw_cfg.audio, resolve=True)
+            )
     try:
         if rtype not in {"audacity", "csv", "both"}:
             logging.error(f"Error. invalid rtype value: {rtype}")
@@ -89,7 +98,7 @@ def analyze(
         logging.info(f"Using {device.upper()} for inference")
 
         start_time = time.time()
-        analyzer = Analyzer()
+        analyzer = Analyzer(audio_overrides=audio_overrides)
         analyzer.run(input_path, output_path, rtype, start_seconds, show)
         elapsed_time = util.format_elapsed_time(start_time, time.time())
         logging.info(f"Elapsed time = {elapsed_time}")

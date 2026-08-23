@@ -5,7 +5,7 @@ from copy import deepcopy
 import importlib.util
 import logging
 import os
-from typing import cast, Any, Dict, List, Optional, Sequence
+from typing import cast, Any, Dict, List, Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -36,6 +36,7 @@ class Predictor:
         device: Optional[str] = None,
         cfg: Optional[BaseConfig] = None,
         quantile: Optional[float] = None,
+        audio_overrides: Optional[Mapping[str, Any]] = None,
     ):
         """
         Initialize the Predictor with a model or ensemble of models.
@@ -48,13 +49,13 @@ class Predictor:
         - cfg (BaseConfig, optional): If specified, use this config.
         - quantile (float, optional): If specified, use this quantile instead of max when
             converting SED frames to fixed-length segments.
+        - audio_overrides (mapping, optional): Explicit audio settings that take precedence
+            over checkpoint metadata.
         """
         from britekit.core.audio import Audio
 
-        if cfg is None:
-            self.cfg = get_config()
-        else:
-            self.cfg = cfg
+        self.cfg = deepcopy(cfg if cfg is not None else get_config())
+        self.audio_overrides = dict(audio_overrides or {})
 
         self.audio = Audio(cfg=self.cfg)
         self.class_names: Optional[List[str]] = None
@@ -77,6 +78,9 @@ class Predictor:
             self.ov = None
 
         self._load_models(model_path)
+        if not self.ov:
+            self._apply_model_config()
+            self.audio.set_config(self.cfg)
         if self.ov:
             # Load one ckpt file to get class names and codes,
             # since onnx files don't contain metadata.
@@ -84,7 +88,9 @@ class Predictor:
             for file_path in sorted(os.listdir(model_path)):
                 full_path = os.path.join(model_path, file_path)
                 if full_path.endswith(".ckpt"):
-                    self._load_model(full_path)
+                    metadata_model = self._load_model(full_path)
+                    self._apply_model_config(metadata_model)
+                    self.audio.set_config(self.cfg)
                     found = True
                     break
 
@@ -791,7 +797,9 @@ class Predictor:
 
         if model_path.endswith(".ckpt"):
             try:
-                model = model_loader.load_from_checkpoint(model_path).eval()
+                model = model_loader.load_from_checkpoint(
+                    model_path, apply_training_config=False
+                ).eval()
                 model.set_config(self.cfg)
                 if self.class_names is None:
                     self.class_names = model.train_class_names
@@ -829,6 +837,21 @@ class Predictor:
             raise InferenceError(f"Unsupported model format: {model_path}")
 
         return model
+
+    def _apply_model_config(self, config_model=None) -> None:
+        """Resolve checkpoint metadata and explicit audio overrides into this Predictor."""
+        if config_model is None:
+            config_model = self.models[0]
+        config_model.apply_training_config(self.cfg)
+
+        for key, value in self.audio_overrides.items():
+            if not hasattr(self.cfg.audio, key):
+                raise InferenceError(f'Unknown audio configuration option "{key}"')
+            setattr(self.cfg.audio, key, value)
+
+        for model in self.models:
+            if hasattr(model, "set_config"):
+                model.set_config(self.cfg)
 
     def _get_openvino_scores(self, specs, max_models=None):
         import numpy as np

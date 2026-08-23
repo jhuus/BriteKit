@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 import threading
+from typing import Any, Mapping, Optional
 
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InferenceError
@@ -17,9 +18,10 @@ class Analyzer:
     Basic inference logic using Predictor class, with multi-threading and multi-recording support.
     """
 
-    def __init__(self):
+    def __init__(self, audio_overrides: Optional[Mapping[str, Any]] = None):
         self.cfg = get_config()
-        self.dataframes = []
+        self.audio_overrides = dict(audio_overrides or {})
+        self.dataframes: list[Any] = []
 
         exclude_list = self.cfg.misc.exclude_list
         self.exclude_set = set()  # Initialize empty set by default
@@ -67,7 +69,11 @@ class Analyzer:
         - thread_num (int): Thread number:
         - show (bool): If true, show the top scores for the first spectrogram, then stop.
         """
-        predictor = Predictor(self.cfg.misc.ckpt_folder)
+        predictor = Predictor(
+            self.cfg.misc.ckpt_folder,
+            cfg=self.cfg,
+            audio_overrides=self.audio_overrides,
+        )
         for recording_path in recording_paths:
             logging.info(f"[Thread {thread_num}] Processing {recording_path}")
 

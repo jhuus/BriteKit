@@ -139,54 +139,60 @@ class BaseModel(pl.LightningModule):
             # maximum still contain Lightning's actual zero-based epoch.
             if "epoch" in checkpoint:
                 self.training_cfg["train"]["num_epochs"] = checkpoint["epoch"] + 1
-
-            self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
-            self.cfg.audio.spec_height = self.training_cfg["audio"]["spec_height"]
-            self.cfg.audio.spec_width = self.training_cfg["audio"]["spec_width"]
-            self.cfg.audio.win_length = self.training_cfg["audio"]["win_length"]
-            self.cfg.audio.max_freq = self.training_cfg["audio"]["max_freq"]
-            self.cfg.audio.min_freq = self.training_cfg["audio"]["min_freq"]
-            self.cfg.audio.sampling_rate = self.training_cfg["audio"]["sampling_rate"]
-            self.cfg.audio.freq_scale = self.training_cfg["audio"]["freq_scale"]
-            self.cfg.audio.power = self.training_cfg["audio"]["power"]
-            self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
-            self.cfg.audio.top_db = self.training_cfg["audio"].get(
-                "top_db", self.cfg.audio.top_db
-            )
-            self.cfg.audio.db_power = self.training_cfg["audio"].get(
-                "db_power", self.cfg.audio.db_power
-            )
-            self.cfg.audio.log_freq_gain = self.training_cfg["audio"].get(
-                "log_freq_gain", self.cfg.audio.log_freq_gain
-            )
-            self.cfg.audio.mel_norm = self.training_cfg["audio"].get(
-                "mel_norm", self.cfg.audio.mel_norm
-            )
-
-            self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
-            self.cfg.train.model_type = self.training_cfg["train"]["model_type"]
-            self.cfg.train.head_type = self.training_cfg["train"].get("head_type")
-            self.cfg.train.lse_temp = self.training_cfg["train"].get("lse_temp", 0.5)
-            self.cfg.train.two_way = self.training_cfg["train"].get("two_way", True)
-
-            if "n_fft" in self.training_cfg["audio"]:
-                self.cfg.audio.n_fft = self.training_cfg["audio"]["n_fft"]
-            else:
-                win_length_samples = int(
-                    self.cfg.audio.win_length * self.cfg.audio.sampling_rate
-                )
-                self.cfg.audio.n_fft = 2 * win_length_samples
-
-            logging.debug(
-                "BaseModel::on_load_checkpoint sr=%d, win=%d, duration=%.2f, height=%d, width=%d",
-                self.cfg.audio.sampling_rate,
-                self.cfg.audio.win_length,
-                self.cfg.audio.spec_duration,
-                self.cfg.audio.spec_height,
-                self.cfg.audio.spec_width,
-            )
         else:
             raise ValueError("Checkpoint metadata not found.")
+
+    def apply_training_config(self, cfg: BaseConfig) -> None:
+        """Apply inference-relevant checkpoint settings to ``cfg``."""
+        if not hasattr(self, "training_cfg"):
+            raise ValueError("Checkpoint metadata not found.")
+
+        self.cfg = cfg
+        self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
+        self.cfg.audio.spec_height = self.training_cfg["audio"]["spec_height"]
+        self.cfg.audio.spec_width = self.training_cfg["audio"]["spec_width"]
+        self.cfg.audio.win_length = self.training_cfg["audio"]["win_length"]
+        self.cfg.audio.max_freq = self.training_cfg["audio"]["max_freq"]
+        self.cfg.audio.min_freq = self.training_cfg["audio"]["min_freq"]
+        self.cfg.audio.sampling_rate = self.training_cfg["audio"]["sampling_rate"]
+        self.cfg.audio.freq_scale = self.training_cfg["audio"]["freq_scale"]
+        self.cfg.audio.power = self.training_cfg["audio"]["power"]
+        self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
+        self.cfg.audio.top_db = self.training_cfg["audio"].get(
+            "top_db", self.cfg.audio.top_db
+        )
+        self.cfg.audio.db_power = self.training_cfg["audio"].get(
+            "db_power", self.cfg.audio.db_power
+        )
+        self.cfg.audio.log_freq_gain = self.training_cfg["audio"].get(
+            "log_freq_gain", self.cfg.audio.log_freq_gain
+        )
+        self.cfg.audio.mel_norm = self.training_cfg["audio"].get(
+            "mel_norm", self.cfg.audio.mel_norm
+        )
+
+        self.cfg.train.sed_fps = self.training_cfg["train"]["sed_fps"]
+        self.cfg.train.model_type = self.training_cfg["train"]["model_type"]
+        self.cfg.train.head_type = self.training_cfg["train"].get("head_type")
+        self.cfg.train.lse_temp = self.training_cfg["train"].get("lse_temp", 0.5)
+        self.cfg.train.two_way = self.training_cfg["train"].get("two_way", True)
+
+        if "n_fft" in self.training_cfg["audio"]:
+            self.cfg.audio.n_fft = self.training_cfg["audio"]["n_fft"]
+        else:
+            win_length_samples = int(
+                self.cfg.audio.win_length * self.cfg.audio.sampling_rate
+            )
+            self.cfg.audio.n_fft = 2 * win_length_samples
+
+        logging.debug(
+            "BaseModel::apply_training_config sr=%d, win=%d, duration=%.2f, height=%d, width=%d",
+            self.cfg.audio.sampling_rate,
+            self.cfg.audio.win_length,
+            self.cfg.audio.spec_duration,
+            self.cfg.audio.spec_height,
+            self.cfg.audio.spec_width,
+        )
 
     # ==================================================================
     # Forward pass
