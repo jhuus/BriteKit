@@ -63,12 +63,10 @@ class HGNetModel(BaseModel):
         self.backbone.head = cast(hgnet.ClassifierHead, nn.Identity())
 
 
-# Model size is most affected by number of classes for smaller models.
-# For the smallest HgNet models, the default head is disproportionately large.
-# Other head types such as "basic" generate a much smaller head.
+# Sizes below include the backbone only and exclude the classifier head.
 MODEL_REGISTRY = {
     "hgnet.1":
-    # ~460K parameters with 50 classes (~90K with basic head)
+    # Backbone is 0.09M parameters
     {
         "stem_type": "v2",
         "stem_chs": [16, 24],
@@ -80,7 +78,7 @@ MODEL_REGISTRY = {
         "stage4": [96, 64, 128, 1, True, True, 5, 2],
     },
     "hgnet.2":
-    # ~740K parameters with 50 classes (~230K with basic head)
+    # Backbone is 0.23M parameters
     {
         "stem_type": "v2",
         "stem_chs": [24, 32],
@@ -92,7 +90,7 @@ MODEL_REGISTRY = {
         "stage4": [160, 96, 192, 1, True, True, 5, 3],
     },
     "hgnet.3":
-    # ~1.3M parameters with 50 classes (~510K with basic head)
+    # Backbone is 0.50M parameters
     {
         "stem_type": "v2",
         "stem_chs": [24, 40],
@@ -104,7 +102,7 @@ MODEL_REGISTRY = {
         "stage4": [256, 160, 320, 1, True, True, 5, 3],
     },
     "hgnet.4":
-    # ~1.8M parameters (~800K with basic head)
+    # Backbone is 0.78M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 48],
@@ -116,7 +114,7 @@ MODEL_REGISTRY = {
         "stage4": [320, 192, 416, 1, True, True, 5, 3],
     },
     "hgnet.5":
-    # ~2.7M parameters (~1.4M with basic head)
+    # Backbone is 1.35M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 64],
@@ -128,7 +126,7 @@ MODEL_REGISTRY = {
         "stage4": [416, 256, 576, 1, True, True, 5, 3],
     },
     "hgnet.6":
-    # ~3.4M parameters (~1.8M with basic head)
+    # Backbone is 1.73M parameters
     {
         "stem_type": "v2",
         "stem_chs": [24, 32],
@@ -140,7 +138,7 @@ MODEL_REGISTRY = {
         "stage4": [480, 256, 768, 1, True, True, 5, 3],
     },
     "hgnet.7":
-    # this is hgnetv2_b0, with ~4.0M parameters (~1.9M with basic head)
+    # Backbone is 1.85M parameters (timm hgnetv2_b0)
     {
         "stem_type": "v2",
         "stem_chs": [16, 16],
@@ -152,7 +150,7 @@ MODEL_REGISTRY = {
         "stage4": [512, 128, 1024, 1, True, True, 5, 3],
     },
     "hgnet.8":
-    # this is hgnetv2_b1, with ~4.3M parameters (~2.3M with basic head)
+    # Backbone is 2.20M parameters (timm hgnetv2_b1)
     {
         "stem_type": "v2",
         "stem_chs": [24, 32],
@@ -164,7 +162,7 @@ MODEL_REGISTRY = {
         "stage4": [512, 192, 1024, 1, True, True, 5, 3],
     },
     "hgnet.9":
-    # ~5.4M parameters (~3.0M with basic head)
+    # Backbone is 2.96M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 40],
@@ -176,19 +174,19 @@ MODEL_REGISTRY = {
         "stage4": [576, 224, 1152, 1, True, True, 5, 3],
     },
     "hgnet.10":
-    # ~6.7M parameters (~4.1M with basic head)
+    # Backbone is 3.61M parameters
     {
         "stem_type": "v2",
-        "stem_chs": [32, 48],
+        "stem_chs": [32, 56],
         "agg": "se",
         # in_chs, mid_chs, out_chs, blocks, downsample, light_block, kernel_size, layer_num
-        "stage1": [48, 64, 128, 1, False, False, 5, 3],
-        "stage2": [128, 96, 320, 1, True, False, 3, 3],
-        "stage3": [320, 144, 640, 2, True, True, 5, 4],
-        "stage4": [640, 256, 1280, 1, True, True, 5, 3],
+        "stage1": [56, 72, 136, 1, False, True, 3, 3],
+        "stage2": [136, 104, 240, 1, True, True, 3, 3],
+        "stage3": [240, 168, 672, 1, True, True, 5, 4],
+        "stage4": [672, 392, 1152, 1, True, True, 5, 4],
     },
     "hgnet.11":
-    # Backbone is 4.0M
+    # Backbone is 4.02M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
@@ -200,7 +198,7 @@ MODEL_REGISTRY = {
         "stage4": [704, 416, 1216, 1, True, True, 5, 4],
     },
     "hgnet.12":
-    # Backbone is 5.0M
+    # Backbone is 4.99M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
@@ -212,7 +210,7 @@ MODEL_REGISTRY = {
         "stage4": [704, 416, 1216, 1, True, True, 5, 5],
     },
     "hgnet.13":
-    # ~7.9M parameters (~5.2M with basic head)
+    # Backbone is 5.15M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 60],
@@ -224,7 +222,7 @@ MODEL_REGISTRY = {
         "stage4": [736, 448, 1280, 1, True, True, 3, 5],
     },
     "hgnet.14":
-    # ~8.3M parameters (~5.5M with basic head)
+    # Backbone is 5.43M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 64],
@@ -236,7 +234,7 @@ MODEL_REGISTRY = {
         "stage4": [768, 448, 1344, 1, True, True, 3, 5],
     },
     "hgnet.15":
-    # ~9.0M parameters (~6.1M with basic head)
+    # Backbone is 6.00M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],
@@ -248,7 +246,7 @@ MODEL_REGISTRY = {
         "stage4": [800, 480, 1408, 1, True, True, 5, 5],
     },
     "hgnet.16":
-    # ~9.6M parameters (~6.6M with basic head)
+    # Backbone is 6.51M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 48],
@@ -260,7 +258,7 @@ MODEL_REGISTRY = {
         "stage4": [832, 512, 1472, 1, True, True, 5, 5],
     },
     "hgnet.17":
-    # ~10.8M parameters (~7.5M with basic head)
+    # Backbone is 7.45M parameters
     {
         "stem_type": "v2",
         "stem_chs": [32, 56],

@@ -24,6 +24,7 @@ def load_new_model(
     from britekit.models.hgnet import HGNetModel
     from britekit.models.mobilenet import MobileNet
     from britekit.models.nfnet import NfNetModel
+    from britekit.models.repvit import RepVitModel
     from britekit.models.vovnet import VovNetModel
 
     cfg = get_config()
@@ -67,6 +68,8 @@ def load_new_model(
         model_class = MobileNet
     elif model_type.startswith("nfnet"):
         model_class = NfNetModel
+    elif model_type.startswith("repvit"):
+        model_class = RepVitModel
     elif model_type.startswith("vovnet"):
         model_class = VovNetModel
     else:
@@ -98,6 +101,7 @@ def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = Non
     from britekit.models.hgnet import HGNetModel
     from britekit.models.mobilenet import MobileNet
     from britekit.models.nfnet import NfNetModel
+    from britekit.models.repvit import RepVitModel
     from britekit.models.vovnet import VovNetModel
 
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
@@ -128,6 +132,8 @@ def load_from_checkpoint(checkpoint_path: str, multi_label: Optional[bool] = Non
             model_class = MobileNet
         elif model_type.startswith("nfnet"):
             model_class = NfNetModel
+        elif model_type.startswith("repvit"):
+            model_class = RepVitModel
         elif model_type.startswith("vovnet"):
             model_class = VovNetModel
         else:
