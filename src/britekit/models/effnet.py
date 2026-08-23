@@ -97,6 +97,9 @@ MODEL_REGISTRY = {
     "effnet.6":
     # ~3.7M parameters with 50 classes
     (0.54, 0.6),
+    "effnet.6.1":
+    # ~4.1M parameters with 50 classes
+    (0.57, 0.6),
     "effnet.7":
     # ~4.6M parameters with 50 classes
     (0.6, 0.6),
