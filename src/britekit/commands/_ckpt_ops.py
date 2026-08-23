@@ -150,6 +150,7 @@ def ckpt_onnx(
     """
     import torch
     from britekit.models.model_loader import load_from_checkpoint
+    from britekit.models.export_util import fold_scaled_std_convs
 
     cfg = get_config(cfg_path)
 
@@ -164,6 +165,7 @@ def ckpt_onnx(
         output_path = base + ".onnx"
         model = load_from_checkpoint(ckpt_path)
         model.eval()
+        fold_scaled_std_convs(model)
         input_sample = torch.randn(
             (
                 cfg.infer.openvino_block_size,
