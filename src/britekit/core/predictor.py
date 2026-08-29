@@ -212,13 +212,22 @@ class Predictor:
 
         return avg_score, avg_frame_map
 
-    def get_recording_scores(self, recording_path: str, start_seconds: float = 0):
+    def get_recording_scores(
+        self,
+        recording_path: str,
+        start_seconds: float = 0,
+        *,
+        use_loaded_audio: bool = False,
+    ):
         """
         Get scores in array format from the loaded models for the given recording.
 
         Args:
         - recording_path (str): Path to the audio recording file.
         - start_seconds (float): Where to start processing the recording, in seconds from the start.
+        - use_loaded_audio (bool): Use the signal already held by ``self.audio``
+          instead of decoding ``recording_path`` again. The caller is responsible
+          for ensuring that the loaded signal is the requested recording.
 
         Returns:
             tuple: A tuple containing:
@@ -234,7 +243,10 @@ class Predictor:
         if not os.path.isfile(recording_path):
             raise InferenceError(f'Recording "{recording_path}" is not a file')
 
-        self.audio.load(recording_path)
+        if not use_loaded_audio:
+            self.audio.load(recording_path)
+        elif self.audio.signal is None:
+            raise InferenceError("No audio signal is loaded")
 
         # Validate audio duration
         audio_duration = self.audio.seconds()
@@ -386,11 +398,12 @@ class Predictor:
         # which is useful when inspecting label files during testing
         num_classes = scores.shape[1]
         spec_duration = self.cfg.audio.spec_duration
+        min_score = self.cfg.infer.min_score
         for i in range(num_classes):
-            if self.cfg.infer.min_score == 0:
+            if min_score == 0:
                 indexes = np.arange(scores.shape[0])
             else:
-                indexes = np.where(scores[:, i] >= self.cfg.infer.min_score)[0]
+                indexes = np.where(scores[:, i] >= min_score)[0]
 
             if len(indexes) > 0:
                 labels[names[i]] = [
@@ -744,9 +757,8 @@ class Predictor:
 
             g0, g1 = max(0, start), min(T_global, start + T_spec)
             t0 = g0 - start
-            indices = np.arange(g0, g1)
-            np.add.at(global_scores, indices, frame_scores[k, :, t0 : t0 + (g1 - g0)].T)
-            np.add.at(weights, indices, 1.0)
+            global_scores[g0:g1] += frame_scores[k, :, t0 : t0 + (g1 - g0)].T
+            weights[g0:g1] += 1.0
 
         # Finalize
         denom = np.clip(weights, 1e-12, None)[:, np.newaxis]

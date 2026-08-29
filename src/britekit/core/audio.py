@@ -351,6 +351,10 @@ class Audio:
 
         specs = []
         sr = self.cfg.audio.sampling_rate
+        target_width = int(
+            spec_duration * self.cfg.audio.spec_width / self.cfg.audio.spec_duration
+        )
+        spec_height = self.cfg.audio.spec_height
         for i, offset in enumerate(start_times):
             end_sample = int((offset + spec_duration) * sr)
             if end_sample > 0 and int(offset * sr) < len(self.signal):
@@ -371,12 +375,7 @@ class Audio:
                 spec = self._get_raw_spectrogram(
                     signal_slice, freq_scale=freq_scale, decibels=False
                 )
-                target_width = int(
-                    spec_duration
-                    * self.cfg.audio.spec_width
-                    / self.cfg.audio.spec_duration
-                )
-                spec = spec[: self.cfg.audio.spec_height, :target_width]
+                spec = spec[:spec_height, :target_width]
                 if spec.shape[1] < target_width:
                     spec = np.pad(
                         spec,
