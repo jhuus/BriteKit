@@ -487,9 +487,11 @@ def expand_spectrogram(spec: bytes):
     try:
         cfg = get_config()
         bytes_data = zlib.decompress(spec)
-        spec_array = np.frombuffer(bytes_data, dtype=np.uint8) / 255
-        spec_array = spec_array.astype(np.float32)
-
+        # Training and inference consume float32 tensors.  Convert directly to
+        # that dtype here instead of letting NumPy promote the division to
+        # float64, only for callers to copy and narrow it later.
+        spec_array = np.frombuffer(bytes_data, dtype=np.uint8).astype(np.float32)
+        spec_array /= 255.0
         # Fix: Add validation for expected shape
         expected_size = cfg.audio.spec_height * cfg.audio.spec_width
         if spec_array.size != expected_size:

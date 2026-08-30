@@ -212,7 +212,9 @@ class SpectrogramDataset(Dataset):
         else:
             frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
 
-        spec_tensor = torch.tensor(spec, dtype=torch.float32)
+        # expand_spectrogram and the augmentation pipeline produce float32
+        # arrays, so avoid another full spectrogram copy here.
+        spec_tensor = torch.from_numpy(np.ascontiguousarray(spec, dtype=np.float32))
         mixup = torch.tensor(mixup)
 
         item = {

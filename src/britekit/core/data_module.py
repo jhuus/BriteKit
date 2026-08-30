@@ -414,6 +414,13 @@ class DataModule(LightningDataModule):
 
         return class_weights
 
+    @staticmethod
+    def _pin_memory():
+        """Pin loader batches only when CUDA can use the faster transfer path."""
+        import torch
+
+        return torch.cuda.is_available()
+
     def _make_val_dataset(self, val_indices):
         """Create a non-augmenting dataset containing only the validation samples."""
         from britekit.core.dataset import SpectrogramDataset
@@ -524,6 +531,7 @@ class DataModule(LightningDataModule):
                 batch_size=self.cfg.train.batch_size,
                 sampler=sampler,
                 num_workers=self.cfg.train.num_workers,
+                pin_memory=self._pin_memory(),
             )
 
         return DataLoader(
@@ -531,6 +539,7 @@ class DataModule(LightningDataModule):
             batch_size=self.cfg.train.batch_size,
             shuffle=self.cfg.train.shuffle,
             num_workers=self.cfg.train.num_workers,
+            pin_memory=self._pin_memory(),
         )
 
     def val_dataloader(self):
@@ -556,6 +565,7 @@ class DataModule(LightningDataModule):
                 batch_size=self.cfg.train.batch_size,
                 sampler=selected,
                 num_workers=self.cfg.train.num_workers,
+                pin_memory=self._pin_memory(),
             )
 
         return DataLoader(
@@ -563,6 +573,7 @@ class DataModule(LightningDataModule):
             batch_size=self.cfg.train.batch_size,
             shuffle=False,
             num_workers=self.cfg.train.num_workers,
+            pin_memory=self._pin_memory(),
         )
 
     def test_dataloader(self):
@@ -576,4 +587,5 @@ class DataModule(LightningDataModule):
             batch_size=self.cfg.train.batch_size,
             shuffle=False,
             num_workers=self.cfg.train.num_workers,
+            pin_memory=self._pin_memory(),
         )
