@@ -3,12 +3,11 @@
 import contextlib
 from datetime import datetime
 import logging
+import os
 from typing import List, Optional, Any
 import uuid
 
 import numpy as np
-import lightning.pytorch as pl
-from timm.optim import create_optimizer_v2
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -20,6 +19,32 @@ from britekit.core import util
 from britekit.models.head_factory import is_sed
 
 
+class _InferenceModule(nn.Module):
+    """Minimal LightningModule-compatible base used by inference bundles."""
+
+    def save_hyperparameters(self) -> None:
+        """Training checkpoints already contain the constructor parameters."""
+
+    @classmethod
+    def load_from_checkpoint(
+        cls, checkpoint_path: str, strict: bool = True, **kwargs: Any
+    ) -> "_InferenceModule":
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        hyperparameters = dict(checkpoint.get("hyper_parameters", {}))
+        hyperparameters.update(kwargs)
+        model = cls(**hyperparameters)
+        model.on_load_checkpoint(checkpoint)  # type: ignore[attr-defined]
+        model.load_state_dict(checkpoint["state_dict"], strict=strict)
+        return model
+
+
+_ModelBase: type[nn.Module] = _InferenceModule
+if os.environ.get("BRITEKIT_INFERENCE_ONLY") != "1":
+    import lightning.pytorch as pl
+
+    _ModelBase = pl.LightningModule
+
+
 def get_learning_rate(optimizer):
     """Get learning rates from all parameter groups."""
     lrs = []
@@ -28,7 +53,7 @@ def get_learning_rate(optimizer):
     return lrs[0] if len(lrs) == 1 else lrs
 
 
-class BaseModel(pl.LightningModule):
+class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
     """
     Base class for models.
 
@@ -328,6 +353,8 @@ class BaseModel(pl.LightningModule):
     # ==================================================================
 
     def configure_optimizers(self):
+        from timm.optim import create_optimizer_v2
+
         cfg = self.cfg.train
 
         kwargs = {
