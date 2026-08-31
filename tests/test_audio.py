@@ -2,6 +2,10 @@
 
 import os
 from pathlib import Path
+
+import librosa
+import numpy as np
+
 from britekit.core import audio, plot
 from britekit.core.config_loader import get_config
 
@@ -42,3 +46,36 @@ def test_low_band():
 
     # plot it to allow manual check
     plot.plot_spec(specs[0], str(Path(plot_path) / "RuffedGrouse.jpeg"), show_dims=True)
+
+
+def test_load_records_errors_and_clears_stale_error(monkeypatch):
+    _audio = audio.Audio()
+
+    def fail_load(*args, **kwargs):
+        raise RuntimeError("decoder unavailable")
+
+    monkeypatch.setattr(librosa, "load", fail_load)
+    signal, _ = _audio.load("broken.mp3")
+    assert signal is None
+    assert _audio.load_error == "decoder unavailable"
+
+    monkeypatch.setattr(
+        librosa,
+        "load",
+        lambda *args, **kwargs: (
+            np.zeros(_audio.cfg.audio.sampling_rate, dtype=np.float32),
+            _audio.cfg.audio.sampling_rate,
+        ),
+    )
+    signal, _ = _audio.load("working.wav")
+    assert signal is not None
+    assert _audio.load_error is None
+
+
+def test_load_records_invalid_path_error():
+    _audio = audio.Audio()
+
+    signal, _ = _audio.load("")
+
+    assert signal is None
+    assert _audio.load_error == "Invalid path provided: "

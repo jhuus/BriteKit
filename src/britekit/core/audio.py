@@ -67,6 +67,7 @@ class Audio:
         self.cached = None
         self.path = None
         self.signal: Any = None
+        self.load_error: Optional[str] = None
         self.set_config(cfg)
         self.sampling_rate = self.cfg.audio.sampling_rate  # in case resampling needed
 
@@ -222,8 +223,11 @@ class Audio:
         import librosa
         import numpy as np
 
+        self.load_error = None
+
         if not path or not isinstance(path, str):
-            logging.error(f"Invalid path provided: {path}")
+            self.load_error = f"Invalid path provided: {path}"
+            logging.error(self.load_error)
             return None, self.cfg.audio.sampling_rate
 
         try:
@@ -249,6 +253,7 @@ class Audio:
         except Exception as e:
             self.signal = None
             self.path = None
+            self.load_error = str(e)
             logging.error(f"Caught exception in audio load of {path}: {e}")
 
         return self.signal, self.sampling_rate
