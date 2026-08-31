@@ -41,7 +41,7 @@ dependencies = [
   "torchaudio>=2.5,<2.12",
   "torchvision>=0.20,<0.27",
 
-  "librosa>=0.11,<2.0",
+  "librosa>=0.11,<1.0",
   "lightning>=2.5,<2.7",
 
   "matplotlib>=3.8,<3.11; python_version < '3.14'",
