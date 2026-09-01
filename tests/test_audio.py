@@ -3,7 +3,6 @@
 import os
 from pathlib import Path
 
-import librosa
 import numpy as np
 
 from britekit.core import audio, plot
@@ -54,16 +53,16 @@ def test_load_records_errors_and_clears_stale_error(monkeypatch):
     def fail_load(*args, **kwargs):
         raise RuntimeError("decoder unavailable")
 
-    monkeypatch.setattr(librosa, "load", fail_load)
+    monkeypatch.setattr(audio, "_decode_audio", fail_load)
     signal, _ = _audio.load("broken.mp3")
     assert signal is None
     assert _audio.load_error == "decoder unavailable"
 
     monkeypatch.setattr(
-        librosa,
-        "load",
+        audio,
+        "_decode_audio",
         lambda *args, **kwargs: (
-            np.zeros(_audio.cfg.audio.sampling_rate, dtype=np.float32),
+            np.zeros((1, _audio.cfg.audio.sampling_rate), dtype=np.float32),
             _audio.cfg.audio.sampling_rate,
         ),
     )
@@ -79,3 +78,15 @@ def test_load_records_invalid_path_error():
 
     assert signal is None
     assert _audio.load_error == "Invalid path provided: "
+
+
+def test_pyav_decoder_returns_channel_first_float32():
+    signal, sampling_rate = audio._decode_audio(
+        str(Path(recording_path) / "RuffedGrouse.mp3")
+    )
+
+    assert sampling_rate == 44_100
+    assert signal.dtype == np.float32
+    assert signal.ndim == 2
+    assert signal.shape[0] == 2
+    assert signal.shape[1] > sampling_rate

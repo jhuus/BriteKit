@@ -16,6 +16,42 @@ warnings.filterwarnings("ignore", message=".*librosa.core.audio.__audioread_load
 warnings.filterwarnings("ignore", message=".*PySoundFile failed.*")
 
 
+def _decode_audio(path: str):
+    """Decode an audio stream through PyAV as channel-first float32 PCM."""
+    import av
+    import numpy as np
+
+    chunks: list[Any] = []
+    sampling_rate = None
+    resampler = None
+    with av.open(path) as container:
+        stream = next(iter(container.streams.audio), None)
+        if stream is None:
+            raise ValueError(f"No audio stream found in {path}")
+        for frame in container.decode(stream):
+            if resampler is None:
+                sampling_rate = frame.sample_rate
+                if sampling_rate is None:
+                    raise ValueError(f"Audio stream has no sampling rate: {path}")
+                resampler = av.AudioResampler(
+                    format="fltp",
+                    layout=frame.layout.name,
+                    rate=sampling_rate,
+                )
+            chunks.extend(
+                converted.to_ndarray() for converted in resampler.resample(frame)
+            )
+        if resampler is not None:
+            chunks.extend(
+                converted.to_ndarray() for converted in resampler.resample(None)
+            )
+    if sampling_rate is None or not chunks:
+        raise ValueError(f"No audio samples found in {path}")
+    return np.ascontiguousarray(np.concatenate(chunks, axis=1), dtype=np.float32), int(
+        sampling_rate
+    )
+
+
 def load_audio(path, sr):
     """Fast audio load for general use."""
 
@@ -235,17 +271,23 @@ class Audio:
             self.cached = None  # invalidate cache when loading new file
             logging.debug("Audio::load processing %s", path)
 
+            signal, source_rate = _decode_audio(path)
+            if not self.cfg.audio.choose_channel:
+                signal = signal.mean(axis=0)
+            if source_rate != self.cfg.audio.sampling_rate:
+                signal = librosa.resample(
+                    signal,
+                    orig_sr=source_rate,
+                    target_sr=self.cfg.audio.sampling_rate,
+                    res_type="soxr_hq",
+                    axis=-1,
+                )
             if self.cfg.audio.choose_channel:
-                self.signal, _ = librosa.load(
-                    path, sr=self.cfg.audio.sampling_rate, mono=False
-                )
-
-                if len(self.signal.shape) == 2:
-                    self.signal = self._choose_channel(self.signal[0], self.signal[1])
-            else:
-                self.signal, _ = librosa.load(
-                    path, sr=self.cfg.audio.sampling_rate, mono=True
-                )
+                if signal.shape[0] == 2:
+                    signal = self._choose_channel(signal[0], signal[1])
+                elif signal.shape[0] == 1:
+                    signal = signal[0]
+            self.signal = signal
 
             # Ensure float32
             self.signal = np.asarray(self.signal, dtype=np.float32)
