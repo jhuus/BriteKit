@@ -16,6 +16,34 @@ warnings.filterwarnings("ignore", message=".*librosa.core.audio.__audioread_load
 warnings.filterwarnings("ignore", message=".*PySoundFile failed.*")
 
 
+def _decode_audio_frames(container, stream, path: str):
+    """Keep the decoded prefix on invalid audio data; discard everything after it."""
+    import av
+
+    seen_samples = False
+    decoded_seconds = 0.0
+    try:
+        for packet in container.demux(stream):
+            frames = packet.decode()
+            for frame in frames:
+                seen_samples = seen_samples or frame.samples > 0
+                if frame.sample_rate:
+                    decoded_seconds += frame.samples / frame.sample_rate
+                yield frame
+    except av.error.InvalidDataError as error:
+        if not seen_samples:
+            raise
+        # Do not decode or flush further packets: retaining later frames could
+        # join audio across a gap and shift detection timestamps.
+        logging.warning(
+            "Truncated audio from %s after %.3f s of decoded audio; "
+            "discarded the damaged packet and all remaining audio: %s",
+            path,
+            decoded_seconds,
+            error,
+        )
+
+
 def _decode_audio(path: str):
     """Decode an audio stream through PyAV as channel-first float32 PCM."""
     import av
@@ -24,11 +52,12 @@ def _decode_audio(path: str):
     chunks: list[Any] = []
     sampling_rate = None
     resampler = None
-    with av.open(path) as container:
+    # Legacy metadata encodings must not prevent decoding valid audio samples.
+    with av.open(path, metadata_errors="replace") as container:
         stream = next(iter(container.streams.audio), None)
         if stream is None:
             raise ValueError(f"No audio stream found in {path}")
-        for frame in container.decode(stream):
+        for frame in _decode_audio_frames(container, stream, path):
             if resampler is None:
                 sampling_rate = frame.sample_rate
                 if sampling_rate is None:
