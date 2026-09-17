@@ -68,6 +68,9 @@ class AugmentationPipeline:
             if name not in AUGMENTATION_REGISTRY:
                 raise ValueError(f"Unknown augmentation: {name}")
 
+            if name == "add_noise_snr":
+                self._validate_snr_config(params.get("snr_db", (20.0, 10.0, 0.0)))
+
             # get unbound function and bind it to self
             fn_unbound = AUGMENTATION_REGISTRY[name]
             bound = fn_unbound.__get__(self, self.__class__)
@@ -161,6 +164,103 @@ class AugmentationPipeline:
 
         spec += noise_spec
         return spec
+
+    def _validate_snr_config(self, snr_db):
+        if self.cfg.audio.decibels:
+            raise ValueError(
+                "add_noise_snr requires linear spectrograms (decibels=false)"
+            )
+        if self.cfg.audio.power not in (1.0, 2.0):
+            raise ValueError("add_noise_snr requires audio.power=1 or 2")
+        if isinstance(snr_db, (str, bytes)):
+            raise ValueError("snr_db must be a nonempty sequence of finite dB targets")
+        if not isinstance(snr_db, (list, tuple)):
+            # OmegaConf lists also implement iteration but are not Python lists.
+            try:
+                snr_db = list(snr_db)
+            except TypeError as error:
+                raise ValueError(
+                    "snr_db must be a nonempty sequence of finite dB targets"
+                ) from error
+        if not snr_db or not all(np.isfinite(float(value)) for value in snr_db):
+            raise ValueError("snr_db must be a nonempty sequence of finite dB targets")
+
+    @register_augmentation("add_noise_snr")
+    def add_noise_snr(self, spec, snr_db=(20.0, 10.0, 0.0), frame_labels=None):
+        """Mix real noise at a uniformly sampled target foreground-to-noise ratio.
+
+        Estimate energies in active hard-label frames (excluding the noise class
+        and appended teacher targets). Missing/all-inactive labels use the full
+        segment. Power features use mean values; magnitude features use mean
+        squares. Foreground includes its existing background: this is an energy
+        ratio between features, not an estimate of isolated-call acoustic SNR.
+        Returns labels unchanged. Silent signal/noise regions are left unchanged.
+        """
+        self._validate_snr_config(snr_db)
+
+        def result(value):
+            return value if frame_labels is None else (value, frame_labels)
+
+        noise = self.dataset.get_random_noise() if self.dataset is not None else None
+        if noise is None:
+            if not getattr(self, "_snr_noise_warning", False):
+                logging.warning(
+                    "add_noise_snr skipped: no noise spectrograms available"
+                )
+                self._snr_noise_warning = True
+            return result(spec)
+        if spec.shape != noise.shape or spec.ndim != 3:
+            raise ValueError(
+                "add_noise_snr requires matching (C, F, T) spectrogram shapes"
+            )
+        if any(not np.isfinite(x).all() or (x < 0).any() for x in (spec, noise)):
+            raise ValueError(
+                "add_noise_snr requires finite nonnegative linear features"
+            )
+
+        active = np.ones(spec.shape[-1], dtype=bool)
+        if frame_labels is not None:
+            labels = (
+                frame_labels.detach().cpu().numpy()
+                if hasattr(frame_labels, "detach")
+                else np.asarray(frame_labels)
+            )
+            if labels.ndim != 2:
+                raise ValueError("frame_labels must have shape (frames, classes)")
+            num_classes = getattr(self.dataset, "num_classes", labels.shape[1])
+            labels = labels[:, :num_classes]
+            present = labels > 0.5
+            noise_index = getattr(self.dataset, "noise_class_index", -1)
+            if 0 <= noise_index < present.shape[1]:
+                present[:, noise_index] = False
+            active_frames = np.flatnonzero(present.any(axis=1))
+            if len(active_frames):
+                active[:] = False
+                for frame in active_frames:
+                    start = math.floor(frame * len(active) / len(labels))
+                    end = math.ceil((frame + 1) * len(active) / len(labels))
+                    active[start:end] = True
+
+        foreground = spec[..., active].astype(np.float64)
+        background = noise[..., active].astype(np.float64)
+        exponent = 2.0 if self.cfg.audio.power == 1.0 else 1.0
+        signal_energy = np.mean(foreground**exponent)
+        noise_energy = np.mean(background**exponent)
+        if signal_energy <= 0 or noise_energy <= 0:
+            return result(spec)
+        target = float(random.choice(snr_db))
+        log_gain = (
+            math.log(noise_energy)
+            - math.log(signal_energy)
+            + target * math.log(10) / 10
+        ) / exponent
+        # Equivalent to gain*spec + noise up to a common scale; avoid amplification
+        # and overflow because the pipeline normalizes the mixture afterward.
+        if log_gain >= 0:
+            mixed = spec + math.exp(-log_gain) * noise
+        else:
+            mixed = math.exp(log_gain) * spec + noise
+        return result(mixed.astype(np.float32, copy=False))
 
     @register_augmentation("add_white_noise")
     def add_white_noise(self, spec, min_std=0.01, max_std=0.1, max_val=2.5):
@@ -302,6 +402,7 @@ class AugmentationPipeline:
                     "flip_horizontal",
                     "shift_horizontal",
                     "time_mask",
+                    "add_noise_snr",
                 ):
                     spec, frame_labels = fn(spec, frame_labels=frame_labels)
                 else:
