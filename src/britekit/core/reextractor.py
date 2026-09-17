@@ -75,8 +75,14 @@ class Reextractor:
 
                 class_names = df["Name"].to_list()
                 recordings = []
+                seen_recording_ids = set()
                 for name in class_names:
-                    recordings.extend(db.get_recording_by_class(name))
+                    for recording in db.get_recording_by_class(name):
+                        # A recording can belong to several selected classes.
+                        # Its segments must be extracted only once per group.
+                        if recording.id not in seen_recording_ids:
+                            recordings.append(recording)
+                            seen_recording_ids.add(recording.id)
             else:
                 assert self.class_name is not None
                 recordings = db.get_recording_by_class(self.class_name)
