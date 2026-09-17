@@ -130,6 +130,7 @@ class Audio:
         self.log2_filterbank_cache: dict[tuple, Any] = {}
 
         self.cached = None
+        self.cached_freq_scale = None
         self.path = None
         self.signal: Any = None
         self.load_error: Optional[str] = None
@@ -181,6 +182,7 @@ class Audio:
             self.n_fft = self.cfg.audio.n_fft
 
         self.cached = None  # invalidate cache when config changes
+        self.cached_freq_scale = None
 
         if (
             resample
@@ -219,6 +221,11 @@ class Audio:
             self.cfg.audio.spec_height,
             self.cfg.audio.spec_width,
             self.cfg.audio.mel_norm,
+            self.n_fft,
+            self.cfg.audio.power,
+            self.cfg.audio.min_freq,
+            self.cfg.audio.max_freq,
+            self.cfg.audio.log_freq_gain,
         )
 
         if key in self.linear_transform_cache:
@@ -298,6 +305,7 @@ class Audio:
         try:
             self.path = path
             self.cached = None  # invalidate cache when loading new file
+            self.cached_freq_scale = None
             logging.debug("Audio::load processing %s", path)
 
             signal, source_rate = _decode_audio(path)
@@ -493,7 +501,8 @@ class Audio:
         # Get one spectrogram for the whole recording, then split it up.
         # Set decibels=False since we call AmplitudeToDB below. That way
         # it uses the correct values for different offsets.
-        if self.cached is None:
+        if self.cached is None or self.cached_freq_scale != freq_scale:
+            self.cached_freq_scale = freq_scale
             logging.debug("Audio::get_spectrograms generate spectrogram for recording")
             self.cached = self._get_raw_spectrogram(
                 self.signal,
@@ -512,8 +521,14 @@ class Audio:
             pad_frames = max(0, -start_frame)
             start_frame = max(0, start_frame)
             end_frame = min(end_frame, self.cached.shape[1])
-            if end_frame - start_frame < frames_per_sec:
-                break  # require at least one second of audio in a spectrogram
+            # Leading windows intentionally include silence before the recording.
+            # Count that padding so a 0.5-second first window does not discard
+            # every subsequent window (and the model assigned to this offset).
+            if (
+                end_frame <= start_frame
+                or end_frame - start_frame + pad_frames < frames_per_sec
+            ):
+                break  # retain the minimum-length check for short trailing windows
 
             if start_frame < self.cached.shape[1]:
                 spec = self.cached[:, start_frame:end_frame]
