@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import math
 import random
 from typing import Any, Callable, Dict, List, Optional
 
@@ -7,7 +8,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from britekit.core.augmentation import AugmentationPipeline
+from britekit.core.augmentation import AugmentationPipeline, apply_fade, fade_after_db
 from britekit.core.config_loader import get_config
 from britekit.core.util import expand_spectrogram
 
@@ -79,6 +80,30 @@ class SpectrogramDataset(Dataset):
         self.teacher_targets = teacher_targets
 
         self.cfg = get_config()
+        if self.cfg.audio.convert_to_db and self.cfg.audio.decibels:
+            raise ValueError(
+                "convert_to_db requires a linear pickle and audio.decibels=false"
+            )
+        levels = self.cfg.train.simple_merge_db
+        if levels is not None:
+            if self.cfg.audio.decibels or self.cfg.audio.power not in (1, 2):
+                raise ValueError(
+                    "simple_merge_db requires linear spectrograms with audio.power=1 or 2"
+                )
+            if not self.cfg.audio.convert_to_db and self.cfg.audio.db_power != 1:
+                raise ValueError("simple_merge_db requires db_power=1")
+            try:
+                valid = (
+                    not isinstance(levels, (str, bytes))
+                    and len(levels) > 0
+                    and all(np.isfinite(float(v)) and float(v) >= 0 for v in levels)
+                )
+            except (TypeError, ValueError):
+                valid = False
+            if not valid:
+                raise ValueError(
+                    "simple_merge_db must be a nonempty list of finite nonnegative dB attenuations"
+                )
         num_frames = round(self.cfg.audio.spec_duration * self.cfg.train.sed_fps)
         if teacher_frame_targets is not None and teacher_frame_targets.shape != (
             len(compressed_specs),
@@ -129,6 +154,7 @@ class SpectrogramDataset(Dataset):
         )
         has_frame_label = self._has_frame_label(idx)
 
+        merged_frames = None
         mixup = False
         cutmix_info = (
             None  # (time_range, other_label, original_label) if cutmix was applied
@@ -140,23 +166,29 @@ class SpectrogramDataset(Dataset):
             ):
                 r = random.random()
                 if r < self.cfg.train.prob_simple_merge:
-                    spec, label_tensor, other_index = self._merge_specs(
-                        spec, label_tensor, self.class_indexes[idx]
-                    )
-                    if teacher_tensor is not None:
+                    if self.cfg.train.simple_merge_db is not None:
+                        spec, label_tensor, other_index, merged_frames = (
+                            self._merge_specs_db(idx, spec, label_tensor)
+                        )
+                    else:
+                        spec, label_tensor, other_index = self._merge_specs(
+                            spec, label_tensor, self.class_indexes[idx]
+                        )
+                    if teacher_tensor is not None and other_index is not None:
                         other = torch.from_numpy(self.teacher_targets[other_index])
                         teacher_tensor = 1 - (1 - teacher_tensor) * (1 - other)
-                    if teacher_frame_tensor is not None:
+                    if teacher_frame_tensor is not None and other_index is not None:
                         other_frames = torch.from_numpy(
                             self.teacher_frame_targets[other_index].astype(np.float32)
                         ).T
                         teacher_frame_tensor = 1 - (1 - teacher_frame_tensor) * (
                             1 - other_frames
                         )
-                    has_frame_label = has_frame_label and self._has_frame_label(
-                        other_index
-                    )
-                    mixup = True
+                    if other_index is not None:
+                        has_frame_label = has_frame_label and self._has_frame_label(
+                            other_index
+                        )
+                        mixup = True
                 elif r < self.cfg.train.prob_simple_merge + self.cfg.train.prob_mixup:
                     spec, label_tensor, other_index, lam = self._mixup(
                         spec, label_tensor, self.class_indexes[idx]
@@ -201,7 +233,11 @@ class SpectrogramDataset(Dataset):
                     cutmix_info = (time_range, other_label, original_label)
                     mixup = True
 
-            frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
+            frame_labels = (
+                merged_frames
+                if merged_frames is not None
+                else self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
+            )
             if teacher_frame_tensor is None:
                 spec, frame_labels = self.augment(spec, frame_labels=frame_labels)
             else:
@@ -211,6 +247,19 @@ class SpectrogramDataset(Dataset):
                 teacher_frame_tensor = combined_frames[:, self.num_classes :]
         else:
             frame_labels = self._get_frame_labels(idx, label_tensor, mixup, cutmix_info)
+
+        if self.cfg.audio.convert_to_db:
+            from britekit.core.audio_util import convert_to_db
+
+            spec = convert_to_db(
+                spec,
+                self.cfg.audio.power,
+                self.cfg.audio.top_db,
+                db_power=self.cfg.audio.db_power,
+            )
+
+        if self.is_training and self.augment and fade_after_db(self.cfg):
+            spec = apply_fade(spec, self.cfg)
 
         # expand_spectrogram and the augmentation pipeline produce float32
         # arrays, so avoid another full spectrogram copy here.
@@ -406,3 +455,75 @@ class SpectrogramDataset(Dataset):
         other_label_tensor[other_indexes] = 1.0
 
         return spec + other_spec, label_tensor + other_label_tensor, other_index
+
+    def _merge_specs_db(self, idx, spec, label_tensor):
+        """Merge disjoint labeled sources at a sampled relative energy level.
+
+        Active-frame energy includes the source's background. This is linear
+        feature mixing, not phase-aware waveform mixing. Hard labels retain
+        their original timing and strength; missing frame labels use the usual
+        full-window fallback. A common normalization follows in the pipeline.
+        """
+        frames = self._get_frame_labels(idx, label_tensor, False)
+        classes = set(self.class_indexes[idx])
+
+        def eligible(i):
+            other = self.class_indexes[i]
+            return (
+                bool(other)
+                and self.noise_class_index not in other
+                and classes.isdisjoint(other)
+            )
+
+        # Fast rejection sampling, with a finite fallback for small datasets.
+        other_index = None
+        for _ in range(32):
+            candidate = random.randrange(len(self.class_indexes))
+            if eligible(candidate):
+                other_index = candidate
+                break
+        if other_index is None:
+            candidates = [i for i in range(len(self.class_indexes)) if eligible(i)]
+            if not candidates:
+                return spec, label_tensor, None, frames
+            other_index = random.choice(candidates)
+        other_spec = self._get_spec(other_index)
+        other_label = torch.zeros_like(label_tensor)
+        other_label[self.class_indexes[other_index]] = 1
+        other_frames = self._get_frame_labels(other_index, other_label, False)
+        exponent = 2 if self.cfg.audio.power == 1 else 1
+
+        def energy(x, labels):
+            if not np.isfinite(x).all() or (x < 0).any():
+                raise ValueError("simple_merge_db requires finite nonnegative features")
+            active_frames = torch.nonzero((labels > 0.5).any(dim=1)).flatten().tolist()
+            active = np.zeros(x.shape[-1], dtype=bool)
+            for frame in active_frames:
+                start = math.floor(frame * len(active) / len(labels))
+                end = math.ceil((frame + 1) * len(active) / len(labels))
+                active[start:end] = True
+            if not active.any():
+                active[:] = True
+            return float(np.mean(x[..., active].astype(np.float64) ** exponent))
+
+        first_energy = energy(spec, frames)
+        second_energy = energy(other_spec, other_frames)
+        if first_energy <= 0 or second_energy <= 0:
+            return spec, label_tensor, None, frames
+        attenuation = float(random.choice(self.cfg.train.simple_merge_db))
+        target_db = attenuation if random.random() < 0.5 else -attenuation
+        log_gain = (
+            math.log(second_energy)
+            - math.log(first_energy)
+            + target_db * math.log(10) / 10
+        ) / exponent
+        if log_gain >= 0:
+            mixed = spec + math.exp(-log_gain) * other_spec
+        else:
+            mixed = math.exp(log_gain) * spec + other_spec
+        return (
+            mixed.astype(np.float32),
+            torch.maximum(label_tensor, other_label),
+            other_index,
+            torch.maximum(frames, other_frames),
+        )

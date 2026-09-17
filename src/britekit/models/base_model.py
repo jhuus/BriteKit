@@ -173,6 +173,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
             raise ValueError("Checkpoint metadata not found.")
 
         self.cfg = cfg
+        self.cfg.audio.spec_bits = self.training_cfg["audio"].get("spec_bits", 8)
         self.cfg.audio.spec_duration = self.training_cfg["audio"]["spec_duration"]
         self.cfg.audio.spec_height = self.training_cfg["audio"]["spec_height"]
         self.cfg.audio.spec_width = self.training_cfg["audio"]["spec_width"]
@@ -183,11 +184,14 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         self.cfg.audio.freq_scale = self.training_cfg["audio"]["freq_scale"]
         self.cfg.audio.power = self.training_cfg["audio"]["power"]
         self.cfg.audio.decibels = self.training_cfg["audio"]["decibels"]
+        self.cfg.audio.convert_to_db = self.training_cfg["audio"].get(
+            "convert_to_db", False
+        )
         self.cfg.audio.top_db = self.training_cfg["audio"].get(
             "top_db", self.cfg.audio.top_db
         )
         self.cfg.audio.db_power = self.training_cfg["audio"].get(
-            "db_power", self.cfg.audio.db_power
+            "db_power", 1.0 if self.cfg.audio.convert_to_db else self.cfg.audio.db_power
         )
         self.cfg.audio.log_freq_gain = self.training_cfg["audio"].get(
             "log_freq_gain", self.cfg.audio.log_freq_gain

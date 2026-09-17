@@ -130,7 +130,10 @@ class Predictor:
         """
         combined_embeddings = []
         for i, model in enumerate(self.models):
-            embeddings = model.get_embeddings(spec_array, self.device)
+            model_specs = spec_array
+            if getattr(self, "converts_linear", False):
+                model_specs = self._prepare_linear_specs(spec_array, i)
+            embeddings = model.get_embeddings(model_specs, self.device)
             embeddings = np.asarray(embeddings, dtype=np.float32)
             combined_embeddings.append(embeddings)
             if i > 0:
@@ -145,10 +148,19 @@ class Predictor:
         return average_embeddings
 
     def get_block_scores(
-        self, specs, start_times=None, audio_duration=None, max_models=None
+        self,
+        specs,
+        start_times=None,
+        audio_duration=None,
+        max_models=None,
+        audio_power=None,
     ):
         """
         Get scores in array format from the loaded models for the given block of spectrograms.
+
+        For convert_to_db ensembles, specs must be normalized linear features;
+        conversion is selected per checkpoint. audio_power, when supplied, is
+        applied after selecting each model's representation.
 
         Args:
         - specs: Spectrograms.
@@ -163,7 +175,7 @@ class Predictor:
                   Shape is (num_frames, num_classes). None if not using SED models.
         """
         frame_maps = []
-        if self.ov:
+        if self.ov and not getattr(self, "converts_linear", False):
             scores, ov_frame_scores = self._get_openvino_scores(specs, max_models)
             if ov_frame_scores is not None and start_times is not None:
                 # SED model with OpenVINO, process frame scores
@@ -179,11 +191,33 @@ class Predictor:
                     frame_maps.append(frame_map)
         else:
             scores = []
+            prepared = {}
             for i, model in enumerate(self.models):
                 if max_models is not None and i == max_models:
                     break
 
-                segment_scores, frame_scores = model.predict(specs, self.device)
+                model_specs = specs
+                if getattr(self, "converts_linear", False):
+                    settings = self.model_audio_settings[i]
+                    key = (
+                        settings["convert_to_db"],
+                        settings["power"],
+                        settings["top_db"],
+                        settings.get("db_power", 1.0),
+                    )
+                    if key not in prepared:
+                        prepared[key] = self._prepare_linear_specs(
+                            specs, i, audio_power
+                        )
+                    model_specs = prepared[key]
+                if self.ov:
+                    segment_scores, frame_scores = self._get_openvino_scores_single(
+                        model, model_specs
+                    )
+                else:
+                    segment_scores, frame_scores = model.predict(
+                        model_specs, self.device
+                    )
 
                 scores.append(segment_scores)
 
@@ -257,16 +291,28 @@ class Predictor:
         start_times = self.get_start_times(
             audio_duration, start_seconds, self.cfg.audio.spec_duration
         )
-        specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
+        if getattr(self, "converts_linear", False):
+            specs, self.unnormalized_specs = self.audio.get_spectrograms(
+                start_times,
+                convert_to_db=False,
+            )
+        else:
+            specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
         self.normalized_specs = specs
 
         if specs is None or len(specs) == 0:
             return None, None, []
 
-        specs = specs**self.cfg.infer.audio_power
+        if not getattr(self, "converts_linear", False):
+            specs = specs**self.cfg.infer.audio_power
         specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
         logging.debug("Predictor::get_recording_scores start call to get_block_scores")
-        avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
+        if getattr(self, "converts_linear", False):
+            avg_score, avg_frame_map = self.get_block_scores(
+                specs, start_times, audio_power=self.cfg.infer.audio_power
+            )
+        else:
+            avg_score, avg_frame_map = self.get_block_scores(specs, start_times)
         logging.debug("Predictor::get_recording_scores finish call to get_block_scores")
 
         return avg_score, avg_frame_map, start_times
@@ -328,7 +374,18 @@ class Predictor:
             logging.debug(
                 "Predictor::get_overlapping_scores start_times=%s", start_times
             )
-            specs, self.unnormalized_specs = self.audio.get_spectrograms(start_times)
+            if getattr(self, "converts_linear", False):
+                settings = self.model_audio_settings[i]
+                specs, self.unnormalized_specs = self.audio.get_spectrograms(
+                    start_times,
+                    convert_to_db=settings["convert_to_db"],
+                    top_db=settings["top_db"],
+                    db_power=settings.get("db_power", 1.0),
+                )
+            else:
+                specs, self.unnormalized_specs = self.audio.get_spectrograms(
+                    start_times
+                )
             self.normalized_specs = specs
             if specs is None or len(specs) == 0:
                 # maybe recording is too short given the increment
@@ -771,6 +828,7 @@ class Predictor:
     def _load_models(self, model_path: str) -> None:
         """Given a checkpoint path or directory, load and return a list of models"""
         self.models = []
+        self.model_paths = []
         if not os.path.exists(model_path):
             raise InferenceError(f'Model path "{model_path}" not found')
 
@@ -791,6 +849,7 @@ class Predictor:
                 if self.ov:
                     if full_path.endswith(".onnx"):
                         self.models.append(self._load_model(full_path))
+                        self.model_paths.append(full_path)
                 elif full_path.endswith(".ckpt"):
                     self.models.append(self._load_model(full_path).to(self.device))
 
@@ -861,9 +920,82 @@ class Predictor:
                 raise InferenceError(f'Unknown audio configuration option "{key}"')
             setattr(self.cfg.audio, key, value)
 
+        self.model_audio_settings = []
+        missing_companions = False
+        for index, model in enumerate(self.models):
+            metadata = getattr(model, "training_cfg", config_model.training_cfg)
+            if self.ov:
+                paths = getattr(self, "model_paths", [])
+                companion = os.path.splitext(paths[index])[0] + ".ckpt" if paths else ""
+                if os.path.isfile(companion):
+                    # Companion checkpoints identify each exported model's preprocessing.
+                    import torch
+
+                    metadata = torch.load(
+                        companion, map_location="cpu", weights_only=False
+                    )["training_cfg"]
+                else:
+                    missing_companions = True
+            audio = dict(metadata["audio"])
+            audio.setdefault("convert_to_db", False)
+            audio.setdefault("db_power", 1.0)
+            audio.update(self.audio_overrides)
+            self.model_audio_settings.append(audio)
+        self.converts_linear = any(
+            a["convert_to_db"] for a in self.model_audio_settings
+        )
+        if self.converts_linear:
+            if missing_companions:
+                raise InferenceError(
+                    "Converted-dB ONNX ensembles require a matching .ckpt for every .onnx"
+                )
+            feature_keys = (
+                "spec_duration",
+                "spec_height",
+                "spec_width",
+                "win_length",
+                "n_fft",
+                "min_freq",
+                "max_freq",
+                "sampling_rate",
+                "freq_scale",
+                "power",
+                "mel_norm",
+                "log_freq_gain",
+            )
+            first = self.model_audio_settings[0]
+            for audio in self.model_audio_settings:
+                if audio.get("decibels", False):
+                    raise InferenceError(
+                        "Converted-dB ensembles require linear source features (decibels=false)"
+                    )
+                if audio["convert_to_db"]:
+                    from britekit.core.audio_util import validate_db_power
+
+                    try:
+                        validate_db_power(audio["db_power"])
+                    except ValueError as error:
+                        raise InferenceError(str(error)) from error
+                for key in feature_keys:
+                    if audio.get(key) != first.get(key):
+                        raise InferenceError(f"Ensemble linear features differ: {key}")
+
         for model in self.models:
             if hasattr(model, "set_config"):
                 model.set_config(self.cfg)
+
+    def _prepare_linear_specs(self, specs, model_index, audio_power=None):
+        from britekit.core.audio_util import convert_to_db
+
+        settings = self.model_audio_settings[model_index]
+        if settings["convert_to_db"]:
+            specs = convert_to_db(
+                specs,
+                settings["power"],
+                settings["top_db"],
+                db_power=settings.get("db_power", 1.0),
+            )
+        return specs ** (1.0 if audio_power is None else audio_power)
 
     def _get_openvino_scores(self, specs, max_models=None):
         import numpy as np

@@ -344,8 +344,9 @@ class Audio:
         freq_scale: Optional[str] = None,
         decibels: Optional[float] = None,
         top_db: Optional[int] = None,
-        db_power: Optional[int] = None,
+        db_power: Optional[float] = None,
         skip_cache: bool = False,
+        convert_to_db: Optional[bool] = None,
     ):
         """
         Generate normalized and unnormalized spectrograms for specified time offsets.
@@ -355,6 +356,10 @@ class Audio:
         Returns both normalized (0-1 range) and unnormalized versions of the spectrograms.
 
         Args:
+        - convert_to_db (Optional[bool]): Convert normalized linear features with
+            the same transform used after training augmentation. Defaults to
+            cfg.audio.convert_to_db; incompatible with legacy decibels=True.
+            Conversion is per requested segment; only linear features are cached.
         - start_times (list[float]): List of start times in seconds from the beginning
             of the recording for each spectrogram.
         - spec_duration (Optional[float]): Length of each spectrogram in seconds.
@@ -365,7 +370,8 @@ class Audio:
             Defaults to cfg.audio.decibels.
         - top_db (Optional[int]): Maximum decibel value for normalization.
             Defaults to cfg.audio.top_db.
-        - db_power (Optional[int]): Power to apply after decibel conversion.
+        - db_power (Optional[float]): Exponent after normalization when convert_to_db
+            is enabled; on raw dB in the legacy decibels path.
             Defaults to cfg.audio.db_power.
 
         Returns:
@@ -397,6 +403,17 @@ class Audio:
         if freq_scale is None:
             freq_scale = self.cfg.audio.freq_scale
 
+        convert = (
+            self.cfg.audio.convert_to_db if convert_to_db is None else convert_to_db
+        )
+        if convert and (self.cfg.audio.decibels if decibels is None else decibels):
+            raise ValueError("convert_to_db requires decibels=False")
+        conversion_db_power = self.cfg.audio.db_power if db_power is None else db_power
+        if convert:
+            from britekit.core.audio_util import validate_db_power
+
+            validate_db_power(conversion_db_power)
+        conversion_top_db = self.cfg.audio.top_db if top_db is None else top_db
         if self.cfg.audio.use_spec_cache and not skip_cache:
             specs = self._get_spectrograms_cached(
                 start_times, spec_duration, freq_scale, decibels, top_db, db_power
@@ -418,6 +435,19 @@ class Audio:
         unnormalized_specs = np.stack(valid_specs, axis=0)
         normalized_specs = unnormalized_specs.copy()
         self._normalize(normalized_specs)
+        if convert:
+            from britekit.core.audio_util import convert_to_db as to_db, normalize_db
+
+            unnormalized_specs = to_db(
+                normalized_specs,
+                self.cfg.audio.power,
+                conversion_top_db,
+                normalize=False,
+            )
+            normalized_specs = normalize_db(
+                unnormalized_specs,
+                db_power=conversion_db_power,
+            )
         return normalized_specs, unnormalized_specs
 
     def _get_spectrograms_sliced(

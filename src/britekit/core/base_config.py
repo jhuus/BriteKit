@@ -6,6 +6,7 @@ from typing import Optional
 
 @dataclass
 class AudioConfig:
+    spec_bits: int = 8  # Quantization for new spectrograms: 8 or 16 bits
     spec_duration: float = 5.0  # Spectrogram duration in seconds
     spec_height: int = 128  # Spectrogram height in pixels
     spec_width: int = 480  # Spectrogram width in pixels (must be divisible by 32)
@@ -22,8 +23,12 @@ class AudioConfig:
     freq_scale: str = "mel"  # "linear", "log" or "mel"
     power: float = 1.0  # Use 1.0 for magnitude and 2.0 for power spectrograms
     decibels: bool = False  # Use decibel amplitude scale?
+    # Convert linear pickle features after augmentation and linear features at inference.
+    convert_to_db: bool = False
     top_db: float = 80  # Threshold below max amplitude in dB; lower values are clipped
-    db_power: float = 1.0  # Raise to this exponent after convert to decibels
+    # convert_to_db: exponent after normalization.
+    # Legacy decibels=True: exponent on raw dB before normalization.
+    db_power: float = 1.0
     log_freq_gain: float = 0.6  # Boost loudness of higher frequencies with log scale
 
     mel_norm: Optional[str] = None  # Mel filterbank normalization: None or "slaney"
@@ -128,12 +133,17 @@ class TrainingConfig:
     max_augmentations: int = 1  # Up to this many per spectrogram
     noise_class_name: str = "Noise"  # Augmentation treats noise specially
     prob_simple_merge: float = 0.32  # Prob of simple merge
+    # Optional nonnegative dB attenuations for relative-level simple merge.
+    # None preserves the existing unweighted merge.
+    simple_merge_db: Optional[list[float]] = None
     # Prob of traditional mixup (mutually exclusive with simple merge)
     prob_mixup: float = 0.0
     # Prob of CutMix (mutually exclusive with simple merge and mixup)
     prob_cutmix: float = 0.0
     mixup_alpha: float = 0.4  # Beta distribution parameter for mixup/cutmix lambda
-    prob_fade1: float = 0.5  # Prob of fading after augmentation
+    # Final input-intensity fade; after conversion/db_power for
+    # convert_to_db training, otherwise after the linear augmentation pipeline.
+    prob_fade1: float = 0.5
     min_fade1: float = 0.1  # Min factor for fading
     max_fade1: float = 1.0  # Max factor for fading
 

@@ -442,12 +442,16 @@ def is_audio_file(file_path):
 # =============================================================================
 
 
-def compress_spectrogram(spec) -> bytes:
+def compress_spectrogram(spec, bits: int = 8) -> bytes:
     """
     Compress a spectrogram in preparation for inserting into database.
 
     Args:
     - spec: Uncompressed spectrogram
+    - bits: Quantization precision (8 or 16). The 8-bit format is unchanged;
+      16-bit blobs use little-endian uint16,
+      with a versioned header recording precision and dimensions.
+      All payloads are zlib-compressed.
 
     Returns:
         Compressed spectrogram
@@ -457,13 +461,26 @@ def compress_spectrogram(spec) -> bytes:
     if not isinstance(spec, np.ndarray):
         raise TypeError("spec must be a numpy array")
 
+    if bits not in (8, 16):
+        raise ValueError("Spectrogram storage bits must be 8 or 16")
+
     try:
-        bytes_spec = spec * 255
-        # Fix: Add bounds checking
-        bytes_spec = np.clip(bytes_spec, 0, 255)
-        np_bytes = bytes_spec.astype(np.uint8)
-        bytes_data = np_bytes.tobytes()
-        compressed = zlib.compress(bytes_data)
+        scale = 2**bits - 1
+        values = spec.astype(np.float32) if bits == 16 else spec
+        np_bytes = np.clip(values * scale, 0, scale).astype(
+            np.uint8 if bits == 8 else np.dtype("<u2")
+        )
+        compressed = zlib.compress(np_bytes.tobytes())
+        if bits == 16:
+            import struct
+
+            if spec.ndim not in (2, 3) or (spec.ndim == 3 and spec.shape[0] != 1):
+                raise ValueError(
+                    "Headered spectrograms must have shape (H,W) or (1,H,W)"
+                )
+            # Outside the zlib stream: cannot be confused with a legacy blob.
+            header = struct.pack("<4sBBII", b"BKSP", 1, bits, *spec.shape[-2:])
+            return header + compressed
         return compressed
     except Exception as e:
         raise RuntimeError(f"Failed to compress spectrogram: {e}")
@@ -486,12 +503,30 @@ def expand_spectrogram(spec: bytes):
 
     try:
         cfg = get_config()
+        bits = 8
+        if spec.startswith(b"BKSP"):
+            import struct
+
+            header_size = struct.calcsize("<4sBBII")
+            if len(spec) < header_size:
+                raise ValueError("Truncated spectrogram header")
+            _, version, bits, height, width = struct.unpack(
+                "<4sBBII", spec[:header_size]
+            )
+            if version != 1 or bits != 16:
+                raise ValueError(
+                    f"Unsupported spectrogram format: version={version}, bits={bits}"
+                )
+            if (height, width) != (cfg.audio.spec_height, cfg.audio.spec_width):
+                raise ValueError(
+                    f"Stored spectrogram shape {(height, width)} does not match configured shape {(cfg.audio.spec_height, cfg.audio.spec_width)}"
+                )
+            spec = spec[header_size:]
         bytes_data = zlib.decompress(spec)
-        # Training and inference consume float32 tensors.  Convert directly to
-        # that dtype here instead of letting NumPy promote the division to
-        # float64, only for callers to copy and narrow it later.
-        spec_array = np.frombuffer(bytes_data, dtype=np.uint8).astype(np.float32)
-        spec_array /= 255.0
+        # Decode precision from the blob, never from the active writer setting.
+        dtype = np.uint8 if bits == 8 else np.dtype("<u2")
+        spec_array = np.frombuffer(bytes_data, dtype=dtype).astype(np.float32)
+        spec_array /= float(2**bits - 1)
         # Fix: Add validation for expected shape
         expected_size = cfg.audio.spec_height * cfg.audio.spec_width
         if spec_array.size != expected_size:

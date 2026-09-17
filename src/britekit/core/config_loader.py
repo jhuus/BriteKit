@@ -29,6 +29,12 @@ def get_config_with_dict(cfg_dict=None) -> BaseConfig:
         _base_config = cast(
             BaseConfig, OmegaConf.merge(_base_config, OmegaConf.create(cfg_dict))
         )
+    if _base_config.audio.spec_bits not in (8, 16):
+        raise ValueError("audio.spec_bits must be 8 or 16")
+    if _base_config.audio.convert_to_db:
+        from britekit.core.audio_util import validate_db_power
+
+        validate_db_power(_base_config.audio.db_power)
     return _base_config
 
 

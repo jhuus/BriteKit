@@ -27,6 +27,18 @@ def register_augmentation(name):
     return decorator
 
 
+def fade_after_db(cfg: BaseConfig) -> bool:
+    """Defer input-intensity fading until after normalized dB conversion."""
+    return cfg.audio.convert_to_db
+
+
+def apply_fade(spec, cfg: BaseConfig):
+    """Apply the configured final input-intensity augmentation once."""
+    if random.random() < cfg.train.prob_fade1:
+        spec *= random.uniform(cfg.train.min_fade1, cfg.train.max_fade1)
+    return spec
+
+
 class AugmentationPipeline:
     """Pipeline for applying audio spectrogram augmentations during training."""
 
@@ -303,8 +315,9 @@ class AugmentationPipeline:
 
         spec = spec.clip(0, 1)  # in case there are negative values
 
-        # reducing the max level after normalization improves detection of faint sounds
-        if random.random() < self.cfg.train.prob_fade1:
-            spec *= random.uniform(self.cfg.train.min_fade1, self.cfg.train.max_fade1)
+        # Relative dB conversion would cancel this gain, so defer it to the dataset.
+        # Keep the linear fade for magnitude inputs.
+        if not fade_after_db(self.cfg):
+            spec = apply_fade(spec, self.cfg)
 
         return spec if frame_labels is None else (spec, frame_labels)

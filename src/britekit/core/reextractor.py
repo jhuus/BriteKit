@@ -61,6 +61,9 @@ class Reextractor:
     # Perform the re-extract
     def run(self, quiet=False):
         import pandas as pd
+        from britekit.core.config_loader import get_config
+
+        cfg = get_config()  # Validate writer precision before replacing a spec group.
 
         with TrainingDatabase(self.db_path) as db:
             if self.class_name is None and self.classes_path is None:
@@ -161,11 +164,15 @@ class Reextractor:
                     for segment in segments:
                         offsets.append(max(0, segment.offset + self.offset))
 
-                    spectrograms, _ = audio_obj.get_spectrograms(offsets)
+                    spectrograms, _ = audio_obj.get_spectrograms(
+                        offsets, convert_to_db=False
+                    )
                     processed_offsets = set()
                     if spectrograms is not None:
                         for i, spec in enumerate(spectrograms):
-                            compressed_spec = util.compress_spectrogram(spec)
+                            compressed_spec = util.compress_spectrogram(
+                                spec, bits=cfg.audio.spec_bits
+                            )
                             segment = segments[i]
                             db.insert_specvalue(
                                 compressed_spec, specgroup_id, segment.id

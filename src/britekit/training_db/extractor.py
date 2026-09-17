@@ -172,7 +172,7 @@ class Extractor:
 
         num_inserted = 0
         specs, _ = self.audio.get_spectrograms(
-            offsets, spec_duration=self.cfg.audio.spec_duration
+            offsets, spec_duration=self.cfg.audio.spec_duration, convert_to_db=False
         )
         if specs is None:
             return 0
@@ -188,7 +188,9 @@ class Extractor:
 
             num_inserted += 1
             self.segments[recording_id].add(round(check_offset))
-            compressed = util.compress_spectrogram(specs[i])
+            compressed = util.compress_spectrogram(
+                specs[i], bits=self.cfg.audio.spec_bits
+            )
             segment_id = self.db.insert_segment(recording_id, offsets[i])
             self.db.insert_segment_class(segment_id, self.class_id)
             self.db.insert_specvalue(compressed, specgroup_id, segment_id)
