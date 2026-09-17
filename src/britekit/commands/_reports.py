@@ -25,8 +25,8 @@ def rpt_ann(
     Summarize per-segment annotations from a test dataset.
 
     This command reads annotation data from a CSV file and generates summary reports
-    showing the total duration of each class across all recordings and per-recording
-    breakdowns.
+    showing the total duration and number of distinct recordings for each class,
+    along with per-recording duration breakdowns.
 
     Args:
     - annotations_path (str): Required path to CSV file containing per-segment annotations.
@@ -40,6 +40,7 @@ def rpt_ann(
 
     # report counts for all recordings combined
     total = {}
+    class_recordings: dict[str, set[str]] = {}
     for i, row in df.iterrows():
         _class = row["class"]
         if type(_class) is not str:
@@ -49,18 +50,24 @@ def rpt_ann(
         seconds = row["end_time"] - row["start_time"]
         if _class not in total:
             total[_class] = 0
+            class_recordings[_class] = set()
 
         total[_class] += seconds
+        if pd.notna(row["recording"]):
+            class_recordings[_class].add(row["recording"])
 
     class_col = []
     seconds_col = []
+    recordings_col = []
     for _class in sorted(total.keys()):
         class_col.append(_class)
         seconds_col.append(total[_class])
+        recordings_col.append(len(class_recordings[_class]))
 
     output_df = pd.DataFrame()
     output_df["class"] = class_col
     output_df["seconds"] = seconds_col
+    output_df["recordings"] = recordings_col
     summary_path = os.path.join(output_path, "test_summary.csv")
     output_df.to_csv(summary_path, index=False, float_format="%.1f")
 
