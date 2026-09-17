@@ -104,6 +104,8 @@ def plot_db(
     power: Optional[float] = 1.0,
     spec_group: Optional[str] = None,
     augment: bool = False,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
 ):
     """
     Plot spectrograms from a training database for a specific class.
@@ -123,12 +125,16 @@ def plot_db(
     - power (float, optional): Raise spectrograms to this power for visualization. Lower values show more detail.
     - spec_group (str, optional): Spectrogram group name to plot from. Defaults to "default".
     - augment (bool): If True, apply the configured augmentation pipeline before plotting.
+    - vmin, vmax (float, optional): Fixed color limits for comparisons.
     """
     from britekit.core.augmentation import AugmentationPipeline
     from britekit.core.plot import plot_spec
     from britekit.training_db.training_db import TrainingDatabase
 
     cfg = get_config(cfg_path)
+
+    if vmin is not None and vmax is not None and vmin >= vmax:
+        raise ValueError("vmin must be less than vmax")
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -170,10 +176,20 @@ def plot_db(
                         spec.reshape(1, cfg.audio.spec_height, cfg.audio.spec_width)
                     ).squeeze(0)
 
+                if cfg.audio.convert_to_db:
+                    from britekit.core.audio_util import convert_to_db
+
+                    spec = convert_to_db(
+                        spec,
+                        cfg.audio.power,
+                        cfg.audio.top_db,
+                        db_power=cfg.audio.db_power,
+                    )
+
                 if power is not None:
                     spec **= power
 
-                plot_spec(spec, spec_path, show_dims=not ndims)
+                plot_spec(spec, spec_path, show_dims=not ndims, vmin=vmin, vmax=vmax)
                 num_plotted += 1
 
             if max_count is not None and num_plotted >= max_count:
@@ -248,6 +264,8 @@ def plot_db(
     is_flag=True,
     help="If specified, apply the configured augmentation pipeline before plotting.",
 )
+@click.option("--vmin", type=float, help="Fixed lower color limit.")
+@click.option("--vmax", type=float, help="Fixed upper color limit.")
 def _plot_db_cmd(
     cfg_path: str,
     class_name: str,
@@ -259,6 +277,8 @@ def _plot_db_cmd(
     power: Optional[float],
     spec_group: Optional[str],
     augment: bool,
+    vmin: Optional[float],
+    vmax: Optional[float],
 ):
     util.set_logging()
     plot_db(
@@ -272,6 +292,8 @@ def _plot_db_cmd(
         power,
         spec_group,
         augment,
+        vmin,
+        vmax,
     )
 
 

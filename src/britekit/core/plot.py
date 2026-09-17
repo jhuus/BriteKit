@@ -13,6 +13,8 @@ def plot_spec(
     spec_duration: Optional[float] = None,
     height: Optional[int] = None,
     width: Optional[int] = None,
+    vmin: Optional[float] = None,
+    vmax: Optional[float] = None,
 ):
     """
     Plot and save a spectrogram image.
@@ -26,6 +28,7 @@ def plot_spec(
         the existing square behavior is preserved.
     - width (int, optional): Output image width in pixels. If not specified,
         the existing square behavior is preserved.
+    - vmin, vmax (float, optional): Fixed color limits for comparisons.
     """
     import matplotlib.pyplot as plt
     import numpy as np
@@ -120,7 +123,7 @@ def plot_spec(
         fig.set_size_inches(width / DPI, height / DPI)
 
     # 'flat' is much faster than 'gouraud'
-    plt.pcolormesh(spec, shading="flat")
+    plt.pcolormesh(spec, shading="flat", vmin=vmin, vmax=vmax)
     if show_dims:
         plt.xticks(x_tick_locations, x_tick_labels)
         plt.yticks(y_tick_locations, y_tick_labels)
