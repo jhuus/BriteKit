@@ -151,9 +151,15 @@ class Trainer:
                     out_file.write(f"=== {self.cfg.train.head_type} ===\n\n")
                 out_file.writelines([str(model.head)])
 
-            # save training parameters in YAML format
-            info_str = yaml.dump(cfg_to_pure(model.cfg.train), sort_keys=False)
-            info_str = "# Training parameters in YAML format\n" + info_str
+            # Save audio preprocessing and training parameters in YAML format.
+            info_str = yaml.dump(
+                {
+                    "audio": cfg_to_pure(model.cfg.audio),
+                    "train": cfg_to_pure(model.cfg.train),
+                },
+                sort_keys=False,
+            )
+            info_str = "# Audio and training parameters in YAML format\n" + info_str
             out_path = Path(trainer.logger.log_dir) / "config.yaml"
             with open(out_path, "w") as out_file:
                 out_file.write(info_str)
