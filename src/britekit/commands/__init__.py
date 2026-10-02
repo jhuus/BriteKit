@@ -28,6 +28,7 @@ from ._migrate_occurrence import migrate_occurrence
 from ._pickle import pickle_frame, pickle_occurrence, pickle_train
 from ._pickle_frame_infer import pickle_frame_infer
 from ._plot import plot_db, plot_dir, plot_occlude, plot_rec, plot_test
+from ._plot_frame import plot_frame
 from ._reextract import reextract
 from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_iou, rpt_labels, rpt_test
 from ._search import search
@@ -79,6 +80,7 @@ __all__ = [
     "plot_db",
     "plot_dir",
     "plot_occlude",
+    "plot_frame",
     "plot_rec",
     "plot_test",
     "reextract",
