@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
-import math
 from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
+
+from britekit.models.temporal_pooling import (
+    pool_temporal_logits,
+    validate_temporal_pooling,
+)
 
 
 class ChannelReducer(nn.Module):
@@ -193,11 +197,14 @@ class TemporalSEDHead(nn.Module):
         dropout=0.0,
         lse_temp=0.5,
         two_way=True,
+        temporal_pooling="logsumexp",
     ):
         super().__init__()
 
         self.lse_temp = lse_temp
         self.two_way = two_way
+        validate_temporal_pooling(temporal_pooling)
+        self.temporal_pooling = temporal_pooling
 
         self.reduce = nn.Sequential(
             nn.Conv1d(in_channels, hidden_channels, kernel_size=1, bias=False),
@@ -250,9 +257,8 @@ class TemporalSEDHead(nn.Module):
         x = self.drop(self.act(x))
 
         frame_logits = self.frame_head(x)  # [B, num_classes, T]
-        T = frame_logits.shape[-1]
-        segment_logits = self.lse_temp * (
-            torch.logsumexp(frame_logits / self.lse_temp, dim=-1) - math.log(T)
+        segment_logits = pool_temporal_logits(
+            frame_logits, self.temporal_pooling, self.lse_temp
         )
 
         return segment_logits, frame_logits
@@ -274,11 +280,17 @@ def make_head(
     num_classes: int,
     drop_rate: float = 0.0,
     prototypes_per_class: int = 5,
+    temporal_pooling: str = "logsumexp",
     **kwargs,
 ) -> nn.Module:
     """Create a classifier head by name."""
     if head_type not in HEAD_REGISTRY:
         raise ValueError(f"Unknown head type: {head_type}")
+    validate_temporal_pooling(temporal_pooling)
+    if head_type in ("temporal_sed", "prototype_sed"):
+        kwargs["temporal_pooling"] = temporal_pooling
+    elif temporal_pooling != "logsumexp":
+        raise ValueError("temporal_pooling requires temporal_sed or prototype_sed")
     if head_type == "prototype_sed":
         kwargs["prototypes_per_class"] = prototypes_per_class
     return HEAD_REGISTRY[head_type][0](
@@ -360,11 +372,14 @@ def build_prototype_sed_head(
     drop_rate: float,
     prototypes_per_class: int = 5,
     lse_temp: float = 0.5,
+    temporal_pooling: str = "logsumexp",
     **_,
 ) -> nn.Module:
     from britekit.models.prototype_head import PrototypeSEDHead
 
-    return PrototypeSEDHead(in_channels, num_classes, prototypes_per_class, lse_temp)
+    return PrototypeSEDHead(
+        in_channels, num_classes, prototypes_per_class, lse_temp, temporal_pooling
+    )
 
 
 HEAD_REGISTRY: dict[str, tuple[Callable[..., nn.Module], bool]] = {

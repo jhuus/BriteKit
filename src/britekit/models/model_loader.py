@@ -31,12 +31,11 @@ def load_new_model(
     device = get_device()
 
     # create a dict of optional keyword arguments
-    kwargs: dict[str, Any] = {}
+    kwargs: dict[str, Any] = {"temporal_pooling": cfg.train.temporal_pooling}
     if cfg.train.head_type == "prototype_sed":
-        kwargs.update(
-            prototypes_per_class=cfg.train.prototypes_per_class,
-            lse_temp=cfg.train.lse_temp,
-        )
+        kwargs["prototypes_per_class"] = cfg.train.prototypes_per_class
+    if cfg.train.head_type in ("temporal_sed", "prototype_sed"):
+        kwargs["lse_temp"] = cfg.train.lse_temp
     if cfg.train.drop_rate is not None:
         kwargs.update(dict(drop_rate=cfg.train.drop_rate))
 

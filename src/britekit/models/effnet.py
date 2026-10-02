@@ -28,6 +28,7 @@ class EffNetModel(BaseModel):
         multi_label: bool,
         prototypes_per_class: int = 5,
         lse_temp: float = 0.5,
+        temporal_pooling: str = "logsumexp",
         **kwargs,
     ):
         super().__init__(
@@ -42,6 +43,7 @@ class EffNetModel(BaseModel):
             multi_label,
             prototypes_per_class,
             lse_temp,
+            temporal_pooling,
         )
 
         if model_type not in MODEL_REGISTRY:
@@ -72,6 +74,7 @@ class EffNetModel(BaseModel):
                 self.num_classes,
                 drop_rate=kwargs.pop("drop_rate", 0.0),
                 lse_temp=lse_temp,
+                temporal_pooling=temporal_pooling,
                 prototypes_per_class=prototypes_per_class,
                 two_way=kwargs.pop("two_way", True),
             )

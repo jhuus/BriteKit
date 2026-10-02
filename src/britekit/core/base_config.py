@@ -58,7 +58,9 @@ class TrainingConfig:
         None  # Load backbone only into a fresh model
     )
     hidden_channels: int = 256  # Hidden channels in classifier head
-    lse_temp: float = 0.5  # LSE temperature for temporal_sed head
+    # Segment pooling for temporal_sed and prototype_sed heads
+    temporal_pooling: str = "logsumexp"  # or "linear_softmax"
+    lse_temp: float = 0.5  # Temperature when temporal_pooling="logsumexp"
     two_way: bool = True  # Bi-directional or unidirectional temporal_sed head
     pretrained: bool = False  # Use pretrained weights (applies to timm models)
     load_ckpt_path: Optional[str] = None  # For transfer learning or fine-tuning

@@ -116,7 +116,9 @@ def test_invalid_options(count, temp):
         PrototypeSEDHead(4, 2, count, temp)
 
 
-def test_checkpoint_roundtrip_and_existing_loss(config, tmp_path):
+@pytest.mark.parametrize("pooling", ["logsumexp", "linear_softmax"])
+def test_checkpoint_roundtrip_and_existing_loss(config, tmp_path, pooling):
+    config.train.temporal_pooling = pooling
     model = new_model().eval()
     x = torch.randn(2, 1, 32, 64)
     clip, frames = model(x)
@@ -133,10 +135,13 @@ def test_checkpoint_roundtrip_and_existing_loss(config, tmp_path):
     save_checkpoint(model, path)
     config.train.prototypes_per_class = 20
     config.train.lse_temp = 9
+    config.train.temporal_pooling = "logsumexp"
     with patch("britekit.models.model_loader.get_device", return_value="cpu"):
         loaded = model_loader.load_from_checkpoint(str(path)).eval()
     assert loaded.head.prototypes_per_class == 3
     assert loaded.head.lse_temp == 0.7
+    assert loaded.head.temporal_pooling == pooling
+    assert config.train.temporal_pooling == pooling
     assert config.train.prototypes_per_class == 3
     for expected, actual in zip((clip, frames), loaded(x)):
         torch.testing.assert_close(expected, actual)

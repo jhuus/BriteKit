@@ -6,6 +6,11 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from britekit.models.temporal_pooling import (
+    pool_temporal_logits,
+    validate_temporal_pooling,
+)
+
 
 class PrototypeSEDHead(nn.Module):
     """Each class reads only its own prototypes; input is [B, D, F, T].
@@ -21,6 +26,7 @@ class PrototypeSEDHead(nn.Module):
         num_classes: int,
         prototypes_per_class: int = 5,
         lse_temp: float = 0.5,
+        temporal_pooling: str = "logsumexp",
     ):
         super().__init__()
         if min(in_channels, num_classes, prototypes_per_class) < 1:
@@ -30,6 +36,8 @@ class PrototypeSEDHead(nn.Module):
         self.num_classes = num_classes
         self.prototypes_per_class = prototypes_per_class
         self.lse_temp = lse_temp
+        validate_temporal_pooling(temporal_pooling)
+        self.temporal_pooling = temporal_pooling
         self.prototypes = nn.Parameter(
             torch.randn(num_classes, prototypes_per_class, in_channels)
         )
@@ -65,8 +73,7 @@ class PrototypeSEDHead(nn.Module):
         activations = self.similarity_maps(x).amax(dim=3)
         frame_logits = (activations * self.weights[None, :, :, None]).sum(dim=2)
         frame_logits = frame_logits + self.bias[None, :, None]
-        segment_logits = self.lse_temp * (
-            torch.logsumexp(frame_logits / self.lse_temp, dim=-1)
-            - math.log(frame_logits.shape[-1])
+        segment_logits = pool_temporal_logits(
+            frame_logits, self.temporal_pooling, self.lse_temp
         )
         return segment_logits, frame_logits

@@ -17,6 +17,7 @@ from britekit import __version__ as britekit_version
 from britekit.core.config_loader import get_config, BaseConfig
 from britekit.core import util
 from britekit.models.head_factory import is_sed
+from britekit.models.temporal_pooling import validate_temporal_pooling
 
 
 class _InferenceModule(nn.Module):
@@ -86,10 +87,17 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         multi_label: bool,
         prototypes_per_class: int = 5,
         lse_temp: float = 0.5,
+        temporal_pooling: str = "logsumexp",
     ):
         super().__init__()
 
         # Input validation
+        validate_temporal_pooling(temporal_pooling)
+        if temporal_pooling != "logsumexp" and head_type not in (
+            "temporal_sed",
+            "prototype_sed",
+        ):
+            raise ValueError("temporal_pooling requires temporal_sed or prototype_sed")
         if not train_class_names:
             raise ValueError("train_class_names cannot be empty")
         if len(train_class_names) != len(train_class_codes):
@@ -157,7 +165,9 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
             training_cfg["train"][
                 "prototypes_per_class"
             ] = self.head.prototypes_per_class
+        if getattr(self, "head_type", None) in ("temporal_sed", "prototype_sed"):
             training_cfg["train"]["lse_temp"] = self.head.lse_temp
+            training_cfg["train"]["temporal_pooling"] = self.head.temporal_pooling
         checkpoint["training_cfg"] = training_cfg
         checkpoint["britekit_version"] = britekit_version
 
@@ -211,6 +221,9 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         self.cfg.train.model_type = self.training_cfg["train"]["model_type"]
         self.cfg.train.head_type = self.training_cfg["train"].get("head_type")
         self.cfg.train.lse_temp = self.training_cfg["train"].get("lse_temp", 0.5)
+        self.cfg.train.temporal_pooling = self.training_cfg["train"].get(
+            "temporal_pooling", "logsumexp"
+        )
         self.cfg.train.prototypes_per_class = self.training_cfg["train"].get(
             "prototypes_per_class", 5
         )
