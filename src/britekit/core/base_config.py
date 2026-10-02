@@ -89,7 +89,9 @@ class TrainingConfig:
 
     num_workers: int = 3  # Number of trainer worker threads
     compile: bool = False  # Compile the model?
-    mixed_precision: bool = False  # Use mixed precision?
+    # Lightning precision override (e.g. "bf16-mixed"); None uses mixed_precision.
+    precision: Optional[str] = None
+    mixed_precision: bool = False  # Legacy FP16 mixed precision switch
 
     # Should loss function weight classes by spec count?
     use_class_weights: bool = False

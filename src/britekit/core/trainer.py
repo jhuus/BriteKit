@@ -3,12 +3,17 @@
 # Defer some imports to improve initialization performance.
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional, cast
 import yaml
 
 from britekit.core.config_loader import get_config
 from britekit.models.model_inspector import ModelInspector
 from britekit.core.util import cfg_to_pure
+
+if TYPE_CHECKING:
+    from lightning.pytorch.trainer.connectors.accelerator_connector import (
+        _PRECISION_INPUT,
+    )
 
 
 class Trainer:
@@ -24,6 +29,11 @@ class Trainer:
 
         self.prefix = prefix
         self.cfg = get_config()
+        precision = self.cfg.train.precision
+        if precision is None:
+            precision = "16-mixed" if self.cfg.train.mixed_precision else "32-true"
+        # Lightning validates configured precision strings when creating its trainer.
+        self.precision = cast("_PRECISION_INPUT", precision)
         torch.set_float32_matmul_precision("medium")
         if self.cfg.train.seed is not None:
             pl.seed_everything(self.cfg.train.seed, workers=True)
@@ -90,7 +100,7 @@ class Trainer:
                 ],
                 deterministic=deterministic,
                 max_epochs=self.cfg.train.num_epochs,
-                precision="16-mixed" if self.cfg.train.mixed_precision else 32,
+                precision=self.precision,
                 logger=logger,
                 limit_val_batches=0 if dm.val_data is None else 1.0,
             )
@@ -116,7 +126,11 @@ class Trainer:
             model.set_class_weights(dm.class_weights())
 
             if self.cfg.train.compile:
-                model = torch.compile(model)
+                # Keep Lightning steps/logging outside compilation; their changing
+                # Python state otherwise causes repeated graph specialization.
+                # Compiling forward also compiles its autograd backward, without
+                # wrapping the module or changing checkpoint parameter names.
+                model.forward = torch.compile(model.forward)
 
             # force the log directory to be created, then save model descriptions
             trainer.logger.experiment
@@ -213,7 +227,7 @@ class Trainer:
             ],
             deterministic=self.cfg.train.deterministic,
             max_epochs=1,
-            precision="16-mixed" if self.cfg.train.mixed_precision else 32,
+            precision=self.precision,
         )
 
         model = model_loader.load_new_model(
