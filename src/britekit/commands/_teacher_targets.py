@@ -4,6 +4,7 @@
 # Defer heavyweight imports to improve --help performance.
 import hashlib
 import logging
+from copy import deepcopy
 from pathlib import Path
 import pickle
 import time
@@ -35,10 +36,12 @@ def teacher_targets(
     Generate soft segment and frame targets from a checkpoint or ensemble.
 
     The input must be a BriteKit training pickle containing stable segment IDs.
-    Stored spectrograms are expanded and passed to the teacher without training
-    augmentation. For an ensemble directory, probabilities are averaged across
-    all checkpoints. SED frame probabilities are stored when the teachers provide
-    them. Calibration and application-level filtering are not applied.
+    Stored spectrograms must match the teachers' source representation. Linear
+    features are converted to dB per teacher when its checkpoint requests it,
+    using its power, top_db, and db_power settings, without training augmentation.
+    For an ensemble directory, probabilities are averaged across all checkpoints.
+    SED frame probabilities are stored when the teachers provide them. Calibration
+    and application-level filtering are not applied.
 
     Args:
     - train_pickle_path (str): Path to the BriteKit training pickle.
@@ -50,6 +53,7 @@ def teacher_targets(
     """
     import numpy as np
 
+    from britekit.core.audio_util import convert_to_db
     from britekit.models import model_loader
 
     if batch_size < 1:
@@ -78,7 +82,7 @@ def teacher_targets(
     if len(segment_ids) != len(set(segment_ids)):
         raise ValueError("Training pickle contains duplicate segment IDs")
 
-    cfg = get_config(cfg_path)
+    cfg = deepcopy(get_config(cfg_path))
     # Distillation targets are the teachers' uncalibrated sigmoid probabilities.
     cfg.infer.scaling_coefficient = 1.0
     cfg.infer.scaling_intercept = 0.0
@@ -106,8 +110,12 @@ def teacher_targets(
             len(checkpoint_files),
             checkpoint_file.name,
         )
-        model = model_loader.load_from_checkpoint(str(checkpoint_file)).eval()
-        model.set_config(cfg)
+        model = model_loader.load_from_checkpoint(
+            str(checkpoint_file), apply_training_config=False
+        ).eval()
+        # Keep each teacher's preprocessing independent of other checkpoints
+        # and of the caller's global config.
+        model.apply_training_config(deepcopy(cfg))
         model = model.to(inference_device)
         model_codes = list(model.train_class_codes)
         if model_codes != class_codes:
@@ -116,10 +124,21 @@ def teacher_targets(
             )
         models.append(model)
 
+    audio = models[0].cfg.audio
+    height = audio.spec_height
+    width = audio.spec_width
+    for model in models:
+        settings = model.cfg.audio
+        for key in ("spec_height", "spec_width", "power", "decibels"):
+            if getattr(settings, key) != getattr(audio, key):
+                raise ValueError(f"Teacher ensemble source features differ: {key}")
+        if settings.convert_to_db and settings.decibels:
+            raise ValueError(
+                "convert_to_db requires a linear pickle and audio.decibels=false"
+            )
+
     probabilities = np.empty((len(specs), len(class_codes)), dtype=np.float32)
     frame_probabilities = None
-    height = cfg.audio.spec_height
-    width = cfg.audio.spec_width
     num_batches = (len(specs) + batch_size - 1) // batch_size
     progress_interval = max(1, num_batches // 100)
     inference_start = time.monotonic()
@@ -127,9 +146,20 @@ def teacher_targets(
         end = min(start + batch_size, len(specs))
         batch = np.empty((end - start, 1, height, width), dtype=np.float32)
         for index, compressed_spec in enumerate(specs[start:end]):
-            expanded = util.expand_spectrogram(compressed_spec)
+            expanded = util.expand_spectrogram(compressed_spec, cfg=models[0].cfg)
             batch[index] = expanded.reshape(1, height, width)
-        predictions = [model.predict(batch, inference_device) for model in models]
+        predictions = []
+        for model in models:
+            settings = model.cfg.audio
+            model_batch = batch
+            if settings.convert_to_db:
+                model_batch = convert_to_db(
+                    batch,
+                    settings.power,
+                    settings.top_db,
+                    db_power=settings.db_power,
+                )
+            predictions.append(model.predict(model_batch, inference_device))
         scores = [prediction[0] for prediction in predictions]
         probabilities[start:end] = np.mean(scores, axis=0, dtype=np.float32)
 

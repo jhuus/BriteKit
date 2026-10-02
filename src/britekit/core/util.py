@@ -15,6 +15,7 @@ from typing import Any, cast, Dict, List, Union, Mapping, TypeAlias, Optional, T
 from posixpath import splitext
 import zlib
 
+from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config
 from britekit.core.exceptions import InputError
 
@@ -486,12 +487,13 @@ def compress_spectrogram(spec, bits: int = 8) -> bytes:
         raise RuntimeError(f"Failed to compress spectrogram: {e}")
 
 
-def expand_spectrogram(spec: bytes):
+def expand_spectrogram(spec: bytes, *, cfg: Optional[BaseConfig] = None):
     """
     Decompress a spectrogram, then convert from bytes to floats and reshape it.
 
     Args:
     - spec: Compressed spectrogram
+    - cfg: Configuration supplying the stored shape; defaults to the global config.
 
     Returns:
         Uncompressed spectrogram
@@ -502,7 +504,8 @@ def expand_spectrogram(spec: bytes):
         raise TypeError("spec must be bytes")
 
     try:
-        cfg = get_config()
+        if cfg is None:
+            cfg = get_config()
         bits = 8
         if spec.startswith(b"BKSP"):
             import struct
