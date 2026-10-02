@@ -26,6 +26,7 @@ from ._inat import inat
 from ._init import init
 from ._migrate_occurrence import migrate_occurrence
 from ._pickle import pickle_frame, pickle_occurrence, pickle_train
+from ._pickle_frame_infer import pickle_frame_infer
 from ._plot import plot_db, plot_dir, plot_occlude, plot_rec, plot_test
 from ._reextract import reextract
 from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_iou, rpt_labels, rpt_test
@@ -72,6 +73,7 @@ __all__ = [
     "init",
     "migrate_occurrence",
     "pickle_frame",
+    "pickle_frame_infer",
     "pickle_occurrence",
     "pickle_train",
     "plot_db",

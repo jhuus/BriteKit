@@ -5,6 +5,7 @@
 import hashlib
 import logging
 from copy import deepcopy
+from numbers import Integral
 from pathlib import Path
 import pickle
 import time
@@ -51,6 +52,22 @@ def teacher_targets(
     - batch_size (int): Number of spectrograms per inference batch.
     - device (str, optional): Inference device, such as cpu, cuda, or mps.
     """
+    _generate_targets(
+        train_pickle_path, checkpoint_path, output_path, cfg_path, batch_size, device
+    )
+
+
+def _generate_targets(
+    train_pickle_path: str,
+    checkpoint_path: str,
+    output_path: str,
+    cfg_path: Optional[str],
+    batch_size: int,
+    device: Optional[str],
+    *,
+    frame_labels_only: bool = False,
+) -> None:
+    """Shared inference for distillation targets and legacy frame-label pickles."""
     import numpy as np
 
     from britekit.core.audio_util import convert_to_db
@@ -67,7 +84,9 @@ def teacher_targets(
     with source_path.open("rb") as file:
         training_data = pickle.load(file)
 
-    required_keys = ("class_codes", "spec_values", "spec_segment_ids")
+    required_keys: tuple[str, ...] = ("class_codes", "spec_values", "spec_segment_ids")
+    if frame_labels_only:
+        required_keys += ("spec_class_indexes",)
     missing = [key for key in required_keys if key not in training_data]
     if missing:
         raise ValueError(f"Training pickle is missing required keys: {missing}")
@@ -82,6 +101,36 @@ def teacher_targets(
     if len(segment_ids) != len(set(segment_ids)):
         raise ValueError("Training pickle contains duplicate segment IDs")
 
+    label_indexes = []
+    if frame_labels_only:
+        if not specs:
+            raise ValueError("Training pickle contains no spectrograms")
+        if not class_codes or len(class_codes) != len(set(class_codes)):
+            raise ValueError("Training pickle must have unique, nonempty class codes")
+        labels = training_data["spec_class_indexes"]
+        if len(labels) != len(specs):
+            raise ValueError(
+                "Training pickle has different numbers of labels and spectrograms"
+            )
+        for segment_id, indexes in zip(segment_ids, labels):
+            if not isinstance(segment_id, Integral) or isinstance(segment_id, bool):
+                raise ValueError("Frame-label pickle requires integer segment IDs")
+            if len(indexes) != 1:
+                raise ValueError(
+                    f"Segment {segment_id} must have exactly one class label; "
+                    "the pickle-frame format stores one curve per segment"
+                )
+            index = indexes[0]
+            if (
+                not isinstance(index, Integral)
+                or isinstance(index, bool)
+                or not 0 <= int(index) < len(class_codes)
+            ):
+                raise ValueError(
+                    f"Invalid class index for segment {segment_id}: {index}"
+                )
+            label_indexes.append(int(index))
+
     cfg = deepcopy(get_config(cfg_path))
     # Distillation targets are the teachers' uncalibrated sigmoid probabilities.
     cfg.infer.scaling_coefficient = 1.0
@@ -94,6 +143,13 @@ def teacher_targets(
     )
     if not checkpoint_files:
         raise ValueError(f"No checkpoint files found in {teacher_path}")
+    if destination.resolve() in {
+        source_path.resolve(),
+        *(p.resolve() for p in checkpoint_files),
+    }:
+        raise ValueError(
+            "Output path must differ from the training pickle and checkpoints"
+        )
 
     logging.info(
         "Generating targets for %d spectrograms and %d classes using %d teacher checkpoint(s) on %s",
@@ -103,6 +159,7 @@ def teacher_targets(
         inference_device,
     )
     models = []
+    model_class_indexes = []
     for model_index, checkpoint_file in enumerate(checkpoint_files, start=1):
         logging.info(
             "Loading teacher %d/%d: %s",
@@ -118,7 +175,17 @@ def teacher_targets(
         model.apply_training_config(deepcopy(cfg))
         model = model.to(inference_device)
         model_codes = list(model.train_class_codes)
-        if model_codes != class_codes:
+        if frame_labels_only:
+            missing_codes = sorted(set(class_codes) - set(model_codes))
+            if len(model_codes) != len(set(model_codes)) or missing_codes:
+                raise ValueError(
+                    f"Checkpoint {checkpoint_file.name} must have unique class codes "
+                    f"covering the training classes; missing: {missing_codes}"
+                )
+            model_class_indexes.append(
+                np.asarray([model_codes.index(class_codes[i]) for i in label_indexes])
+            )
+        elif model_codes != class_codes:
             raise ValueError(
                 "Teacher ensemble checkpoints do not have identical class codes and ordering"
             )
@@ -127,18 +194,42 @@ def teacher_targets(
     audio = models[0].cfg.audio
     height = audio.spec_height
     width = audio.spec_width
+    source_keys = ["spec_height", "spec_width", "power", "decibels"]
+    if frame_labels_only:
+        source_keys += [
+            "spec_duration",
+            "sampling_rate",
+            "win_length",
+            "n_fft",
+            "min_freq",
+            "max_freq",
+            "freq_scale",
+            "mel_norm",
+            "log_freq_gain",
+        ]
+        if audio.decibels:
+            source_keys += ["top_db", "db_power"]
     for model in models:
         settings = model.cfg.audio
-        for key in ("spec_height", "spec_width", "power", "decibels"):
+        for key in source_keys:
             if getattr(settings, key) != getattr(audio, key):
                 raise ValueError(f"Teacher ensemble source features differ: {key}")
         if settings.convert_to_db and settings.decibels:
             raise ValueError(
                 "convert_to_db requires a linear pickle and audio.decibels=false"
             )
+        if frame_labels_only and model.cfg.train.sed_fps != models[0].cfg.train.sed_fps:
+            raise ValueError(
+                "Frame-label ensemble checkpoints must have matching sed_fps"
+            )
 
-    probabilities = np.empty((len(specs), len(class_codes)), dtype=np.float32)
+    probabilities = (
+        None
+        if frame_labels_only
+        else np.empty((len(specs), len(class_codes)), dtype=np.float32)
+    )
     frame_probabilities = None
+    frame_labels = {}
     num_batches = (len(specs) + batch_size - 1) // batch_size
     progress_interval = max(1, num_batches // 100)
     inference_start = time.monotonic()
@@ -149,7 +240,7 @@ def teacher_targets(
             expanded = util.expand_spectrogram(compressed_spec, cfg=models[0].cfg)
             batch[index] = expanded.reshape(1, height, width)
         predictions = []
-        for model in models:
+        for model_index, model in enumerate(models):
             settings = model.cfg.audio
             model_batch = batch
             if settings.convert_to_db:
@@ -159,9 +250,39 @@ def teacher_targets(
                     settings.top_db,
                     db_power=settings.db_power,
                 )
-            predictions.append(model.predict(model_batch, inference_device))
-        scores = [prediction[0] for prediction in predictions]
-        probabilities[start:end] = np.mean(scores, axis=0, dtype=np.float32)
+            segment_scores, frames = model.predict(model_batch, inference_device)
+            if frame_labels_only:
+                if frames is None:
+                    raise ValueError(
+                        "Frame-label generation requires SED frame outputs from every checkpoint"
+                    )
+                frames = np.asarray(frames)
+                expected = (
+                    end - start,
+                    len(model.train_class_codes),
+                    round(settings.spec_duration * model.cfg.train.sed_fps),
+                )
+                if frames.shape != expected:
+                    raise ValueError(
+                        f"Unexpected frame output shape: {frames.shape}; expected {expected}"
+                    )
+                # Select the known class, retaining only one curve per source
+                # segment instead of allocating all classes for the full dataset.
+                frames = frames[
+                    np.arange(end - start), model_class_indexes[model_index][start:end]
+                ][:, None, :]
+                if (
+                    not np.isfinite(frames).all()
+                    or (frames < 0).any()
+                    or (frames > 1).any()
+                ):
+                    raise ValueError(
+                        "Frame outputs must be finite probabilities in [0, 1]"
+                    )
+            predictions.append((segment_scores, frames))
+        if probabilities is not None:
+            scores = [prediction[0] for prediction in predictions]
+            probabilities[start:end] = np.mean(scores, axis=0, dtype=np.float32)
 
         frame_scores = [prediction[1] for prediction in predictions]
         has_frame_scores = [frame_output is not None for frame_output in frame_scores]
@@ -183,11 +304,22 @@ def teacher_targets(
                 raise ValueError(
                     "Teacher ensemble checkpoints have different frame output shapes"
                 )
-            if first_shape[:2] != (end - start, len(class_codes)):
+            if first_shape[:2] != (
+                end - start,
+                1 if frame_labels_only else len(class_codes),
+            ):
                 raise ValueError(
                     f"Unexpected teacher frame output shape: {first_shape}"
                 )
-            if frame_probabilities is None:
+            averaged_frames = np.asarray(
+                np.mean(valid_frame_scores, axis=0, dtype=np.float32), dtype=np.float32
+            )
+            if frame_labels_only:
+                for segment_id, curve in zip(
+                    segment_ids[start:end], averaged_frames[:, 0]
+                ):
+                    frame_labels[int(segment_id)] = curve.copy()
+            elif frame_probabilities is None:
                 frame_probabilities = np.empty(
                     (len(specs), len(class_codes), first_shape[2]), dtype=np.float16
                 )
@@ -197,9 +329,8 @@ def teacher_targets(
                 )
             elif frame_probabilities.shape[2] != first_shape[2]:
                 raise ValueError("Teacher frame output length changed between batches")
-            frame_probabilities[start:end] = np.mean(
-                valid_frame_scores, axis=0, dtype=np.float32
-            )
+            if frame_probabilities is not None:
+                frame_probabilities[start:end] = averaged_frames
         elif frame_probabilities is not None:
             raise ValueError("Teacher frame outputs disappeared between batches")
         batch_number = start // batch_size + 1
@@ -217,6 +348,18 @@ def teacher_targets(
                 100 * end / len(specs) if specs else 100.0,
                 rate,
             )
+
+    if frame_labels_only:
+        _write_targets(destination, frame_labels)
+        logging.info(
+            "Wrote soft frame labels for %d segments (%d frames, %s fps, %s seconds) to %s",
+            len(frame_labels),
+            len(next(iter(frame_labels.values()))),
+            models[0].cfg.train.sed_fps,
+            audio.spec_duration,
+            destination,
+        )
+        return
 
     logging.info("Computing source and checkpoint fingerprints")
     output = {
@@ -243,18 +386,23 @@ def teacher_targets(
     if frame_probabilities is not None:
         output["frame_probabilities"] = frame_probabilities
 
+    _write_targets(destination, output)
+    assert probabilities is not None
+    logging.info(
+        "Wrote teacher targets with segment shape %s and frame shape %s to %s",
+        probabilities.shape,
+        None if frame_probabilities is None else frame_probabilities.shape,
+        destination,
+    )
+
+
+def _write_targets(destination: Path, output) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.tmp")
     try:
         with temporary.open("wb") as file:
             pickle.dump(output, file, protocol=pickle.HIGHEST_PROTOCOL)
         temporary.replace(destination)
-        logging.info(
-            "Wrote teacher targets with segment shape %s and frame shape %s to %s",
-            probabilities.shape,
-            None if frame_probabilities is None else frame_probabilities.shape,
-            destination,
-        )
     finally:
         if temporary.exists():
             temporary.unlink()

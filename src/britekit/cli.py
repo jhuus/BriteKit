@@ -53,6 +53,7 @@ from .commands._pickle import (
     _pickle_occurrence_cmd,
     _pickle_train_cmd,
 )
+from .commands._pickle_frame_infer import _pickle_frame_infer_cmd
 from .commands._plot import (
     _plot_db_cmd,
     _plot_dir_cmd,
@@ -130,6 +131,7 @@ cli.add_command(_init_cmd)
 cli.add_command(_migrate_occurrence_cmd)
 
 cli.add_command(_pickle_frame_cmd)
+cli.add_command(_pickle_frame_infer_cmd)
 cli.add_command(_pickle_occurrence_cmd)
 cli.add_command(_pickle_train_cmd)
 cli.add_command(_plot_dir_cmd)
