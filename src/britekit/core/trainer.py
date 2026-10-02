@@ -57,6 +57,11 @@ class Trainer:
         from britekit.core.data_module import DataModule
         from britekit.models import model_loader
 
+        if self.cfg.train.load_ckpt_path and self.cfg.train.init_backbone_ckpt_path:
+            raise ValueError(
+                "Use only one of load_ckpt_path and init_backbone_ckpt_path"
+            )
+
         # load all the data once for performance, then split as needed in each fold
         dm = DataModule()
 
@@ -112,8 +117,6 @@ class Trainer:
                     self.cfg.train.load_ckpt_path,
                     multi_label=self.cfg.train.multi_label,
                 )
-                if self.cfg.train.freeze_backbone:
-                    model.freeze_backbone()
             else:
                 model = model_loader.load_new_model(
                     dm.train_class_names,
@@ -122,6 +125,13 @@ class Trainer:
                     dm.train_class_alt_codes,
                     dm.num_train_specs,
                 )
+
+            if self.cfg.train.init_backbone_ckpt_path:
+                model_loader.initialize_backbone(
+                    model, self.cfg.train.init_backbone_ckpt_path
+                )
+            if self.cfg.train.freeze_backbone:
+                model.freeze_backbone()
 
             model.set_class_weights(dm.class_weights())
 

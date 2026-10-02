@@ -84,6 +84,8 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         train_class_alt_codes: List[str],
         num_train_specs: int,
         multi_label: bool,
+        prototypes_per_class: int = 5,
+        lse_temp: float = 0.5,
     ):
         super().__init__()
 
@@ -151,6 +153,11 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         # the configured maximum so downstream manifests describe the model
         # that was loaded (which may be an earlier retained checkpoint).
         training_cfg["train"]["num_epochs"] = checkpoint["epoch"] + 1
+        if getattr(self, "head_type", None) == "prototype_sed":
+            training_cfg["train"][
+                "prototypes_per_class"
+            ] = self.head.prototypes_per_class
+            training_cfg["train"]["lse_temp"] = self.head.lse_temp
         checkpoint["training_cfg"] = training_cfg
         checkpoint["britekit_version"] = britekit_version
 
@@ -204,6 +211,9 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         self.cfg.train.model_type = self.training_cfg["train"]["model_type"]
         self.cfg.train.head_type = self.training_cfg["train"].get("head_type")
         self.cfg.train.lse_temp = self.training_cfg["train"].get("lse_temp", 0.5)
+        self.cfg.train.prototypes_per_class = self.training_cfg["train"].get(
+            "prototypes_per_class", 5
+        )
         self.cfg.train.two_way = self.training_cfg["train"].get("two_way", True)
 
         if "n_fft" in self.training_cfg["audio"]:

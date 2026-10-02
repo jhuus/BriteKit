@@ -28,6 +28,8 @@ class GerNetModel(BaseModel):
         train_class_alt_codes: List[str],
         num_train_specs: int,
         multi_label: bool,
+        prototypes_per_class: int = 5,
+        lse_temp: float = 0.5,
         **kwargs,
     ):
         super().__init__(
@@ -40,6 +42,8 @@ class GerNetModel(BaseModel):
             train_class_alt_codes,
             num_train_specs,
             multi_label,
+            prototypes_per_class,
+            lse_temp,
         )
 
         if model_type not in MODEL_REGISTRY:
@@ -60,7 +64,8 @@ class GerNetModel(BaseModel):
                 hidden_channels,
                 self.num_classes,
                 drop_rate=kwargs.pop("drop_rate", 0.0),
-                lse_temp=kwargs.pop("lse_temp", 0.5),
+                lse_temp=lse_temp,
+                prototypes_per_class=prototypes_per_class,
                 two_way=kwargs.pop("two_way", True),
             )
 

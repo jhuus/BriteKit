@@ -70,6 +70,7 @@ from .commands._reports import (
     _rpt_test_cmd,
 )
 from .commands._search import _search_cmd
+from .commands._prototype_export import _prototype_export_cmd
 from .commands._teacher_targets import _teacher_targets_cmd
 from .commands._train import _find_lr_cmd, _train_cmd
 from .commands._tune import _tune_cmd
@@ -156,3 +157,5 @@ cli.add_command(_wav2mp3_cmd)
 cli.add_command(_xeno_cmd)
 
 cli.add_command(_youtube_cmd)
+
+cli.add_command(_prototype_export_cmd)

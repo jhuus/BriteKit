@@ -31,7 +31,12 @@ def load_new_model(
     device = get_device()
 
     # create a dict of optional keyword arguments
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
+    if cfg.train.head_type == "prototype_sed":
+        kwargs.update(
+            prototypes_per_class=cfg.train.prototypes_per_class,
+            lse_temp=cfg.train.lse_temp,
+        )
     if cfg.train.drop_rate is not None:
         kwargs.update(dict(drop_rate=cfg.train.drop_rate))
 
@@ -111,14 +116,15 @@ def load_from_checkpoint(
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     device = get_device()
     model_class: Any = None
+    strict = ckpt["hyper_parameters"].get("head_type") == "prototype_sed"
     if "model_type" in ckpt["hyper_parameters"]:
         model_type = ckpt["hyper_parameters"]["model_type"]
         if model_type.startswith("timm."):
             if multi_label is None:
-                model = TimmModel.load_from_checkpoint(checkpoint_path, strict=False)
+                model = TimmModel.load_from_checkpoint(checkpoint_path, strict=strict)
             else:
                 model = TimmModel.load_from_checkpoint(
-                    checkpoint_path, multi_label=multi_label, strict=False
+                    checkpoint_path, multi_label=multi_label, strict=strict
                 )
         elif model_type.startswith("bk"):
             model_class = BKNetModel
@@ -143,10 +149,10 @@ def load_from_checkpoint(
 
         if not model_type.startswith("timm."):
             if multi_label is None:
-                model = model_class.load_from_checkpoint(checkpoint_path, strict=False)
+                model = model_class.load_from_checkpoint(checkpoint_path, strict=strict)
             else:
                 model = model_class.load_from_checkpoint(
-                    checkpoint_path, multi_label=multi_label, strict=False
+                    checkpoint_path, multi_label=multi_label, strict=strict
                 )
 
         if apply_training_config:
@@ -154,3 +160,56 @@ def load_from_checkpoint(
         return model.to(device)
     else:
         raise ModelError("Checkpoint file has no model_type information.")
+
+
+def initialize_backbone(model, checkpoint_path: str) -> None:
+    """Copy compatible backbone weights only; keep the new head and run config.
+
+    Species ordering is checked even though the head is not copied, making
+    accidental changes to the baseline experiment explicit. Built-in classifier
+    weights in a timm source backbone may be discarded.
+    """
+    import torch
+
+    ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    hp = ckpt["hyper_parameters"]
+    for key in ("model_type", "train_class_names", "train_class_codes"):
+        if hp.get(key) != getattr(model, key):
+            raise ModelError(f"Backbone initialization requires matching {key}")
+    # Reusing weights with a different frontend would confound this experiment.
+    source_audio = ckpt.get("training_cfg", {}).get("audio", {})
+    from britekit.core.base_config import AudioConfig
+    from dataclasses import asdict
+
+    for key, default in asdict(AudioConfig()).items():
+        if key in (
+            "use_spec_cache",
+            "chunks_per_spec",
+            "choose_channel",
+            "check_seconds",
+            "spec_bits",
+        ):
+            continue
+        source_value = source_audio.get(key, default)
+        if source_value != getattr(model.cfg.audio, key):
+            raise ModelError(f"Backbone initialization requires matching audio.{key}")
+    if model.backbone is None:
+        raise ModelError("Target model has no backbone")
+    source = {
+        k[len("backbone.") :]: v
+        for k, v in ckpt["state_dict"].items()
+        if k.startswith("backbone.")
+    }
+    target = model.backbone.state_dict()
+    missing = set(target) - set(source)
+    extra = set(source) - set(target)
+    allowed_extra = ("head.", "classifier.", "fc.", "global_pool.")
+    unexpected = [k for k in extra if not k.startswith(allowed_extra)]
+    mismatched = [
+        k for k in target if k in source and source[k].shape != target[k].shape
+    ]
+    if missing or unexpected or mismatched:
+        raise ModelError(
+            f"Incompatible backbone: missing={sorted(missing)}, unexpected={sorted(unexpected)}, shape_mismatch={mismatched}"
+        )
+    model.backbone.load_state_dict({k: source[k] for k in target}, strict=True)

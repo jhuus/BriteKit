@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import math
-from typing import Optional
+from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -273,11 +273,14 @@ def make_head(
     hidden_channels: int,
     num_classes: int,
     drop_rate: float = 0.0,
+    prototypes_per_class: int = 5,
     **kwargs,
 ) -> nn.Module:
     """Create a classifier head by name."""
     if head_type not in HEAD_REGISTRY:
         raise ValueError(f"Unknown head type: {head_type}")
+    if head_type == "prototype_sed":
+        kwargs["prototypes_per_class"] = prototypes_per_class
     return HEAD_REGISTRY[head_type][0](
         in_channels, hidden_channels, num_classes, drop_rate, **kwargs
     )
@@ -350,7 +353,21 @@ def build_temporal_sed_head(
     )
 
 
-HEAD_REGISTRY = {
+def build_prototype_sed_head(
+    in_channels: int,
+    hidden_channels: int,
+    num_classes: int,
+    drop_rate: float,
+    prototypes_per_class: int = 5,
+    lse_temp: float = 0.5,
+    **_,
+) -> nn.Module:
+    from britekit.models.prototype_head import PrototypeSEDHead
+
+    return PrototypeSEDHead(in_channels, num_classes, prototypes_per_class, lse_temp)
+
+
+HEAD_REGISTRY: dict[str, tuple[Callable[..., nn.Module], bool]] = {
     # name: (method, is_sed)
     "basic": (build_basic_head, False),
     "effnet": (build_effnet_head, False),
@@ -363,4 +380,5 @@ HEAD_REGISTRY = {
         True,
     ),  # old name for reduced_sed - keep for now
     "temporal_sed": (build_temporal_sed_head, True),
+    "prototype_sed": (build_prototype_sed_head, True),
 }

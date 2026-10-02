@@ -30,6 +30,7 @@ from ._plot import plot_db, plot_dir, plot_occlude, plot_rec, plot_test
 from ._reextract import reextract
 from ._reports import rpt_ann, rpt_db, rpt_epochs, rpt_iou, rpt_labels, rpt_test
 from ._search import search
+from ._prototype_export import prototype_export
 from ._teacher_targets import teacher_targets
 from ._train import train, find_lr
 from ._tune import tune
@@ -88,6 +89,7 @@ __all__ = [
     "rpt_test",
     "search",
     "teacher_targets",
+    "prototype_export",
     "train",
     "tune",
     "wav2mp3",
