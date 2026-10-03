@@ -14,6 +14,7 @@ def pickle_frame_infer(
     output_path: str,
     cfg_path: Optional[str] = None,
     batch_size: int = 256,
+    full_segment_classes: Optional[list[str]] = None,
 ) -> None:
     """Generate soft frame labels using a checkpoint or ensemble.
 
@@ -21,7 +22,14 @@ def pickle_frame_infer(
     For each segment, average the checkpoints' uncalibrated frame probabilities
     for its labeled class. Save the same dictionary as pickle-frame:
     {segment_id: float32 array of shape (num_frames,)}. No thresholding, padding,
-    normalization by peak score, or filling of gaps is applied.
+    normalization by peak score, or filling of gaps is applied, except for the
+    full-segment override below.
+
+    For segments labeled with a class in full_segment_classes, replace the entire
+    curve with ones. Names must exactly match class_names in the training pickle;
+    unknown names are errors. This can be used for classes such as Noise, Insects
+    and Other when their temporal localization is not needed. Other segments
+    retain their inferred probabilities. No classes are overridden by default.
 
     Every segment must have exactly one class label. Checkpoints must provide
     SED frame outputs, cover the training classes, and share the source frontend,
@@ -41,6 +49,7 @@ def pickle_frame_infer(
     - output_path (str): Output frame-label pickle, compatible with pickle-frame.
     - cfg_path (str, optional): YAML configuration overrides; checkpoint audio settings take precedence.
     - batch_size (int): Number of spectrograms per inference batch.
+    - full_segment_classes (list[str], optional): Class names whose labeled segments receive all-one frame labels.
     """
     _generate_targets(
         train_pickle_path,
@@ -50,6 +59,7 @@ def pickle_frame_infer(
         batch_size,
         device=None,
         frame_labels_only=True,
+        full_segment_classes=full_segment_classes,
     )
 
 
@@ -84,6 +94,15 @@ def pickle_frame_infer(
 @click.option(
     "--batch-size", type=click.IntRange(min=1), default=256, show_default=True
 )
+@click.option(
+    "--full-segment-classes",
+    help="Comma-separated class names whose labeled segments receive all-one frame labels "
+    '(e.g. "Noise,Insects,Other"). Names must exactly match the training pickle.',
+)
 def _pickle_frame_infer_cmd(**kwargs) -> None:
     util.set_logging()
+    if kwargs["full_segment_classes"] is not None:
+        kwargs["full_segment_classes"] = [
+            name.strip() for name in kwargs["full_segment_classes"].split(",")
+        ]
     pickle_frame_infer(**kwargs)

@@ -66,6 +66,7 @@ def _generate_targets(
     device: Optional[str],
     *,
     frame_labels_only: bool = False,
+    full_segment_classes: Optional[list[str]] = None,
 ) -> None:
     """Shared inference for distillation targets and legacy frame-label pickles."""
     import numpy as np
@@ -75,6 +76,16 @@ def _generate_targets(
 
     if batch_size < 1:
         raise ValueError("batch_size must be at least 1")
+    if full_segment_classes is not None:
+        if isinstance(full_segment_classes, str) or any(
+            not isinstance(name, str) or not name.strip()
+            for name in full_segment_classes
+        ):
+            raise ValueError(
+                "full_segment_classes must be a list of nonempty class names"
+            )
+        if full_segment_classes and not frame_labels_only:
+            raise ValueError("full_segment_classes requires frame-label generation")
 
     source_path = Path(train_pickle_path)
     teacher_path = Path(checkpoint_path)
@@ -87,6 +98,8 @@ def _generate_targets(
     required_keys: tuple[str, ...] = ("class_codes", "spec_values", "spec_segment_ids")
     if frame_labels_only:
         required_keys += ("spec_class_indexes",)
+    if full_segment_classes:
+        required_keys += ("class_names",)
     missing = [key for key in required_keys if key not in training_data]
     if missing:
         raise ValueError(f"Training pickle is missing required keys: {missing}")
@@ -130,6 +143,31 @@ def _generate_targets(
                     f"Invalid class index for segment {segment_id}: {index}"
                 )
             label_indexes.append(int(index))
+
+    full_segment_indexes: set[int] = set()
+    if full_segment_classes:
+        class_names = list(training_data["class_names"])
+        if (
+            len(class_names) != len(class_codes)
+            or any(
+                not isinstance(name, str) or not name.strip() for name in class_names
+            )
+            or len(class_names) != len(set(class_names))
+        ):
+            raise ValueError(
+                "Training pickle must have unique, nonempty class_names matching class_codes"
+            )
+        unknown_names = sorted(set(full_segment_classes) - set(class_names))
+        if unknown_names:
+            raise ValueError(f"Unknown full-segment class names: {unknown_names}")
+        full_segment_indexes = {
+            class_names.index(name) for name in full_segment_classes
+        }
+        logging.info(
+            "Forcing all-one frame labels for %d segments in classes: %s",
+            sum(index in full_segment_indexes for index in label_indexes),
+            ", ".join(sorted(set(full_segment_classes))),
+        )
 
     cfg = deepcopy(get_config(cfg_path))
     # Distillation targets are the teachers' uncalibrated sigmoid probabilities.
@@ -315,10 +353,16 @@ def _generate_targets(
                 np.mean(valid_frame_scores, axis=0, dtype=np.float32), dtype=np.float32
             )
             if frame_labels_only:
-                for segment_id, curve in zip(
-                    segment_ids[start:end], averaged_frames[:, 0]
+                for segment_id, class_index, curve in zip(
+                    segment_ids[start:end],
+                    label_indexes[start:end],
+                    averaged_frames[:, 0],
                 ):
-                    frame_labels[int(segment_id)] = curve.copy()
+                    frame_labels[int(segment_id)] = (
+                        np.ones_like(curve)
+                        if class_index in full_segment_indexes
+                        else curve.copy()
+                    )
             elif frame_probabilities is None:
                 frame_probabilities = np.empty(
                     (len(specs), len(class_codes), first_shape[2]), dtype=np.float16

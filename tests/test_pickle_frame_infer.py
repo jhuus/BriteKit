@@ -160,6 +160,127 @@ def test_cli_averages_known_class_curves_and_training_preserves_soft_labels(
         assert "teacher_segment_labels" not in item
 
 
+@pytest.mark.parametrize("use_cli", [False, True])
+def test_full_segment_classes_override_only_labeled_segments(
+    monkeypatch, case, caplog, use_cli
+):
+    cfg, data, source, checkpoints, destination = case
+    data.update(
+        class_names=["Noise", "Insects", "Other", "Alpha"],
+        class_codes=["n", "i", "o", "a"],
+        spec_values=data["spec_values"] * 2,
+        spec_segment_ids=[10, 20, 30, 40, 50, 60],
+        spec_class_indexes=[[0], [3], [1], [3], [2], [0]],
+    )
+    source.write_bytes(pickle.dumps(data))
+    a1 = [0.1, 0.8, 0.05, 0.05, 0.7, 0.1]
+    a2 = [0.3, 0.6, 0.15, 0.15, 0.9, 0.3]
+    first = FrameModel(cfg, ["n", "i", "o", "a"], [[0.2] * 6] * 3 + [a1])
+    second = FrameModel(cfg, ["a", "o", "i", "n"], [a2] + [[0.4] * 6] * 3)
+    install_models(monkeypatch, checkpoints, [first, second])
+
+    with caplog.at_level("INFO"):
+        if use_cli:
+            result = CliRunner().invoke(
+                cli,
+                [
+                    "pickle-frame-infer",
+                    str(source),
+                    "--checkpoints",
+                    str(checkpoints),
+                    "--output",
+                    str(destination),
+                    "--batch-size",
+                    "2",
+                    "--full-segment-classes",
+                    "Noise, Insects, Other",
+                ],
+            )
+            assert result.exit_code == 0, result.output
+        else:
+            pickle_frame_infer(
+                str(source),
+                str(checkpoints),
+                str(destination),
+                batch_size=2,
+                full_segment_classes=["Noise", "Insects", "Other"],
+            )
+
+    labels = pickle.loads(destination.read_bytes())
+    assert list(labels) == data["spec_segment_ids"]
+    dataset = SpectrogramDataset(
+        data["spec_values"],
+        data["spec_class_indexes"],
+        4,
+        segment_ids=data["spec_segment_ids"],
+        frame_label_dict=labels,
+    )
+    for i, (segment_id, indexes) in enumerate(
+        zip(data["spec_segment_ids"], data["spec_class_indexes"])
+    ):
+        class_index = indexes[0]
+        expected = np.mean([a1, a2], axis=0) if class_index == 3 else np.ones(6)
+        curve = labels[segment_id]
+        assert curve.dtype == np.float32 and curve.shape == (6,)
+        np.testing.assert_allclose(curve, expected, atol=1e-7)
+        item = dataset[i]
+        expected_frames = np.zeros((6, 4), dtype=np.float32)
+        expected_frames[:, class_index] = expected
+        np.testing.assert_allclose(item["frame_labels"], expected_frames, atol=1e-7)
+        torch.testing.assert_close(item["segment_labels"], torch.eye(4)[class_index])
+    log_output = result.output if use_cli else caplog.text
+    assert "Forcing all-one frame labels for 4 segments" in log_output
+    assert source.read_bytes() == pickle.dumps(data)
+
+
+@pytest.mark.parametrize(
+    "problem, message",
+    [
+        ("unknown", "Unknown full-segment class names.*Noise"),
+        ("case", "Unknown full-segment class names.*alpha"),
+        ("missing_names", "missing required keys.*class_names"),
+        ("name_count", "class_names matching class_codes"),
+        ("duplicate_names", "unique, nonempty class_names"),
+        ("empty_name", "list of nonempty class names"),
+        ("bare_string", "list of nonempty class names"),
+    ],
+)
+def test_invalid_full_segment_classes_rejected_before_inference(
+    monkeypatch, case, problem, message
+):
+    _, data, source, checkpoints, destination = case
+    classes = ["Alpha"]
+    if problem == "unknown":
+        classes = ["Noise"]
+    elif problem == "case":
+        classes = ["alpha"]
+    elif problem == "missing_names":
+        del data["class_names"]
+    elif problem == "name_count":
+        data["class_names"].pop()
+    elif problem == "duplicate_names":
+        data["class_names"] = ["Alpha", "Alpha"]
+    elif problem == "empty_name":
+        classes = [""]
+    elif problem == "bare_string":
+        classes = "Alpha"
+    source.write_bytes(pickle.dumps(data))
+    destination.write_bytes(b"previous labels")
+
+    def unexpected_load(*args, **kwargs):
+        pytest.fail("Invalid class overrides should be rejected before loading models")
+
+    monkeypatch.setattr(model_loader, "load_from_checkpoint", unexpected_load)
+    with pytest.raises(ValueError, match=message):
+        pickle_frame_infer(
+            str(source),
+            str(checkpoints),
+            str(destination),
+            full_segment_classes=classes,
+        )
+    assert destination.read_bytes() == b"previous labels"
+
+
 @pytest.mark.parametrize(
     "problem, message",
     [
