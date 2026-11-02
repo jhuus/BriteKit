@@ -96,13 +96,13 @@ def pickle_frame_infer(
 )
 @click.option(
     "--full-segment-classes",
-    help="Comma-separated class names whose labeled segments receive all-one frame labels "
-    '(e.g. "Noise,Insects,Other"). Names must exactly match the training pickle.',
+    type=click.Path(exists=True, dir_okay=False),
+    help="Path to a text file of class names whose labeled segments receive all-one "
+    "frame labels (one entry per row, no header). Names must exactly match the training pickle.",
 )
 def _pickle_frame_infer_cmd(**kwargs) -> None:
     util.set_logging()
     if kwargs["full_segment_classes"] is not None:
-        kwargs["full_segment_classes"] = [
-            name.strip() for name in kwargs["full_segment_classes"].split(",")
-        ]
+        with open(kwargs["full_segment_classes"], encoding="utf-8") as classes_file:
+            kwargs["full_segment_classes"] = [name.strip() for name in classes_file]
     pickle_frame_infer(**kwargs)

@@ -181,6 +181,8 @@ def test_full_segment_classes_override_only_labeled_segments(
 
     with caplog.at_level("INFO"):
         if use_cli:
+            classes_file = source.parent / "classes.txt"
+            classes_file.write_text("Noise\n Insects \nOther\n", encoding="utf-8")
             result = CliRunner().invoke(
                 cli,
                 [
@@ -193,7 +195,7 @@ def test_full_segment_classes_override_only_labeled_segments(
                     "--batch-size",
                     "2",
                     "--full-segment-classes",
-                    "Noise, Insects, Other",
+                    str(classes_file),
                 ],
             )
             assert result.exit_code == 0, result.output
@@ -231,6 +233,27 @@ def test_full_segment_classes_override_only_labeled_segments(
     log_output = result.output if use_cli else caplog.text
     assert "Forcing all-one frame labels for 4 segments" in log_output
     assert source.read_bytes() == pickle.dumps(data)
+
+
+@pytest.mark.parametrize("classes_path", ["missing.txt", ".", "Noise,Insects,Other"])
+def test_cli_rejects_invalid_full_segment_classes_path(case, classes_path):
+    _, _, source, checkpoints, destination = case
+    result = CliRunner().invoke(
+        cli,
+        [
+            "pickle-frame-infer",
+            str(source),
+            "--checkpoints",
+            str(checkpoints),
+            "--output",
+            str(destination),
+            "--full-segment-classes",
+            str(source.parent / classes_path),
+        ],
+    )
+    assert result.exit_code == 2
+    assert "Invalid value for '--full-segment-classes'" in result.output
+    assert not destination.exists()
 
 
 @pytest.mark.parametrize(
