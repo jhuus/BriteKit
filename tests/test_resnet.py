@@ -56,12 +56,15 @@ def save_checkpoint(model, path):
 @pytest.mark.parametrize(
     "model_type,backbone_params",
     [
-        ("resnet.1", 4_922_056),
-        ("resnet.2", 7_083_144),
+        ("resnet.1", 1_690_120),
+        ("resnet.2", 2_275_752),
         ("resnet.3", 2_955_976),
-        ("resnet.4", 4_625_544),
-        ("resnet.5", 5_606_440),
-        ("resnet.6", 6_686_152),
+        ("resnet.4", 3_743_464),
+        ("resnet.5", 4_625_544),
+        ("resnet.6", 4_922_056),
+        ("resnet.7", 5_606_440),
+        ("resnet.8", 6_686_152),
+        ("resnet.9", 7_083_144),
     ],
 )
 def test_variant_shapes_parameters_and_training(config, model_type, backbone_params):
@@ -92,7 +95,7 @@ def test_variant_shapes_parameters_and_training(config, model_type, backbone_par
 def test_baseline_matches_timm_initialization_outputs_and_gradients(config, head_type):
     config.train.head_type = head_type
     torch.manual_seed(99)
-    backbone = new_model(config).backbone.eval()
+    backbone = new_model(config, "resnet.6").backbone.eval()
     torch.manual_seed(99)
     reference = timm.create_model(
         "resnet10t",
@@ -142,7 +145,7 @@ def test_short_variants_exclude_distant_time_context(config, model_type):
             nn.init.ones_(module.weight)
     with torch.no_grad():
         features = backbone(inputs)[..., 6]
-    if model_type in ("resnet.1", "resnet.2"):
+    if not MODEL_REGISTRY[model_type][1]:
         assert (features[1] - features[0]).min() > 1e-4
     else:
         torch.testing.assert_close(features[0], features[1], rtol=0, atol=0)
@@ -151,7 +154,11 @@ def test_short_variants_exclude_distant_time_context(config, model_type):
 @pytest.mark.parametrize(
     "model_type,head_type",
     [(name, "prototype_sed") for name in MODEL_REGISTRY]
-    + [("resnet.4", head) for head in (None, "basic", "temporal_sed")]
+    + [
+        (name, head)
+        for name in ("resnet.1", "resnet.6")
+        for head in (None, "basic", "temporal_sed")
+    ]
     + [("timm.resnet10t", "prototype_sed")],
 )
 def test_checkpoint_roundtrip_and_head_compatibility(
@@ -205,7 +212,9 @@ def test_unknown_variant_rejected(config):
         new_model(config, "resnet.99")
 
 
-@pytest.mark.parametrize("model_type", ["resnet.4", "resnet.5", "resnet.6"])
+@pytest.mark.parametrize(
+    "model_type", [name for name, (_, short) in MODEL_REGISTRY.items() if short]
+)
 def test_short_variant_onnx_export(config, tmp_path, model_type):
     onnx = pytest.importorskip("onnx")
     from britekit.commands import ckpt_onnx

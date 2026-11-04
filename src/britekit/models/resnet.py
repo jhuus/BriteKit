@@ -122,10 +122,13 @@ class ResNetModel(BaseModel):
 # the classifier/head and use a one-channel input. All presets train from
 # scratch, like BriteKit's other custom model families.
 MODEL_REGISTRY = {
-    "resnet.1": ((64, 128, 256, 512), False),  # 4,922,056; timm resnet10t
-    "resnet.2": ((96, 192, 384, 512), False),  # 7,083,144; wider
+    "resnet.1": ((32, 64, 128, 512), True),  # 1,690,120; narrower + shorter
+    "resnet.2": ((48, 96, 192, 512), True),  # 2,275,752; narrower + shorter
     "resnet.3": ((64, 128, 256, 512), True),  # 2,955,976; shorter time context
-    "resnet.4": ((96, 192, 384, 512), True),  # 4,625,544; wider + shorter
-    "resnet.5": ((112, 224, 448, 512), True),  # 5,606,440; wider + shorter
-    "resnet.6": ((128, 256, 512, 512), True),  # 6,686,152; wider + shorter
+    "resnet.4": ((80, 160, 320, 512), True),  # 3,743,464; wider + shorter
+    "resnet.5": ((96, 192, 384, 512), True),  # 4,625,544; wider + shorter
+    "resnet.6": ((64, 128, 256, 512), False),  # 4,922,056; timm resnet10t
+    "resnet.7": ((112, 224, 448, 512), True),  # 5,606,440; wider + shorter
+    "resnet.8": ((128, 256, 512, 512), True),  # 6,686,152; wider + shorter
+    "resnet.9": ((96, 192, 384, 512), False),  # 7,083,144; wider
 }
