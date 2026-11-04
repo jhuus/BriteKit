@@ -103,6 +103,10 @@ class TrainingConfig:
     use_class_weights: bool = False
     weight_exponent: float = 0.5  # Exponent to soften the class weights
 
+    loss_type: str = "bce"  # "bce" or multilabel "focal"
+    focal_alpha: float = 0.25  # Positive weight; negatives use 1 - alpha
+    focal_gamma: float = 2.0  # Focusing exponent
+
     pos_label_smoothing: float = 0.08  # Positive side of asymmetric label smoothing
     neg_label_smoothing: float = 0.01  # Negative side of asymmetric label smoothing
 

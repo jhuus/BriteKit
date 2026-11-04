@@ -133,6 +133,15 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         self._val_labels: List = []
 
         # Loss function
+        if self.cfg.train.loss_type not in ("bce", "focal"):
+            raise ValueError("loss_type must be bce or focal")
+        if self.cfg.train.loss_type == "focal" and not self.multi_label:
+            raise ValueError("focal loss requires multi_label=True")
+        if not 0 <= self.cfg.train.focal_alpha <= 1:
+            raise ValueError("focal_alpha must be between 0 and 1")
+        if not 0 <= self.cfg.train.focal_gamma < float("inf"):
+            raise ValueError("focal_gamma must be finite and nonnegative")
+
         if self.multi_label:
             self.loss_fn: Any = nn.BCEWithLogitsLoss(
                 weight=torch.ones(self.num_classes)
@@ -588,7 +597,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
                 raise ValueError("distillation_temperature must be greater than 0")
             softened_targets = self._soften_targets(teacher_labels, temperature)
             teacher_losses = self._loss_per_sample(
-                seg_logits / temperature, softened_targets
+                seg_logits / temperature, softened_targets, focal=False
             )
             teacher_losses *= temperature**2
             blended_losses = (1 - weight) * segment_losses + weight * teacher_losses
@@ -612,9 +621,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
                 frame_labels = fl.permute(0, 2, 1)  # (B, T, C)
             else:
                 frame_labels = seg_labels.unsqueeze(-1).expand(B, C, T).transpose(1, 2)
-            frame_losses = F.binary_cross_entropy_with_logits(
-                frame_logits.transpose(1, 2), frame_labels, reduction="none"
-            )
+            frame_losses = self._binary_loss(frame_logits.transpose(1, 2), frame_labels)
             frame_losses = frame_losses.mean(dim=(1, 2))
 
             if teacher_frame_labels is not None:
@@ -653,12 +660,25 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         target_logits = torch.logit(targets.clamp(eps, 1 - eps))
         return torch.sigmoid(target_logits / temperature)
 
-    def _loss_per_sample(self, logits, labels):
+    def _binary_loss(self, logits, labels, focal=True):
+        """Elementwise loss; smoothing is applied by training_step beforehand.
+
+        Focal loss uses p_t and alpha_t interpolated by the supplied targets,
+        including smoothed or mixed targets. Teacher distillation retains BCE.
+        """
+        losses = F.binary_cross_entropy_with_logits(logits, labels, reduction="none")
+        if focal and self.cfg.train.loss_type == "focal":
+            probabilities = logits.sigmoid()
+            pt = labels * probabilities + (1 - labels) * (1 - probabilities)
+            alpha = self.cfg.train.focal_alpha
+            alpha_t = labels * alpha + (1 - labels) * (1 - alpha)
+            losses = losses * alpha_t * (1 - pt).pow(self.cfg.train.focal_gamma)
+        return losses
+
+    def _loss_per_sample(self, logits, labels, focal=True):
         """Calculate classification loss while retaining the batch dimension."""
         if self.multi_label:
-            losses = F.binary_cross_entropy_with_logits(
-                logits, labels, reduction="none"
-            )
+            losses = self._binary_loss(logits, labels, focal=focal)
             if self.loss_fn.weight is not None:
                 losses = losses * self.loss_fn.weight.to(losses.device)
             return losses.mean(dim=1)
