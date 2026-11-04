@@ -2,6 +2,7 @@
 
 # Defer some imports to improve initialization performance.
 from copy import deepcopy
+from functools import partial
 import importlib.util
 import logging
 import os
@@ -197,7 +198,14 @@ class Predictor:
                     break
 
                 model_specs = specs
-                if getattr(self, "converts_linear", False):
+                preprocess = None
+                if self._use_device_conversion():
+                    preprocess = partial(
+                        self._prepare_linear_specs,
+                        model_index=i,
+                        audio_power=audio_power,
+                    )
+                elif getattr(self, "converts_linear", False):
                     settings = self.model_audio_settings[i]
                     key = (
                         settings["convert_to_db"],
@@ -213,6 +221,10 @@ class Predictor:
                 if self.ov:
                     segment_scores, frame_scores = self._get_openvino_scores_single(
                         model, model_specs
+                    )
+                elif preprocess is not None:
+                    segment_scores, frame_scores = model.predict(
+                        model_specs, self.device, preprocess=preprocess
                     )
                 else:
                     segment_scores, frame_scores = model.predict(
@@ -378,7 +390,9 @@ class Predictor:
                 settings = self.model_audio_settings[i]
                 specs, self.unnormalized_specs = self.audio.get_spectrograms(
                     start_times,
-                    convert_to_db=settings["convert_to_db"],
+                    convert_to_db=(
+                        settings["convert_to_db"] and not self._use_device_conversion()
+                    ),
                     top_db=settings["top_db"],
                     db_power=settings.get("db_power", 1.0),
                 )
@@ -391,10 +405,20 @@ class Predictor:
                 # maybe recording is too short given the increment
                 continue
 
-            specs = specs**self.cfg.infer.audio_power
+            device_conversion = self._use_device_conversion()
+            if not device_conversion:
+                specs = specs**self.cfg.infer.audio_power
             specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
 
-            if self.ov:
+            if device_conversion:
+                segment_scores, frame_scores = model.predict(
+                    specs,
+                    self.device,
+                    preprocess=lambda block: self._prepare_linear_specs(
+                        block, i, self.cfg.infer.audio_power
+                    ),
+                )
+            elif self.ov:
                 segment_scores, frame_scores = self._get_openvino_scores_single(
                     model, specs
                 )
@@ -984,18 +1008,27 @@ class Predictor:
             if hasattr(model, "set_config"):
                 model.set_config(self.cfg)
 
+    def _use_device_conversion(self):
+        return (
+            getattr(self, "converts_linear", False)
+            and not self.ov
+            and str(self.device).startswith("cuda")
+        )
+
     def _prepare_linear_specs(self, specs, model_index, audio_power=None):
-        from britekit.core.audio_util import convert_to_db
+        import torch
+        from britekit.core.audio_util import convert_to_db, convert_to_db_tensor
 
         settings = self.model_audio_settings[model_index]
         if settings["convert_to_db"]:
-            specs = convert_to_db(
+            convert = convert_to_db_tensor if torch.is_tensor(specs) else convert_to_db
+            specs = convert(
                 specs,
                 settings["power"],
                 settings["top_db"],
                 db_power=settings.get("db_power", 1.0),
             )
-        return specs ** (1.0 if audio_power is None else audio_power)
+        return specs if audio_power is None or audio_power == 1 else specs**audio_power
 
     def _get_openvino_scores(self, specs, max_models=None):
         import numpy as np

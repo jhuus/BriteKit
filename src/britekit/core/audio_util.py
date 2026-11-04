@@ -63,3 +63,29 @@ def normalize_db(db, db_power=1.0):
     span = shifted.max(axis=(-2, -1), keepdims=True)
     normalized = shifted / np.maximum(span, np.finfo(np.float32).tiny)
     return normalized if db_power == 1 else normalized**db_power
+
+
+def convert_to_db_tensor(specs, power=1.0, top_db=80.0, db_power=1.0):
+    """Normalize trusted float32 linear inference features on their torch device.
+
+    Reduce over the final two axes, matching convert_to_db. Inputs must be
+    finite and nonnegative; host-side value checks would synchronize CUDA.
+    The source tensor is never modified.
+    """
+    import torch
+
+    validate_db_power(db_power)
+    if power not in (1.0, 2.0):
+        raise ValueError("convert_to_db requires audio.power to be 1 or 2")
+    if not np.isfinite(top_db) or top_db <= 0:
+        raise ValueError("convert_to_db requires a finite positive top_db")
+    tiny = torch.finfo(torch.float32).tiny
+    peak = specs.amax(dim=(-2, -1), keepdim=True)
+    relative = specs / peak.clamp_min(tiny)
+    multiplier = 20.0 / power
+    db = relative.clamp_min(10.0 ** (-top_db / multiplier)).log10_()
+    db.mul_(multiplier)
+    db = torch.where(peak > 0, db, -top_db)
+    db.sub_(db.amin(dim=(-2, -1), keepdim=True))
+    db.div_(db.amax(dim=(-2, -1), keepdim=True).clamp_min(tiny))
+    return db if db_power == 1 else db.pow_(db_power)

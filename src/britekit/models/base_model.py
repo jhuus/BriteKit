@@ -436,9 +436,10 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
     # Inference & embeddings
     # ==================================================================
 
-    def predict(self, x, device=None):
+    def predict(self, x, device=None, preprocess=None):
         """
         Memory-safe, block-wise inference with a single AMP toggle.
+        preprocess runs per float32 block on device, before autocast.
         Config:
         - infer.block_size: int (None/0 -> whole batch)
         - infer.autocast: bool (use CUDA autocast if on GPU)
@@ -478,6 +479,8 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         with torch.inference_mode():
             for x_block in self._iter_blocks(x, block_size):
                 xb = self._ensure_tensor(x_block, device)
+                if preprocess is not None:
+                    xb = preprocess(xb)
 
                 # Heavy ops under autocast (if enabled)
                 with amp_ctx():

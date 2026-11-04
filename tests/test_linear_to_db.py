@@ -140,8 +140,24 @@ def test_mixed_ensemble_rejects_incompatible_linear_features():
         p._apply_model_config()
 
 
-def test_mixed_overlapping_inference_converts_requested_windows(tmp_path):
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_mixed_overlapping_inference_converts_requested_windows(tmp_path, device):
+    import torch
+
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA unavailable")
     p = mixed_predictor()
+    p.device = device
+    if device == "cuda":
+        for model in p.models:
+            original_predict = model.predict
+
+            def predict(specs, device, preprocess=None, original=original_predict):
+                assert preprocess is not None
+                specs = preprocess(torch.from_numpy(specs).to(device)).cpu().numpy()
+                return original(specs, device)
+
+            model.predict = predict
     p.cfg.audio = audio_fixture().cfg.audio
     p.audio = audio_fixture()
     p.audio.load = lambda path: None
@@ -329,3 +345,60 @@ def test_overlapping_inference_uses_per_checkpoint_db_power(tmp_path):
         np.testing.assert_allclose(
             model.seen[:, 0], convert_to_db(linear) ** exponent, atol=1e-6
         )
+
+
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+@pytest.mark.parametrize("power", [1, 2])
+@pytest.mark.parametrize("db_power", [0.7, 1, 1.3])
+def test_tensor_conversion_matches_numpy(device, power, db_power):
+    import torch
+    from britekit.core.audio_util import convert_to_db_tensor
+
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA unavailable")
+    x = np.random.default_rng(42).random((5, 1, 16, 32), dtype=np.float32)
+    x[0] = 0
+    x[1] = 0.3
+    x[2, :, :8] = 0
+    tensor = torch.from_numpy(x.copy()).to(device)
+    result = convert_to_db_tensor(tensor, power, 60, db_power)
+    assert result.device == tensor.device
+    np.testing.assert_allclose(
+        result.cpu(), convert_to_db(x, power, 60, db_power=db_power), atol=1e-6
+    )
+    np.testing.assert_array_equal(tensor.cpu(), x)
+
+
+def test_cuda_prediction_converts_per_block():
+    import torch
+    from britekit.models.base_model import BaseModel
+
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA unavailable")
+    p = mixed_predictor()
+    p.device = "cuda"
+    p.cfg.infer.block_size = 2
+    x = np.random.default_rng(42).random((5, 1, 8, 16), dtype=np.float32)
+
+    class BlockModel:
+        predict = BaseModel.predict
+        _iter_blocks = BaseModel._iter_blocks
+        _ensure_tensor = BaseModel._ensure_tensor
+        multi_label = True
+
+        def __init__(self):
+            self.cfg = p.cfg
+            self.seen = []
+
+        def __call__(self, xb):
+            assert xb.device.type == "cuda"
+            assert xb.dtype == torch.float32
+            self.seen.append(xb.cpu().numpy())
+            return xb.mean(dim=(2, 3)), None
+
+    p.models = [BlockModel(), BlockModel()]
+    p.get_block_scores(x, audio_power=0.7)
+    for i, model in enumerate(p.models):
+        assert [len(block) for block in model.seen] == [2, 2, 1]
+        expected = convert_to_db(x) if i else x
+        np.testing.assert_allclose(np.concatenate(model.seen), expected**0.7, atol=1e-6)
