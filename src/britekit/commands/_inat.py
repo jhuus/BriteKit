@@ -2,41 +2,85 @@
 
 # File name starts with _ to keep it out of typeahead for API users.
 # Defer some imports to improve --help performance.
+import csv
 import logging
 import os
+import tempfile
+import threading
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from pathlib import Path
 from typing import Any, Dict, Optional
+from urllib.parse import urlsplit
 
 import click
 
 from britekit.core import util
+from britekit.core.http_util import create_download_session, is_audio_header
 
 
-def _download(url: Optional[str], output_dir: str, no_prefix: bool) -> Optional[str]:
+def _paths(
+    url: Optional[str], output_dir: str, no_prefix: bool
+) -> Optional[tuple[str, Path, Path]]:
+    if not url or not url.strip():
+        return None
+    filename = urlsplit(url).path.rsplit("/", 1)[-1]
+    base, _ = os.path.splitext(filename)
+    if not base or filename in (".", ".."):
+        return None
+    prefix = "" if no_prefix else "N"
+    return (
+        base,
+        Path(output_dir) / f"{prefix}{filename}",
+        Path(output_dir) / f"{prefix}{base}.mp3",
+    )
+
+
+def _valid_audio(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    with path.open("rb") as audio:
+        return is_audio_header(audio.read(12))
+
+
+def _download(
+    url: Optional[str], output_dir: str, no_prefix: bool, session=None
+) -> Optional[str]:
     import requests
 
-    if url is None or len(url.strip()) == 0:
+    paths = _paths(url, output_dir, no_prefix)
+    if paths is None:
         return None
-
-    tokens = url.split("?")
-    tokens2 = tokens[0].split("/")
-    filename = tokens2[-1]
-
-    base, _ = os.path.splitext(filename)
-
-    # check mp3_path too in case file was converted to mp3
-    if no_prefix:
-        output_path = f"{output_dir}/{filename}"
-        mp3_path = f"{output_dir}/{base}.mp3"
-    else:
-        output_path = f"{output_dir}/N{filename}"
-        mp3_path = f"{output_dir}/N{base}.mp3"
-
-    if not os.path.exists(output_path) and not os.path.exists(mp3_path):
+    base, output_path, mp3_path = paths
+    # Also recognize a previously downloaded file converted to MP3.
+    if _valid_audio(output_path) or _valid_audio(mp3_path):
+        return base
+    own_session = session is None
+    if own_session:
+        session = create_download_session()
+    temp_path = None
+    try:
         logging.info(f"Downloading {output_path}")
-        r = requests.get(url, allow_redirects=True)
-        open(output_path, "wb").write(r.content)
-
-    return base
+        with session.get(url, allow_redirects=True, timeout=(10, 60)) as response:
+            response.raise_for_status()
+            content = response.content
+        if not is_audio_header(content[:12]):
+            logging.error(f"Invalid audio response for {output_path.name}")
+            return None
+        with tempfile.NamedTemporaryFile(
+            dir=output_dir, suffix=".part", delete=False
+        ) as audio:
+            temp_path = Path(audio.name)
+            audio.write(content)
+        os.replace(temp_path, output_path)
+        return base
+    except (requests.RequestException, OSError) as exc:
+        logging.error(f"Download {output_path.name} failed ({type(exc).__name__})")
+        return None
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+        if own_session:
+            session.close()
 
 
 def inat(
@@ -45,6 +89,7 @@ def inat(
     max_downloads: int = 500,
     no_prefix: bool = False,
     include_unverified: bool = False,
+    workers: int = 4,
 ) -> None:
     """
     Download audio recordings from iNaturalist observations.
@@ -53,34 +98,42 @@ def inat(
     audio recordings. It downloads the audio files and creates a CSV file mapping the
     downloaded files to their iNaturalist observation URLs for reference.
 
-    Only observations with "research grade" quality are downloaded (excluding "needs_id").
+    Observations with "needs_id" quality are excluded unless explicitly requested.
     The command respects the maximum download limit and can optionally add filename prefixes.
 
     Args:
     - name (str): Required species name to search for (e.g., "Common Yellowthroat", "Geothlypis trichas").
     - output_dir (str): Required directory where downloaded recordings will be saved.
-    - max_downloads (int): Maximum number of recordings to download. Default is 500.
+    - max_downloads (int): Maximum total matching recordings, including existing valid files. Default is 500; zero or negative means unlimited.
     - no_prefix (bool): If True, skip adding "N" prefix to filenames. Default adds prefix.
     - include_unverified (bool): If true, include recordings that have not been verified. By default they are excluded.
+    - workers (int): Concurrent audio downloads. Default is 4; use 1 for sequential downloads.
     """
     import pyinaturalist
 
+    if workers < 1:
+        raise ValueError("workers must be at least 1")
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     response: Dict[str, Any] = pyinaturalist.get_observations(
-        taxon_name=f"{name}", sounds=True, page="all"
+        taxon_name=f"{name}", sounds=True, page="all", per_page=200
     )
 
-    id_map: Dict[str, int] = {}  # map media IDs to observation IDs
+    # Keep references from previous runs, including recordings converted to MP3.
+    csv_path = Path(output_dir) / "inat.csv"
+    id_map: Dict[str, str] = {}
+    if csv_path.exists():
+        with csv_path.open(newline="") as csv_file:
+            id_map.update(
+                (row["Media ID"], row["URL"]) for row in csv.DictReader(csv_file)
+            )
     logging.info(f"Response contains {len(response['results'])} results")
-    num_downloads = 0
+    candidates: Dict[str, tuple[str, int]] = {}
     for i, result in enumerate(response["results"]):
-        if num_downloads >= max_downloads:
-            break
-
         for sound in result["sounds"]:
-            if sound["file_url"] is None:
+            url = sound["file_url"]
+            if not url:
                 logging.info(f"Skipping {sound['file_url']} (no audio available)")
                 continue
 
@@ -95,23 +148,85 @@ def inat(
                     )
                     continue
 
-            logging.info(f"Downloading {sound['file_url']}")
-            media_id = _download(sound["file_url"], output_dir, no_prefix)
-            if media_id is not None and result["id"] is not None:
-                num_downloads += 1
-                id_map[media_id] = result["id"]
+            paths = _paths(url, output_dir, no_prefix)
+            if paths is not None and result["id"] is not None:
+                candidates.setdefault(paths[0], (url, result["id"]))
+
+    existing = 0
+    todo = []
+    for media_id, (url, observation_id) in candidates.items():
+        paths = _paths(url, output_dir, no_prefix)
+        assert paths is not None  # Candidates were validated above.
+        _, output_path, mp3_path = paths
+        if _valid_audio(output_path) or _valid_audio(mp3_path):
+            existing += 1
+            id_map[media_id] = (
+                f"https://www.inaturalist.org/observations/{observation_id}"
+            )
+        else:
+            todo.append((url, observation_id))
+
+    local = threading.local()
+    sessions = []
+    session_lock = threading.Lock()
+
+    def download(url: str) -> Optional[str]:
+        if not hasattr(local, "session"):
+            local.session = create_download_session()
+            with session_lock:
+                sessions.append(local.session)
+        return _download(url, output_dir, no_prefix, session=local.session)
+
+    remaining = iter(todo)
+    limit = max(0, max_downloads - existing) if max_downloads > 0 else None
+    num_downloads = 0
+    try:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            pending: Dict[Future[Optional[str]], int] = {}
+            exhausted = False
+            while pending or not exhausted:
+                while len(pending) < workers and (
+                    limit is None or num_downloads + len(pending) < limit
+                ):
+                    item = next(remaining, None)
+                    if item is None:
+                        exhausted = True
+                        break
+                    url, observation_id = item
+                    pending[pool.submit(download, url)] = observation_id
+                if not pending:
+                    break
+                finished, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for future in finished:
+                    observation_id = pending.pop(future)
+                    downloaded_id = future.result()
+                    if downloaded_id is not None:
+                        num_downloads += 1
+                        id_map[downloaded_id] = (
+                            f"https://www.inaturalist.org/observations/{observation_id}"
+                        )
+    finally:
+        for session in sessions:
+            session.close()
 
     logging.info(f"Downloaded {num_downloads} recordings")
-    if num_downloads == 0:
+    if not id_map:
         return
 
-    csv_path = os.path.join(output_dir, "inat.csv")
-    with open(csv_path, "w") as csv_file:
-        csv_file.write("Media ID,URL\n")
-        for key in sorted(id_map.keys()):
-            csv_file.write(
-                f"{key},https://www.inaturalist.org/observations/{id_map[key]}\n"
-            )
+    # Replace the mapping atomically so a failed write cannot truncate prior references.
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", newline="", dir=output_dir, suffix=".part", delete=False
+        ) as csv_temp:
+            temp_path = Path(csv_temp.name)
+            writer = csv.writer(csv_temp)
+            writer.writerow(["Media ID", "URL"])
+            writer.writerows((key, id_map[key]) for key in sorted(id_map))
+        os.replace(temp_path, csv_path)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 @click.command(
@@ -133,7 +248,14 @@ def inat(
     "max_downloads",
     type=int,
     default=500,
-    help="Maximum number of recordings to download. Default = 500.",
+    help="Maximum total matching recordings, including existing valid files. Default = 500; <=0 is unlimited.",
+)
+@click.option(
+    "--workers",
+    type=click.IntRange(min=1),
+    default=4,
+    show_default=True,
+    help="Concurrent audio downloads.",
 )
 @click.option(
     "--noprefix",
@@ -153,6 +275,7 @@ def _inat_cmd(
     max_downloads: int,
     no_prefix: bool,
     include_unverified: bool,
+    workers: int,
 ) -> None:
     util.set_logging()
-    inat(name, output_dir, max_downloads, no_prefix, include_unverified)
+    inat(name, output_dir, max_downloads, no_prefix, include_unverified, workers)
