@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import random
 
 import click
 
@@ -11,6 +12,7 @@ def copy_class(
     src_db_path: str,
     dest_db_path: str,
     class_name: str,
+    max_segments: int | None = None,
 ) -> None:
     """
     Copy a class and all its associated records from one training database to another.
@@ -20,12 +22,19 @@ def copy_class(
     in the destination database (matched by name or filename+source) are reused rather than
     duplicated. The class must not already exist in the destination database.
 
+    When a limit is set, only the selected segments and their associated
+    recordings are copied.
+
     Args:
     - src_db_path (str): Path to the source training database.
     - dest_db_path (str): Path to the destination training database.
     - class_name (str): Name of the class to copy.
+    - max_segments (int | None): Maximum number of randomly selected segments.
     """
     from britekit.training_db.training_db import TrainingDatabase
+
+    if max_segments is not None and max_segments < 0:
+        raise ValueError("max_segments must be non-negative")
 
     with TrainingDatabase(src_db_path) as src, TrainingDatabase(dest_db_path) as dest:
         # Validate class exists in source and not in destination
@@ -70,6 +79,13 @@ def copy_class(
 
         # Copy recordings: build src recording ID -> dest recording ID map
         src_recordings = src.get_recording_by_class(class_name)
+        src_segments = src.get_segment_by_class(class_name)
+        if max_segments is not None and max_segments < len(src_segments):
+            src_segments = random.sample(src_segments, max_segments)
+            selected_recording_ids = {seg.recording_id for seg in src_segments}
+            src_recordings = [
+                rec for rec in src_recordings if rec.id in selected_recording_ids
+            ]
         recording_id_map: dict[int, int] = {}
 
         for rec in src_recordings:
@@ -95,7 +111,6 @@ def copy_class(
             recording_id_map[rec.id] = dest_rec_id
 
         # Copy segments, spectrograms, and SegmentClass links
-        src_segments = src.get_segment_by_class(class_name)
         num_segments = 0
         num_specvalues = 0
 
@@ -158,10 +173,17 @@ def copy_class(
     help="Path to the destination training database.",
 )
 @click.option("--name", "class_name", required=True, help="Name of the class to copy.")
+@click.option(
+    "--max",
+    "max_segments",
+    type=click.IntRange(min=0),
+    help="Randomly select up to this many segments to copy.",
+)
 def _copy_class_cmd(
     src_db_path: str,
     dest_db_path: str,
     class_name: str,
+    max_segments: int | None,
 ) -> None:
     util.set_logging()
-    copy_class(src_db_path, dest_db_path, class_name)
+    copy_class(src_db_path, dest_db_path, class_name, max_segments)
