@@ -555,10 +555,19 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
     # Utilities & helpers
     # ==================================================================
 
+    _backbone_frozen = False
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        if self._backbone_frozen and self.backbone is not None:
+            self.backbone.eval()
+        return self
+
     def freeze_backbone(self):
-        if self.backbone:
-            for _, p in self.backbone.named_parameters():
-                p.requires_grad = False
+        if self.backbone is not None:
+            self.backbone.requires_grad_(False)
+            self.backbone.eval()
+            self._backbone_frozen = True
 
     def set_class_weights(self, class_weights):
         """Set class weights on the loss function."""

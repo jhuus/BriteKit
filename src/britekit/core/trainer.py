@@ -128,7 +128,9 @@ class Trainer:
 
             if self.cfg.train.init_backbone_ckpt_path:
                 model_loader.initialize_backbone(
-                    model, self.cfg.train.init_backbone_ckpt_path
+                    model,
+                    self.cfg.train.init_backbone_ckpt_path,
+                    allow_class_change=self.cfg.train.freeze_backbone,
                 )
             if self.cfg.train.freeze_backbone:
                 model.freeze_backbone()

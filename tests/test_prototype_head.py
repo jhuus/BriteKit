@@ -161,11 +161,15 @@ def test_initialize_backbone_preserves_fresh_head(config, tmp_path):
     for key, value in fresh_head.items():
         torch.testing.assert_close(value, target.head.state_dict()[key])
     target.freeze_backbone()
+    target.train()
+    assert not target.backbone.training
+    assert target.head.training
     assert not any(p.requires_grad for p in target.backbone.parameters())
     assert all(p.requires_grad for p in target.head.parameters())
     target.train_class_codes.reverse()
     with pytest.raises(ModelError, match="train_class_codes"):
         model_loader.initialize_backbone(target, str(path))
+    model_loader.initialize_backbone(target, str(path), allow_class_change=True)
     target.train_class_codes.reverse()
     config.audio.max_freq = 7000
     with pytest.raises(ModelError, match="audio.max_freq"):

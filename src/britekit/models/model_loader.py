@@ -167,18 +167,23 @@ def load_from_checkpoint(
         raise ModelError("Checkpoint file has no model_type information.")
 
 
-def initialize_backbone(model, checkpoint_path: str) -> None:
+def initialize_backbone(
+    model, checkpoint_path: str, *, allow_class_change: bool = False
+) -> None:
     """Copy compatible backbone weights only; keep the new head and run config.
 
-    Species ordering is checked even though the head is not copied, making
-    accidental changes to the baseline experiment explicit. Built-in classifier
-    weights in a timm source backbone may be discarded.
+    By default, class ordering is checked for comparisons against a baseline.
+    Set allow_class_change when transferring to a different class list.
+    Built-in classifier weights in a timm source backbone may be discarded.
     """
     import torch
 
     ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     hp = ckpt["hyper_parameters"]
-    for key in ("model_type", "train_class_names", "train_class_codes"):
+    keys: tuple[str, ...] = ("model_type",)
+    if not allow_class_change:
+        keys += ("train_class_names", "train_class_codes")
+    for key in keys:
         if hp.get(key) != getattr(model, key):
             raise ModelError(f"Backbone initialization requires matching {key}")
     # Reusing weights with a different frontend would confound this experiment.
