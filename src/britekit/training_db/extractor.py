@@ -6,6 +6,9 @@ import os
 import random
 import re
 import shutil
+from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
+from threading import local
 from pathlib import Path
 from typing import Optional
 
@@ -114,88 +117,108 @@ class Extractor:
 
         return offsets_per_file
 
-    def _insert_by_dict(self, recording_dir, destination_dir, offsets_per_file):
-        """
-        Given a recording directory and a dict from recording stems to offsets,
-        insert the corresponding spectrograms.
-        """
-        num_inserted = 0
-        recording_paths = util.get_audio_files(recording_dir)
-        for recording_dir in recording_paths:
-            filename = Path(recording_dir).stem
-            if filename not in offsets_per_file:
-                filename = Path(recording_dir).name
-                if filename not in offsets_per_file:
-                    continue
-
+    def _matching_recordings(self, directory, destination_dir, offsets_per_file):
+        for source in util.get_audio_files(directory):
+            path = Path(source)
+            offsets = offsets_per_file.get(path.stem, offsets_per_file.get(path.name))
+            if offsets is None:
+                continue
+            target = source
             if destination_dir is not None:
-                dest_path = os.path.join(destination_dir, Path(recording_dir).name)
-                if not os.path.exists(dest_path):
-                    shutil.copy(recording_dir, dest_path)
+                target = os.path.join(destination_dir, path.name)
+                if not os.path.exists(target):
+                    shutil.copy(source, target)
+            yield source, target, offsets
 
-                recording_path = dest_path
-            else:
-                recording_path = recording_dir
+    def _insert_by_dict(
+        self, recording_dir, destination_dir, offsets_per_file, workers=1
+    ):
+        """Prepare matching recordings and write them in input order."""
+        jobs = self._matching_recordings(
+            recording_dir, destination_dir, offsets_per_file
+        )
+        if workers == 1:
+            total = 0
+            for source, target, offsets in jobs:
+                logging.info(f"Processing {target}")
+                try:
+                    self.audio.load(source)
+                except Exception as e:
+                    logging.error(f"Caught exception: {e}")
+                    continue
+                total += self.insert_spectrograms(target, offsets)
+            return total
 
-            logging.info(f"Processing {recording_path}")
+        worker_state = local()
+
+        def prepare(job):
+            source, target, offsets = job
+            if not hasattr(worker_state, "audio"):
+                worker_state.audio = audio.Audio()
+            worker_audio = worker_state.audio
+            logging.info(f"Processing {target}")
             try:
-                self.audio.load(recording_dir)
+                worker_audio.load(source)
             except Exception as e:
                 logging.error(f"Caught exception: {e}")
-                continue
-
-            num_inserted += self.insert_spectrograms(
-                recording_path, offsets_per_file[filename]
+                return None
+            return (
+                target,
+                worker_audio.seconds(),
+                self._prepare_spectrograms(worker_audio, offsets),
             )
 
-        return num_inserted
+        total = 0
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            # Bound the queued work and keep SQLite writes on the calling thread.
+            while batch := list(islice(jobs, workers * 2)):
+                for result in pool.map(prepare, batch):
+                    if result is not None:
+                        total += self._write_spectrograms(*result)
+        return total
+
+    def _prepare_spectrograms(self, worker_audio, offsets):
+        specs, _ = worker_audio.get_spectrograms(
+            offsets, spec_duration=self.cfg.audio.spec_duration, convert_to_db=False
+        )
+        if specs is None:
+            return []
+        return [
+            (offset, util.compress_spectrogram(spec, bits=self.cfg.audio.spec_bits))
+            for offset, spec in zip(offsets, specs)
+        ]
 
     def insert_spectrograms(self, recording_path, offsets):
-        """
-        Insert a spectrogram at each of the given offsets of the specified file.
+        """Extract and insert spectrograms at the specified recording offsets."""
+        return self._write_spectrograms(
+            recording_path,
+            self.audio.seconds(),
+            self._prepare_spectrograms(self.audio, offsets),
+        )
 
-        Args:
-        - recording_path (str): Path to audio recording.
-        - offsets (list[float]): List of offsets, where each represents number of seconds to start of spectrogram.
-
-        Returns:
-            Number of spectrograms inserted.
-        """
-
-        seconds = self.audio.seconds()
+    def _write_spectrograms(self, recording_path, seconds, prepared):
         filename = Path(recording_path).name
         source_id = self.provider.source_id(filename, self.src_name)
         specgroup_id = self.provider.specgroup_id(self.spec_group)
         recording_id = self.provider.recording_id(
             self.class_name, filename, recording_path, source_id, seconds
         )
+        existing = self.segments.setdefault(recording_id, set())
+        pending_offsets = set()
+        segments = []
+        for offset, value in prepared:
+            check_offset = round(offset, 0)
+            if check_offset in existing or check_offset in pending_offsets:
+                continue
+            pending_offsets.add(check_offset)
+            segments.append((offset, value))
 
-        num_inserted = 0
-        specs, _ = self.audio.get_spectrograms(
-            offsets, spec_duration=self.cfg.audio.spec_duration, convert_to_db=False
-        )
-        if specs is None:
-            return 0
-
-        for i in range(len(specs)):
-            # check for duplicate before inserting
-            if recording_id not in self.segments:
-                self.segments[recording_id] = set()
-
-            check_offset = round(offsets[i], 0)
-            if check_offset in self.segments[recording_id]:
-                continue  # skip if another one is within a second
-
-            num_inserted += 1
-            self.segments[recording_id].add(round(check_offset))
-            compressed = util.compress_spectrogram(
-                specs[i], bits=self.cfg.audio.spec_bits
+        if segments:
+            self.db.insert_extracted_segments(
+                recording_id, self.class_id, specgroup_id, segments
             )
-            segment_id = self.db.insert_segment(recording_id, offsets[i])
-            self.db.insert_segment_class(segment_id, self.class_id)
-            self.db.insert_specvalue(compressed, specgroup_id, segment_id)
-
-        return num_inserted
+            existing.update(pending_offsets)
+        return len(segments)
 
     def extract_all(
         self,
@@ -265,7 +288,12 @@ class Extractor:
         return num_inserted
 
     def extract_by_csv(
-        self, rec_dir: str, csv_path: str, dest_dir: Optional[str] = None
+        self,
+        rec_dir: str,
+        csv_path: str,
+        dest_dir: Optional[str] = None,
+        *,
+        workers: int = 1,
     ):
         """
         Extract spectrograms that match names of spectrogram images in a given directory.
@@ -281,6 +309,8 @@ class Extractor:
         """
         import pandas as pd
 
+        if workers < 1:
+            raise ValueError("workers must be at least 1")
         df = pd.read_csv(csv_path)
         offsets_per_file: dict[str, list] = {}
         for i, row in df.iterrows():
@@ -290,7 +320,7 @@ class Extractor:
 
             offsets_per_file[recording].append(row["offset"])
 
-        return self._insert_by_dict(rec_dir, dest_dir, offsets_per_file)
+        return self._insert_by_dict(rec_dir, dest_dir, offsets_per_file, workers)
 
     def extract_by_image(
         self, rec_dir: str, spec_dir: str, dest_dir: Optional[str] = None

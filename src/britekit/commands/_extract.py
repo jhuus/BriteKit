@@ -192,6 +192,9 @@ def extract_by_csv(
     dest_dir: Optional[str] = None,
     src_name: Optional[str] = None,
     spec_group: Optional[str] = None,
+    *,
+    optimize: bool = True,
+    workers: int = 1,
 ) -> None:
     """
     Extract spectrograms that correspond to rows in a CSV file.
@@ -215,10 +218,14 @@ def extract_by_csv(
     - dest_dir (str, optional): If specified, copy used recordings to this directory.
     - src_name (str, optional): Source name for the recordings (e.g., "Xeno-Canto"). Defaults to "default".
     - spec_group (str, optional): Spectrogram group name for organizing extractions. Defaults to "default".
+    - optimize (bool): Run database optimization after extraction. Defaults to True.
+    - workers (int): Number of parallel audio preparation workers. Defaults to 1.
     """
     from britekit.training_db.extractor import Extractor
     from britekit.training_db.training_db import TrainingDatabase
 
+    if workers < 1:
+        raise ValueError("workers must be at least 1")
     cfg = get_config(cfg_path)
     if db_path is not None:
         cfg.train.train_db = db_path
@@ -227,8 +234,9 @@ def extract_by_csv(
         extractor = Extractor(
             db, class_name, class_code, cat_name, src_name, spec_group=spec_group
         )
-        count = extractor.extract_by_csv(rec_dir, csv_path, dest_dir)
-        db.optimize()
+        count = extractor.extract_by_csv(rec_dir, csv_path, dest_dir, workers=workers)
+        if optimize:
+            db.optimize()
         logging.info(f"Inserted {count} spectrograms")
 
 

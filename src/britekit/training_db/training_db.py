@@ -1163,6 +1163,8 @@ class TrainingDatabase:
         self,
         recording_id: int,
         offset: float,
+        *,
+        commit: bool = True,
     ):
         """
         Insert a Segment record.
@@ -1178,10 +1180,21 @@ class TrainingDatabase:
         try:
             sql = "INSERT INTO Segment (RecordingID, Offset, InsertedDate) Values (?, ?, ?)"
             self.cursor.execute(sql, (recording_id, offset, self.today))
-            self.conn.commit()
+            if commit:
+                self.conn.commit()
             return self.cursor.lastrowid
         except sqlite3.Error as e:
             raise DatabaseError(f"Error in TrainingDatabase::insert_segment: {e}")
+
+    def insert_extracted_segments(
+        self, recording_id, class_id, spec_group_id, segments
+    ):
+        """Insert a recording's (offset, spectrogram) pairs atomically."""
+        with self.conn:
+            for offset, value in segments:
+                segment_id = self.insert_segment(recording_id, offset, commit=False)
+                self.insert_segment_class(segment_id, class_id, commit=False)
+                self.insert_specvalue(value, spec_group_id, segment_id, commit=False)
 
     def delete_segment(self, filters: Optional[dict] = None):
         """
@@ -1447,7 +1460,9 @@ class TrainingDatabase:
                 f"Error in TrainingDatabase::get_segment_class_count: {e}"
             )
 
-    def insert_segment_class(self, segment_id: int, class_id: int):
+    def insert_segment_class(
+        self, segment_id: int, class_id: int, *, commit: bool = True
+    ):
         """
         Insert a SegmentClass record, to identify a segment as containing a sound of the class.
         Spectrograms can contain sounds of multiple classes, represented by multiple SegmentClass
@@ -1463,7 +1478,8 @@ class TrainingDatabase:
         try:
             sql = "INSERT INTO SegmentClass (SegmentID, ClassID) Values (?, ?)"
             self.cursor.execute(sql, (segment_id, class_id))
-            self.conn.commit()
+            if commit:
+                self.conn.commit()
             return self.cursor.lastrowid
         except sqlite3.Error as e:
             raise DatabaseError(f"Error in TrainingDatabase::insert_segment_class: {e}")
@@ -1592,6 +1608,8 @@ class TrainingDatabase:
         value: bytes,
         spec_group_id: int,
         segment_id: int,
+        *,
+        commit: bool = True,
     ):
         """
         Insert a SpecValue record.
@@ -1610,7 +1628,8 @@ class TrainingDatabase:
                 "INSERT INTO SpecValue (Value, SpecGroupID, SegmentID) Values (?, ?, ?)"
             )
             self.cursor.execute(sql, (value, spec_group_id, segment_id))
-            self.conn.commit()
+            if commit:
+                self.conn.commit()
             return self.cursor.lastrowid
         except sqlite3.Error as e:
             raise DatabaseError(f"Error in TrainingDatabase::insert_specvalue: {e}")
