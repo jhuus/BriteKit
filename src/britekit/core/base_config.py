@@ -65,6 +65,9 @@ class TrainingConfig:
     pretrained: bool = False  # Use pretrained weights (applies to timm models)
     load_ckpt_path: Optional[str] = None  # For transfer learning or fine-tuning
     freeze_backbone: bool = False  # Option when transfer learning
+    backbone_trainable_stages: Optional[int] = (
+        None  # Train only the last N BKNet stages
+    )
 
     # General training parameters
 
@@ -72,7 +75,8 @@ class TrainingConfig:
     multi_label: bool = True
     deterministic: bool = False  # Enable deterministic training for reproducibility
     seed: Optional[int] = None  # Random seed for reproducibility; None uses random seed
-    learning_rate: float = 0.001  # Base learning rate
+    learning_rate: float = 0.001  # Base learning rate, also used for the head
+    backbone_learning_rate: Optional[float] = None  # Override for trainable backbone
     batch_size: int = 64  # Mini-batch size
     shuffle: bool = True  # Shuffle data during training?
     num_epochs: int = 10  # Number of epochs

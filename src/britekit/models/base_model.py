@@ -322,13 +322,13 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
             p_max = (p * m).amax(dim=-1)
             loss += self.cfg.train.offpeak_weight * (p_sum - p_max).clamp_min(0).mean()
 
-        self.log(
-            "lr",
-            get_learning_rate(self.optimizer),
-            on_step=True,
-            on_epoch=False,
-            prog_bar=False,
-        )
+        learning_rate = get_learning_rate(self.optimizer)
+        if isinstance(learning_rate, list):
+            for index, group in enumerate(self.optimizer.param_groups):
+                name = group.get("name", index)
+                self.log(f"lr/{name}", group["lr"], on_step=True, on_epoch=False)
+        else:
+            self.log("lr", learning_rate, on_step=True, on_epoch=False)
         self.log("loss", loss, on_step=True, on_epoch=False, prog_bar=True)
         return loss
 
@@ -402,7 +402,27 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         if cfg.opt_beta1 is not None:
             kwargs["betas"] = (cfg.opt_beta1, cfg.opt_beta2)
 
-        self.optimizer = create_optimizer_v2(self, cfg.optimizer, **kwargs)
+        parameters: Any = self
+        if cfg.backbone_learning_rate is not None and self.backbone is not None:
+            if isinstance(self.head, nn.Identity):
+                raise ValueError("backbone_learning_rate requires a separate head")
+            backbone = [p for p in self.backbone.parameters() if p.requires_grad]
+            backbone_ids = {id(p) for p in backbone}
+            head = [
+                p
+                for p in self.parameters()
+                if p.requires_grad and id(p) not in backbone_ids
+            ]
+            parameters = [
+                {"params": params, "lr": lr, "name": name}
+                for name, params, lr in (
+                    ("head", head, cfg.learning_rate),
+                    ("backbone", backbone, cfg.backbone_learning_rate),
+                )
+                if params
+            ]
+
+        self.optimizer = create_optimizer_v2(parameters, cfg.optimizer, **kwargs)
 
         total_steps = (
             self.trainer.estimated_stepping_batches
@@ -555,19 +575,23 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
     # Utilities & helpers
     # ==================================================================
 
-    _backbone_frozen = False
+    _frozen_backbone_modules: tuple[nn.Module, ...] = ()
 
     def train(self, mode: bool = True):
         super().train(mode)
-        if self._backbone_frozen and self.backbone is not None:
-            self.backbone.eval()
+        for module in self._frozen_backbone_modules:
+            module.eval()
         return self
+
+    def _freeze_backbone_modules(self, *modules: nn.Module):
+        for module in modules:
+            module.requires_grad_(False)
+            module.eval()
+        self._frozen_backbone_modules += modules
 
     def freeze_backbone(self):
         if self.backbone is not None:
-            self.backbone.requires_grad_(False)
-            self.backbone.eval()
-            self._backbone_frozen = True
+            self._freeze_backbone_modules(self.backbone)
 
     def set_class_weights(self, class_weights):
         """Set class weights on the loss function."""

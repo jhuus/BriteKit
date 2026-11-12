@@ -108,6 +108,19 @@ class BKNetModel(BaseModel):
         self.backbone.fc = cast(nn.Linear, nn.Identity())
         self.backbone.flatten = nn.Identity()
 
+    def freeze_backbone_except_last_stages(self, count: int) -> None:
+        """Freeze the stem, earlier stages, and final projection."""
+        backbone = self.backbone
+        assert isinstance(backbone, BKNetBaseModel)
+        stage_count = len(backbone.stages)
+        if not 1 <= count <= stage_count:
+            raise ValueError(
+                f"backbone_trainable_stages must be between 1 and {stage_count}"
+            )
+        self._freeze_backbone_modules(
+            backbone.stem, *backbone.stages[:-count], backbone.final_conv
+        )
+
 
 def _get_act_layer(name: str) -> Type[nn.Module]:
     """Get activation layer class by name."""

@@ -147,6 +147,58 @@ def test_checkpoint_roundtrip_and_existing_loss(config, tmp_path, pooling):
         torch.testing.assert_close(expected, actual)
 
 
+def test_separate_backbone_learning_rate(config):
+    config.train.learning_rate = 1e-3
+    config.train.backbone_learning_rate = 1e-4
+    config.train.warmup_fraction = 0.1
+    model = new_model()
+    model.trainer = pl.Trainer(accelerator="cpu", max_steps=20, logger=False)
+    setup = model.configure_optimizers()
+    optimizer = setup["optimizer"]
+    scheduler = setup["lr_scheduler"]["scheduler"]
+    head, backbone = optimizer.param_groups
+    assert {id(p) for p in head["params"]} == {id(p) for p in model.head.parameters()}
+    assert {id(p) for p in backbone["params"]} == {
+        id(p) for p in model.backbone.parameters()
+    }
+
+    for _ in range(10):
+        optimizer.step()
+        scheduler.step()
+        assert backbone["lr"] == pytest.approx(head["lr"] * 0.1)
+
+    model.freeze_backbone()
+    groups = model.configure_optimizers()["optimizer"].param_groups
+    assert len(groups) == 1
+    assert groups[0]["name"] == "head"
+
+
+def test_bknet_last_stage_fine_tuning(config):
+    config.train.model_type = "bknet.5"
+    config.train.backbone_learning_rate = 1e-4
+    model = new_model()
+    backbone = model.backbone
+    with pytest.raises(ValueError, match="backbone_trainable_stages"):
+        model.freeze_backbone_except_last_stages(0)
+    model.freeze_backbone_except_last_stages(1)
+    model.eval()
+    model.train()
+    for module in (backbone.stem, *backbone.stages[:-1], backbone.final_conv):
+        assert all(not child.training for child in module.modules())
+        assert all(not param.requires_grad for param in module.parameters())
+    assert backbone.stages[-1].training
+    assert model.head.training
+    model.trainer = pl.Trainer(accelerator="cpu", max_steps=20, logger=False)
+    groups = model.configure_optimizers()["optimizer"].param_groups
+    assert {id(p) for p in groups[0]["params"]} == {
+        id(p) for p in model.head.parameters()
+    }
+    assert {id(p) for p in groups[1]["params"]} == {
+        id(p) for p in backbone.stages[-1].parameters()
+    }
+    assert groups[1]["lr"] == pytest.approx(1e-4)
+
+
 def test_initialize_backbone_preserves_fresh_head(config, tmp_path):
     config.train.head_type = "temporal_sed"
     source = new_model()

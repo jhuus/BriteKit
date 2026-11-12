@@ -62,6 +62,12 @@ class Trainer:
                 "Use only one of load_ckpt_path and init_backbone_ckpt_path"
             )
 
+        trainable_stages = self.cfg.train.backbone_trainable_stages
+        if trainable_stages is not None and self.cfg.train.freeze_backbone:
+            raise ValueError(
+                "Use only one of freeze_backbone and backbone_trainable_stages"
+            )
+
         # load all the data once for performance, then split as needed in each fold
         dm = DataModule()
 
@@ -130,9 +136,15 @@ class Trainer:
                 model_loader.initialize_backbone(
                     model,
                     self.cfg.train.init_backbone_ckpt_path,
-                    allow_class_change=self.cfg.train.freeze_backbone,
+                    allow_class_change=True,
                 )
-            if self.cfg.train.freeze_backbone:
+            if trainable_stages is not None:
+                from britekit.models.bknet import BKNetModel
+
+                if not isinstance(model, BKNetModel):
+                    raise ValueError("backbone_trainable_stages requires a BKNet model")
+                model.freeze_backbone_except_last_stages(trainable_stages)
+            elif self.cfg.train.freeze_backbone:
                 model.freeze_backbone()
 
             model.set_class_weights(dm.class_weights())
