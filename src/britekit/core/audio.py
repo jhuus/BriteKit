@@ -762,7 +762,8 @@ class Audio:
                     chunk_spec = chunk_spec[:, :chunk_width]
                     chunks.append(chunk_spec)
                     del chunk_spec
-                    torch.cuda.empty_cache()
+                    # Reuse freed CUDA blocks across chunks and concurrent models.
+                    # Flushing the shared cache forces synchronizing allocations.
 
                 spec = np.concatenate(chunks, axis=1)
         else:

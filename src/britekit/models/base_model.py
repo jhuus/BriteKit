@@ -271,7 +271,14 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         if self.use_sed:
             segment_logits, frame_logits = x
             target = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
-            frame_logits = F.interpolate(frame_logits, size=target, mode="linear")
+            if frame_logits.shape[-1] != target:
+                frame_logits = F.interpolate(frame_logits, size=target, mode="linear")
+            elif frame_logits.is_cuda and torch.is_autocast_enabled():
+                # CUDA autocast promotes linear interpolation to float32 even
+                # when its size is unchanged. Preserve that conversion without
+                # launching an identity interpolation kernel.
+                if frame_logits.dtype in (torch.float16, torch.bfloat16):
+                    frame_logits = frame_logits.float()
             return segment_logits, frame_logits
         else:
             return x, None
