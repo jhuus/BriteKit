@@ -2,6 +2,7 @@
 
 # File name starts with _ to keep it out of typeahead for API users.
 # Defer heavyweight imports to improve --help performance.
+import csv
 import hashlib
 import logging
 from copy import deepcopy
@@ -32,9 +33,12 @@ def teacher_targets(
     cfg_path: Optional[str] = None,
     batch_size: int = 256,
     device: Optional[str] = None,
+    classes_path: Optional[str] = None,
+    code_mapping: Optional[dict[str, str]] = None,
+    hard: Optional[float] = None,
 ) -> None:
     """
-    Generate soft segment and frame targets from a checkpoint or ensemble.
+    Generate segment and frame targets from a checkpoint or ensemble.
 
     The input must be a BriteKit training pickle containing stable segment IDs.
     Stored spectrograms must match the teachers' source representation. Linear
@@ -51,9 +55,24 @@ def teacher_targets(
     - cfg_path (str, optional): Path to YAML configuration overrides.
     - batch_size (int): Number of spectrograms per inference batch.
     - device (str, optional): Inference device, such as cpu, cuda, or mps.
+    - classes_path (str, optional): CSV with a Code column matching the training
+      pickle's class set. Select and reorder each teacher's outputs to the
+      training pickle's class order. Teachers may contain additional classes.
+    - hard (float, optional): Threshold ensemble probabilities at this value in [0, 1].
+      Omit to retain soft probabilities.
+    - code_mapping (dict, optional): Map checkpoint codes to training codes,
+      for example {"BADO": "BAOW"}. Output codes retain the training names.
     """
     _generate_targets(
-        train_pickle_path, checkpoint_path, output_path, cfg_path, batch_size, device
+        train_pickle_path,
+        checkpoint_path,
+        output_path,
+        cfg_path,
+        batch_size,
+        device,
+        classes_path=classes_path,
+        code_mapping=code_mapping,
+        hard=hard,
     )
 
 
@@ -65,6 +84,9 @@ def _generate_targets(
     batch_size: int,
     device: Optional[str],
     *,
+    classes_path: Optional[str] = None,
+    code_mapping: Optional[dict[str, str]] = None,
+    hard: Optional[float] = None,
     frame_labels_only: bool = False,
     full_segment_classes: Optional[list[str]] = None,
 ) -> None:
@@ -74,6 +96,8 @@ def _generate_targets(
     from britekit.core.audio_util import convert_to_db
     from britekit.models import model_loader
 
+    if hard is not None and not 0 <= hard <= 1:
+        raise ValueError("hard threshold must be between 0 and 1")
     if batch_size < 1:
         raise ValueError("batch_size must be at least 1")
     if full_segment_classes is not None:
@@ -86,6 +110,16 @@ def _generate_targets(
             )
         if full_segment_classes and not frame_labels_only:
             raise ValueError("full_segment_classes requires frame-label generation")
+
+    code_mapping = code_mapping or {}
+    if any(
+        not isinstance(old, str)
+        or not old.strip()
+        or not isinstance(new, str)
+        or not new.strip()
+        for old, new in code_mapping.items()
+    ):
+        raise ValueError("Code mappings must contain nonempty string codes")
 
     source_path = Path(train_pickle_path)
     teacher_path = Path(checkpoint_path)
@@ -105,6 +139,22 @@ def _generate_targets(
         raise ValueError(f"Training pickle is missing required keys: {missing}")
 
     class_codes = list(training_data["class_codes"])
+    if classes_path is not None:
+        with open(classes_path, encoding="utf-8-sig", newline="") as file:
+            reader = csv.DictReader(file)
+            if "Code" not in (reader.fieldnames or []):
+                raise ValueError("Classes CSV must contain a Code column")
+            requested_codes = [row["Code"].strip() for row in reader]
+        if not requested_codes or any(not code for code in requested_codes):
+            raise ValueError("Classes CSV must contain nonempty class codes")
+        if len(requested_codes) != len(set(requested_codes)):
+            raise ValueError("Classes CSV contains duplicate class codes")
+        if len(class_codes) != len(set(class_codes)) or set(requested_codes) != set(
+            class_codes
+        ):
+            raise ValueError(
+                "Classes CSV class codes must match the training pickle's class set"
+            )
     specs = training_data["spec_values"]
     segment_ids = list(training_data["spec_segment_ids"])
     if len(specs) != len(segment_ids):
@@ -212,7 +262,7 @@ def _generate_targets(
         # and of the caller's global config.
         model.apply_training_config(deepcopy(cfg))
         model = model.to(inference_device)
-        model_codes = list(model.train_class_codes)
+        model_codes = [code_mapping.get(code, code) for code in model.train_class_codes]
         if frame_labels_only:
             missing_codes = sorted(set(class_codes) - set(model_codes))
             if len(model_codes) != len(set(model_codes)) or missing_codes:
@@ -222,6 +272,16 @@ def _generate_targets(
                 )
             model_class_indexes.append(
                 np.asarray([model_codes.index(class_codes[i]) for i in label_indexes])
+            )
+        elif classes_path is not None or code_mapping:
+            missing_codes = sorted(set(class_codes) - set(model_codes))
+            if len(model_codes) != len(set(model_codes)) or missing_codes:
+                raise ValueError(
+                    f"Checkpoint {checkpoint_file.name} must have unique class codes "
+                    f"covering the training classes; missing: {missing_codes}"
+                )
+            model_class_indexes.append(
+                np.asarray([model_codes.index(code) for code in class_codes])
             )
         elif model_codes != class_codes:
             raise ValueError(
@@ -317,6 +377,11 @@ def _generate_targets(
                     raise ValueError(
                         "Frame outputs must be finite probabilities in [0, 1]"
                     )
+            elif classes_path is not None or code_mapping:
+                indexes = model_class_indexes[model_index]
+                segment_scores = np.asarray(segment_scores)[:, indexes]
+                if frames is not None:
+                    frames = np.asarray(frames)[:, indexes, :]
             predictions.append((segment_scores, frames))
         if probabilities is not None:
             scores = [prediction[0] for prediction in predictions]
@@ -374,7 +439,9 @@ def _generate_targets(
             elif frame_probabilities.shape[2] != first_shape[2]:
                 raise ValueError("Teacher frame output length changed between batches")
             if frame_probabilities is not None:
-                frame_probabilities[start:end] = averaged_frames
+                frame_probabilities[start:end] = (
+                    (averaged_frames >= hard) if hard is not None else averaged_frames
+                )
         elif frame_probabilities is not None:
             raise ValueError("Teacher frame outputs disappeared between batches")
         batch_number = start // batch_size + 1
@@ -418,6 +485,8 @@ def _generate_targets(
         "teacher": {
             "path": str(teacher_path),
             "ensemble_method": "mean_probability",
+            "hard_labels": hard is not None,
+            "hard_threshold": hard,
             "checkpoints": [
                 {
                     "name": path.name,
@@ -429,6 +498,10 @@ def _generate_targets(
     }
     if frame_probabilities is not None:
         output["frame_probabilities"] = frame_probabilities
+
+    if hard is not None:
+        assert probabilities is not None
+        output["probabilities"] = (probabilities >= hard).astype(probabilities.dtype)
 
     _write_targets(destination, output)
     assert probabilities is not None
@@ -454,7 +527,7 @@ def _write_targets(destination: Path, output) -> None:
 
 @click.command(
     name="teacher-targets",
-    short_help="Generate soft training targets from a model ensemble.",
+    short_help="Generate soft or hard training targets from a model ensemble.",
     help=util.cli_help_from_doc(teacher_targets.__doc__),
 )
 @click.argument("train_pickle_path", type=click.Path(exists=True, dir_okay=False))
@@ -484,6 +557,25 @@ def _write_targets(destination: Path, output) -> None:
     "--batch-size", type=click.IntRange(min=1), default=256, show_default=True
 )
 @click.option("--device", type=click.Choice(["cpu", "cuda", "mps"]))
+@click.option(
+    "--classes",
+    "classes_path",
+    type=click.Path(exists=True, dir_okay=False),
+    help="Class CSV with a Code column matching the training pickle's class set.",
+)
+@click.option(
+    "--map-code",
+    "code_pairs",
+    multiple=True,
+    metavar="OLD=NEW",
+    help="Map a checkpoint code to a training code, e.g. BADO=BAOW. Repeat as needed.",
+)
+@click.option(
+    "--hard",
+    type=click.FloatRange(0, 1),
+    default=None,
+    help="Threshold averaged clip and frame probabilities at this value (default: soft).",
+)
 def _teacher_targets_cmd(
     train_pickle_path: str,
     checkpoint_path: str,
@@ -491,7 +583,21 @@ def _teacher_targets_cmd(
     cfg_path: Optional[str],
     batch_size: int,
     device: Optional[str],
+    classes_path: Optional[str] = None,
+    code_pairs: tuple[str, ...] = (),
+    hard: Optional[float] = None,
 ) -> None:
+    code_mapping = {}
+    for pair in code_pairs:
+        old, separator, new = pair.partition("=")
+        old, new = old.strip(), new.strip()
+        if not separator or not old or not new or "=" in new:
+            raise click.BadParameter("Expected OLD=NEW", param_hint="--map-code")
+        if old in code_mapping:
+            raise click.BadParameter(
+                f"Duplicate mapping for {old}", param_hint="--map-code"
+            )
+        code_mapping[old] = new
     util.set_logging()
     teacher_targets(
         train_pickle_path,
@@ -500,4 +606,7 @@ def _teacher_targets_cmd(
         cfg_path,
         batch_size,
         device,
+        classes_path=classes_path,
+        code_mapping=code_mapping,
+        hard=hard,
     )

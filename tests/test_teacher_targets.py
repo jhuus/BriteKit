@@ -63,8 +63,9 @@ def source_pickle(tmp_path):
     return path
 
 
+@pytest.mark.parametrize("hard", [None, 0.0, 0.35, 0.5, 1.0])
 def test_teacher_targets_averages_ensemble_and_writes_metadata(
-    monkeypatch, tmp_path, source_pickle, caplog
+    monkeypatch, tmp_path, source_pickle, caplog, hard
 ):
     checkpoint_dir = tmp_path / "ckpts"
     checkpoint_dir.mkdir()
@@ -101,6 +102,7 @@ def test_teacher_targets_averages_ensemble_and_writes_metadata(
             str(output_path),
             batch_size=2,
             device="cpu",
+            hard=hard,
         )
 
     with output_path.open("rb") as file:
@@ -109,10 +111,18 @@ def test_teacher_targets_averages_ensemble_and_writes_metadata(
     assert output["format_version"] == 2
     assert output["class_codes"] == ["a", "b"]
     assert output["segment_ids"] == [10, 20, 30]
-    np.testing.assert_allclose(output["probabilities"], 0.4)
+    np.testing.assert_allclose(
+        output["probabilities"], float(0.4 >= hard) if hard is not None else 0.4
+    )
     assert output["frame_probabilities"].shape == (3, 2, 4)
     assert output["frame_probabilities"].dtype == np.float16
-    np.testing.assert_allclose(output["frame_probabilities"], 0.3, atol=0.001)
+    np.testing.assert_allclose(
+        output["frame_probabilities"],
+        float(0.3 >= hard) if hard is not None else 0.3,
+        atol=0.001,
+    )
+    assert output["teacher"]["hard_labels"] == (hard is not None)
+    assert output["teacher"]["hard_threshold"] == hard
     assert [item["name"] for item in output["teacher"]["checkpoints"]] == [
         "one.ckpt",
         "two.ckpt",
@@ -326,3 +336,69 @@ def test_teacher_targets_matches_training_preprocessing_with_real_checkpoint(
     np.testing.assert_allclose(targets["probabilities"], expected[0], atol=1e-6)
     np.testing.assert_allclose(targets["frame_probabilities"], expected[1], atol=5e-4)
     assert runtime_cfg == BaseConfig()
+
+
+@pytest.mark.parametrize("hard", [None, 0.5])
+def test_teacher_targets_selects_and_aligns_class_subset(
+    monkeypatch, tmp_path, source_pickle, hard
+):
+    checkpoint_dir = tmp_path / "ensemble"
+    checkpoint_dir.mkdir()
+    for name in ("one.ckpt", "two.ckpt"):
+        (checkpoint_dir / name).write_bytes(b"teacher")
+    classes = tmp_path / "classes.csv"
+    # CSV order deliberately differs from the training pickle.
+    classes.write_text("Name,Code\nSecond,b\nFirst,a\n")
+    models = iter(
+        [
+            FakeModel(["extra", "b", "old_a"], 0),
+            FakeModel(["a", "extra", "b"], 0),
+        ]
+    )
+
+    def load_model(*args, **kwargs):
+        model = next(models)
+
+        def predict(specs, device):
+            values = {"a": 0.2, "old_a": 0.2, "b": 0.8, "extra": 0.99}
+            scores = np.tile(
+                [values[code] for code in model.train_class_codes], (len(specs), 1)
+            )
+            return scores, np.repeat(scores[:, :, None], 4, axis=2)
+
+        model.predict = predict
+        return model
+
+    monkeypatch.setattr(
+        _teacher_targets,
+        "get_config",
+        lambda _: SimpleNamespace(
+            audio=SimpleNamespace(spec_height=2, spec_width=3), infer=SimpleNamespace()
+        ),
+    )
+    monkeypatch.setattr("britekit.models.model_loader.load_from_checkpoint", load_model)
+    monkeypatch.setattr(
+        _teacher_targets.util, "expand_spectrogram", lambda value, **kwargs: value
+    )
+    output_path = tmp_path / "targets.pkl"
+    _teacher_targets.teacher_targets(
+        str(source_pickle),
+        str(checkpoint_dir),
+        str(output_path),
+        device="cpu",
+        classes_path=str(classes),
+        code_mapping={"old_a": "a"},
+        hard=hard,
+    )
+    with output_path.open("rb") as file:
+        output = pickle.load(file)
+    assert output["class_codes"] == ["a", "b"]
+    assert output["segment_ids"] == [10, 20, 30]
+    np.testing.assert_allclose(
+        output["probabilities"], [[0, 1] if hard else [0.2, 0.8]] * 3
+    )
+    np.testing.assert_allclose(
+        output["frame_probabilities"][:, :, 0],
+        [[0, 1] if hard else [0.2, 0.8]] * 3,
+        atol=0.001,
+    )
