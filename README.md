@@ -53,6 +53,12 @@ It is best to install BriteKit in a virtual environment, such as a [Python venv]
 ```console
 pip install britekit
 ```
+The `Audio` recording loader prefers TorchCodec and retries with PyAV when a recording cannot
+be decoded. PyAV recovery retains only the usable prefix before a damaged packet,
+so later audio is not joined across a gap. TorchCodec 0.17 needs a compatible
+PyTorch (2.11 or later) and shared FFmpeg runtime; when it cannot load, BriteKit
+continues using PyAV. Resampling and channel selection are unchanged.
+
 In Windows environments, you then need to uninstall and reinstall PyTorch:
 ```
 pip uninstall -y torch torchvision torchaudio

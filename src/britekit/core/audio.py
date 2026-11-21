@@ -2,6 +2,7 @@
 
 # Defer some imports to improve initialization performance.
 import logging
+from functools import lru_cache
 from typing import Any, Optional
 
 from britekit.core.base_config import BaseConfig
@@ -44,7 +45,52 @@ def _decode_audio_frames(container, stream, path: str):
         )
 
 
+@lru_cache(maxsize=1)
+def _get_torchcodec_decoder():
+    """Cache native runtime availability, including incompatible Torch/FFmpeg builds."""
+    try:
+        from torchcodec.decoders import AudioDecoder
+
+        return AudioDecoder
+    except Exception:
+        logging.debug(
+            "TorchCodec unavailable; using PyAV audio decoding", exc_info=True
+        )
+        return None
+
+
 def _decode_audio(path: str):
+    """Prefer bulk decoding, retaining PyAV's recovery and error behavior."""
+    decoder = _get_torchcodec_decoder()
+    if decoder is not None:
+        try:
+            import av
+            import numpy as np
+
+            # Match the previous first-audio-stream policy, rather than FFmpeg's
+            # best-stream selection (which can choose a different recording).
+            with av.open(path, metadata_errors="replace") as container:
+                stream = next(iter(container.streams.audio), None)
+                if stream is None:
+                    raise ValueError(f"No audio stream found in {path}")
+                stream_index = stream.index
+
+            samples = decoder(path, stream_index=stream_index).get_all_samples()
+            signal = np.ascontiguousarray(samples.data.numpy(), dtype=np.float32)
+            rate = int(samples.sample_rate)
+            if signal.ndim != 2 or not all(signal.shape) or rate <= 0:
+                raise ValueError(f"No audio samples found in {path}")
+            return signal, rate
+        except Exception:
+            # TorchCodec rejects some damaged files that PyAV can salvage. Let
+            # PyAV retain only the prefix before the first invalid packet; do
+            # not concatenate audio across a damaged section or shift timestamps.
+            logging.debug("Retrying %s with PyAV audio recovery", path, exc_info=True)
+
+    return _decode_audio_pyav(path)
+
+
+def _decode_audio_pyav(path: str):
     """Decode an audio stream through PyAV as channel-first float32 PCM."""
     import av
     import numpy as np
