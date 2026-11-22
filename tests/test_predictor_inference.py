@@ -48,6 +48,55 @@ def test_to_global_frames_matches_general_accumulator(offsets, duration):
     assert actual.tobytes() == expected.tobytes()
 
 
+@pytest.mark.parametrize("duration", [6.0, 6.5, 2.75])
+def test_overlapping_scores_fill_only_missing_tail(tmp_path, duration):
+    recording = tmp_path / "recording.wav"
+    recording.touch()
+    windows = []
+    batches = []
+
+    def get_spectrograms(offsets):
+        windows.append(list(offsets))
+        specs = np.ones((len(offsets), 2, 2), dtype=np.float32)
+        return specs, specs
+
+    def predict(specs, device):
+        batches.append(len(specs))
+        frames = np.arange(12, dtype=np.float32) / 32
+        if len(batches) > 1:
+            frames = frames + 0.5
+        return None, np.broadcast_to(frames, (len(specs), 1, 12))
+
+    predictor = Predictor.__new__(Predictor)
+    predictor.cfg = SimpleNamespace(
+        audio=SimpleNamespace(spec_duration=3.0),
+        train=SimpleNamespace(sed_fps=4),
+        infer=SimpleNamespace(audio_power=1.0),
+    )
+    predictor.ov = None
+    predictor.device = "cpu"
+    predictor.models = [SimpleNamespace(predict=predict)]
+    predictor.audio = SimpleNamespace(
+        load=lambda path: None,
+        seconds=lambda: duration,
+        get_spectrograms=get_spectrograms,
+    )
+
+    result = predictor.get_overlapping_scores(str(recording), [0])
+    normal = np.arange(12, dtype=np.float32) / 32
+    if duration == 6.5:
+        assert windows == [[0, 3], [3.5]]
+        assert batches == [2, 1]
+        np.testing.assert_array_equal(result[:24, 0], np.tile(normal, 2))
+        np.testing.assert_array_equal(result[24:, 0], normal[-2:] + 0.5)
+        assert len(predictor.normalized_specs) == 2
+    else:
+        assert len(windows) == len(batches) == 1
+        np.testing.assert_array_equal(
+            result[:, 0], np.tile(normal, batches[0])[: round(duration * 4)]
+        )
+
+
 def test_get_recording_scores_can_reuse_loaded_audio(tmp_path):
     recording = tmp_path / "recording.wav"
     recording.touch()

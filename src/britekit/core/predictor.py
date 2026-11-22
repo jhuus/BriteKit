@@ -337,14 +337,15 @@ class Predictor:
         self, recording_path: str, initial_start_times: List[float]
     ):
         """
-        This is a variant of get_recording_scores that overlaps spectrograms differently,
-        and is intended mainly for models with SED classifier heads. Each model processes
-        non-overlapping spectrograms. The first start_time for each model is taken from
-        initial_start_times, and then non-overlapping start_times are created from there.
-        For example, suppose initial_start_times = [0, .5, 1.0] and spec_duration = 3.0.
+        Score a recording with staggered spectrogram windows, mainly for SED
+        models. Each model starts at its assigned offset and advances by
+        infer.staggered_hop_seconds, or one window duration when unset.
+        For example, suppose initial_start_times = [0, .5, 1.0] and both the
+        hop and window duration are 3.0 seconds.
         Then model 1 uses [0, 3, 6, ...], model 2 uses [.5, 3.5, 6.5, ...], model 3 uses
         [1, 4, 7, ...]. After that it wraps using a modulus operator, so model 4 has the same
-        start_times as model 1 etc.
+        start_times as model 1 etc. If a model's last window leaves a
+        short uncovered tail, fill it from a separate end-aligned window.
 
         Args:
         - recording_path (str): Path to the audio recording file.
@@ -368,6 +369,13 @@ class Predictor:
             return None
 
         spec_duration = self.cfg.audio.spec_duration
+        configured_hop = getattr(self.cfg.infer, "staggered_hop_seconds", None)
+        if configured_hop is None:
+            hop = spec_duration
+        else:
+            if not np.isfinite(configured_hop) or configured_hop < 0.5:
+                raise InferenceError("The staggered hop must be at least 0.5 seconds.")
+            hop = min(configured_hop, spec_duration)
         frame_maps = []
         converts_linear = getattr(self, "converts_linear", False)
         device_conversion = self._use_device_conversion()
@@ -381,6 +389,11 @@ class Predictor:
             import torch
             from britekit.models.base_model import BaseModel
 
+        def model_input(normalized: np.ndarray) -> np.ndarray:
+            if not device_conversion:
+                normalized = normalized**self.cfg.infer.audio_power
+            return np.expand_dims(normalized, axis=1)  # (N,H,W) -> (N,1,H,W)
+
         prepared: dict[
             tuple[float, ...], tuple[np.ndarray, np.ndarray, torch.Tensor]
         ] = {}
@@ -390,7 +403,7 @@ class Predictor:
             # curr_start is first start_time for this model
             curr_start = initial_start_times[i % len(initial_start_times)]
             start_times = self.get_start_times(
-                audio_duration, curr_start, spec_duration, overlap=0
+                audio_duration, curr_start, spec_duration, overlap=spec_duration - hop
             )
 
             # add extra overlap at start of recording for non-first models in each batch;
@@ -402,7 +415,11 @@ class Predictor:
                 and curr_start < spec_duration
                 and curr_start > 0
             ):
-                start_times = [curr_start - spec_duration] + start_times
+                # Extend the same hop grid backwards until it covers frame zero.
+                leading_windows = int(np.ceil(curr_start / hop))
+                start_times = [
+                    curr_start - step * hop for step in range(leading_windows, 0, -1)
+                ] + start_times
 
             logging.debug(
                 "Predictor::get_overlapping_scores start_times=%s", start_times
@@ -417,32 +434,16 @@ class Predictor:
             if cached_input is not None:
                 self.normalized_specs, self.unnormalized_specs, specs = cached_input
             else:
-                if converts_linear:
-                    settings = self.model_audio_settings[i]
-                    normalized, unnormalized = self.audio.get_spectrograms(
-                        start_times,
-                        convert_to_db=(
-                            settings["convert_to_db"] and not device_conversion
-                        ),
-                        top_db=settings["top_db"],
-                        db_power=settings.get("db_power", 1.0),
-                    )
-                else:
-                    normalized, unnormalized = self.audio.get_spectrograms(start_times)
+                normalized, unnormalized = self._overlapping_spectrograms(
+                    start_times, i, converts_linear, device_conversion
+                )
                 self.normalized_specs = normalized
                 self.unnormalized_specs = unnormalized
                 if normalized is None or len(normalized) == 0:
                     # maybe recording is too short given the increment
                     continue
 
-                specs = np.expand_dims(
-                    (
-                        normalized
-                        if device_conversion
-                        else normalized**self.cfg.infer.audio_power
-                    ),
-                    axis=1,
-                )  # (N,H,W) -> (N,1,H,W)
+                specs = model_input(normalized)
                 if reuse_input and i + len(initial_start_times) < len(self.models):
                     block_size = model.cfg.infer.block_size
                     # Leave large recordings on the existing block-wise upload path.
@@ -459,39 +460,73 @@ class Predictor:
                             specs = device_specs
                             cached_bytes += batch_bytes
 
-            if device_conversion:
-                segment_scores, frame_scores = model.predict(
-                    specs,
-                    self.device,
-                    preprocess=lambda block: self._prepare_linear_specs(
-                        block, i, self.cfg.infer.audio_power
-                    ),
-                )
-            elif self.ov:
-                segment_scores, frame_scores = self._get_openvino_scores_single(
-                    model, specs
-                )
-            else:
-                segment_scores, frame_scores = model.predict(specs, self.device)
-
-            if frame_scores is None:
-                # Create frame_scores by duplicating segment scores across the frames
-                frames_per_clip = int(self.cfg.train.sed_fps * spec_duration)
-                frame_scores = np.repeat(
-                    segment_scores[:, :, np.newaxis], frames_per_clip, axis=2
-                )
-
-            frame_map = self.to_global_frames(
-                frame_scores,
-                start_times,
-                audio_duration,
+            frame_scores = self._predict_overlapping_frames(
+                model, specs, i, device_conversion
             )
+            frame_map = self.to_global_frames(frame_scores, start_times, audio_duration)
+            # Use a separate prediction so the original windows keep their
+            # batch shape. Only copy scores for frames the model missed.
+            if audio_duration >= spec_duration and len(frame_scores):
+                fps = self.cfg.train.sed_fps
+                window_frames = frame_scores.shape[-1]
+                last_start = round(start_times[len(frame_scores) - 1] * fps)
+                first_missing = last_start + window_frames
+                end_aligned_start = len(frame_map) - window_frames
+                if 0 <= end_aligned_start <= first_missing < len(frame_map):
+                    normalized, _ = self._overlapping_spectrograms(
+                        [end_aligned_start / fps], i, converts_linear, device_conversion
+                    )
+                    if normalized is not None and len(normalized):
+                        tail = self._predict_overlapping_frames(
+                            model, model_input(normalized), i, device_conversion
+                        )
+                        frame_map[first_missing:] = tail[
+                            0, :, first_missing - end_aligned_start :
+                        ].T
             frame_maps.append(frame_map)
 
         if len(frame_maps) == 0:
             return None
 
         return np.mean(frame_maps, axis=0)
+
+    def _overlapping_spectrograms(
+        self, start_times, model_index, converts_linear, device_conversion
+    ):
+        if not converts_linear:
+            return self.audio.get_spectrograms(start_times)
+
+        settings = self.model_audio_settings[model_index]
+        return self.audio.get_spectrograms(
+            start_times,
+            convert_to_db=settings["convert_to_db"] and not device_conversion,
+            top_db=settings["top_db"],
+            db_power=settings.get("db_power", 1.0),
+        )
+
+    def _predict_overlapping_frames(self, model, specs, model_index, device_conversion):
+        if device_conversion:
+            segment_scores, frame_scores = model.predict(
+                specs,
+                self.device,
+                preprocess=lambda block: self._prepare_linear_specs(
+                    block, model_index, self.cfg.infer.audio_power
+                ),
+            )
+        elif self.ov:
+            segment_scores, frame_scores = self._get_openvino_scores_single(
+                model, specs
+            )
+        else:
+            segment_scores, frame_scores = model.predict(specs, self.device)
+
+        if frame_scores is None:
+            # Segment-only models contribute the same score to every clip frame.
+            frames_per_clip = int(self.cfg.train.sed_fps * self.cfg.audio.spec_duration)
+            frame_scores = np.repeat(
+                segment_scores[:, :, np.newaxis], frames_per_clip, axis=2
+            )
+        return frame_scores
 
     def get_segment_labels(
         self, scores, start_times: list[float]

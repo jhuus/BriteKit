@@ -218,6 +218,8 @@ class InferenceConfig:
     segment_len: Optional[float] = None
     # Number of seconds overlap for adjacent spectrograms
     overlap: float = 0.0
+    # Hop within each model's staggered windows. None uses one window duration.
+    staggered_hop_seconds: Optional[float] = None
     min_score: float = 0.80  # Only generate labels when score is at least this
     num_threads: int = 3  # More threads = faster but more VRAM
     max_models: Optional[int] = None  # If specified, limit ensemble size accordingly

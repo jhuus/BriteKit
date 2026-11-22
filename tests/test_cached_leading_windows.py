@@ -68,9 +68,42 @@ def test_every_offset_model_contributes_to_overlapping_ensemble(count, tmp_path)
     path = tmp_path / "recording.wav"
     path.touch()
     frames = predictor.get_overlapping_scores(str(path), [0, 0.5, 1, 1.5, 2, 2.5])
-    for model in predictor.models:
-        model.predict.assert_called_once()
-    # All models predict throughout the first window, including at time zero.
-    np.testing.assert_allclose(frames[:12, 0], 0.5, atol=1e-6)
+    for i, model in enumerate(predictor.models):
+        # The 2.5-second offset misses the last half-second on its regular grid.
+        assert model.predict.call_count == (2 if i % 6 == 5 else 1)
+    # Every model contributes throughout the recording, including both ends.
+    np.testing.assert_allclose(frames[:, 0], 0.5, atol=1e-6)
     # The half-second-offset member receives its leading window AND later ones.
     assert predictor.models[1].predict.call_args.args[0].shape[0] == 3
+
+
+def test_staggered_hop_keeps_the_leading_windows_on_the_same_grid(tmp_path):
+    audio = cached_audio()
+    audio.cfg.infer.staggered_hop_seconds = 2.5
+    audio.cfg.infer.audio_power = 1
+    audio.cfg.train.sed_fps = 4
+    audio.get_spectrograms = Mock(wraps=audio.get_spectrograms)
+
+    model = Mock()
+    model.predict.side_effect = lambda specs, device: (
+        None,
+        np.ones((len(specs), 1, 12), dtype=np.float32),
+    )
+    predictor = Predictor.__new__(Predictor)
+    predictor.cfg = audio.cfg
+    predictor.audio = audio
+    predictor.device = "cpu"
+    predictor.ov = None
+    predictor.models = [model] * 4
+    path = tmp_path / "recording.wav"
+    path.touch()
+
+    scores = predictor.get_overlapping_scores(str(path), [0, 1, 2, 2.5])
+
+    assert [call.args[0] for call in audio.get_spectrograms.call_args_list] == [
+        [0, 2.5, 5],
+        [-1.5, 1, 3.5],
+        [-0.5, 2, 4.5],
+        [0, 2.5, 5],
+    ]
+    np.testing.assert_array_equal(scores[:, 0], np.ones(24, dtype=np.float32))
