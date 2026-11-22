@@ -16,6 +16,10 @@ from britekit.core.exceptions import InferenceError
 from britekit.core import util
 
 
+# Combined NumPy and CUDA input cache budget per recording and predictor.
+_OVERLAPPING_INPUT_CACHE_BYTES = 64 * 1024**2
+
+
 class Label:
     def __init__(self, score: float, start_time: float, end_time: float) -> None:
         self.score = score
@@ -66,8 +70,8 @@ class Predictor:
 
         self.last_frame_map = None
         self.labels = None
-        self.normalized_specs = None
-        self.unnormalized_specs = None
+        self.normalized_specs: Optional[np.ndarray] = None
+        self.unnormalized_specs: Optional[np.ndarray] = None
 
         self.quantile = quantile
         self.device = device or util.get_device()
@@ -365,6 +369,23 @@ class Predictor:
 
         spec_duration = self.cfg.audio.spec_duration
         frame_maps = []
+        converts_linear = getattr(self, "converts_linear", False)
+        device_conversion = self._use_device_conversion()
+        cache_inputs = (
+            not converts_linear
+            and not self.ov
+            and str(self.device).startswith("cuda")
+            and len(self.models) > len(initial_start_times)
+        )
+        if cache_inputs:
+            import torch
+            from britekit.models.base_model import BaseModel
+
+        prepared: dict[
+            tuple[float, ...], tuple[np.ndarray, np.ndarray, torch.Tensor]
+        ] = {}
+        cached_bytes = 0
+        specs: np.ndarray | torch.Tensor | None
         for i, model in enumerate(self.models):
             # curr_start is first start_time for this model
             curr_start = initial_start_times[i % len(initial_start_times)]
@@ -386,29 +407,57 @@ class Predictor:
             logging.debug(
                 "Predictor::get_overlapping_scores start_times=%s", start_times
             )
-            if getattr(self, "converts_linear", False):
-                settings = self.model_audio_settings[i]
-                specs, self.unnormalized_specs = self.audio.get_spectrograms(
-                    start_times,
-                    convert_to_db=(
-                        settings["convert_to_db"] and not self._use_device_conversion()
-                    ),
-                    top_db=settings["top_db"],
-                    db_power=settings.get("db_power", 1.0),
-                )
+            # Shared audio preprocessing is fixed for the recording on this path.
+            # Converted-dB ensembles can have different preprocessing per model.
+            reuse_input = (
+                cache_inputs and isinstance(model, BaseModel) and not model.training
+            )
+            key = tuple(start_times)
+            cached_input = prepared.get(key) if reuse_input else None
+            if cached_input is not None:
+                self.normalized_specs, self.unnormalized_specs, specs = cached_input
             else:
-                specs, self.unnormalized_specs = self.audio.get_spectrograms(
-                    start_times
-                )
-            self.normalized_specs = specs
-            if specs is None or len(specs) == 0:
-                # maybe recording is too short given the increment
-                continue
+                if converts_linear:
+                    settings = self.model_audio_settings[i]
+                    normalized, unnormalized = self.audio.get_spectrograms(
+                        start_times,
+                        convert_to_db=(
+                            settings["convert_to_db"] and not device_conversion
+                        ),
+                        top_db=settings["top_db"],
+                        db_power=settings.get("db_power", 1.0),
+                    )
+                else:
+                    normalized, unnormalized = self.audio.get_spectrograms(start_times)
+                self.normalized_specs = normalized
+                self.unnormalized_specs = unnormalized
+                if normalized is None or len(normalized) == 0:
+                    # maybe recording is too short given the increment
+                    continue
 
-            device_conversion = self._use_device_conversion()
-            if not device_conversion:
-                specs = specs**self.cfg.infer.audio_power
-            specs = np.expand_dims(specs, axis=1)  # (N,H,W) -> (N,1,H,W)
+                specs = np.expand_dims(
+                    (
+                        normalized
+                        if device_conversion
+                        else normalized**self.cfg.infer.audio_power
+                    ),
+                    axis=1,
+                )  # (N,H,W) -> (N,1,H,W)
+                if reuse_input and i + len(initial_start_times) < len(self.models):
+                    block_size = model.cfg.infer.block_size
+                    # Leave large recordings on the existing block-wise upload path.
+                    if block_size <= 0 or len(specs) <= block_size:
+                        batch_bytes = (
+                            normalized.nbytes
+                            + unnormalized.nbytes
+                            + specs.size * np.dtype(np.float32).itemsize
+                        )
+                        if cached_bytes + batch_bytes <= _OVERLAPPING_INPUT_CACHE_BYTES:
+                            with torch.inference_mode():
+                                device_specs = model._ensure_tensor(specs, self.device)
+                            prepared[key] = (normalized, unnormalized, device_specs)
+                            specs = device_specs
+                            cached_bytes += batch_bytes
 
             if device_conversion:
                 segment_scores, frame_scores = model.predict(
