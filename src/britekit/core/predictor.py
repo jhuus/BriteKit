@@ -873,6 +873,24 @@ class Predictor:
         # Map spectrogram offsets (seconds) to global frame indices
         starts = np.rint(np.array(offsets_sec) * fps).astype(np.int64)
 
+        # A contiguous run has exactly one score per covered frame. Skip
+        # accumulation and averaging, while still clipping to the recording.
+        if (
+            frame_scores.dtype == np.float32
+            and starts.size >= num_specs
+            and np.all(np.diff(starts[:num_specs]) == T_spec)
+        ):
+            first = int(starts[0])
+            g0, g1 = max(0, first), min(T_global, first + num_specs * T_spec)
+            result = np.zeros((T_global, num_classes), dtype=np.float32)
+            if g0 < g1:
+                frames = frame_scores.transpose(0, 2, 1).reshape(
+                    num_specs * T_spec, num_classes
+                )
+                # Adding positive zero matches the accumulator's handling of -0.
+                np.add(frames[g0 - first : g1 - first], 0.0, out=result[g0:g1])
+            return result
+
         # Prepare accumulation buffers (float64 for precision)
         global_scores = np.zeros((T_global, num_classes), dtype=np.float64)
         weights = np.zeros((T_global,), dtype=np.float64)

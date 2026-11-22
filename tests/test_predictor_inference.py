@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from britekit.core.predictor import Predictor
 
@@ -23,6 +24,28 @@ def test_to_global_frames_averages_overlaps_and_clips_edges():
     np.testing.assert_array_equal(
         result[:, 0], np.array([2.0, 6.5, 12.0, 30.0, 40.0, 0.0])
     )
+
+
+@pytest.mark.parametrize(
+    "offsets,duration",
+    [
+        ([-1.0, 1.0, 3.0], 4.5),  # clip both ends
+        ([0.5, 2.5, 4.5], 7.0),  # uncovered leading and trailing frames
+        ([-9.0, -7.0, -5.0], 4.5),  # entirely outside the recording
+        ([0.0, 2.5, 4.5], 7.0),  # non-overlapping with a gap
+    ],
+)
+def test_to_global_frames_matches_general_accumulator(offsets, duration):
+    predictor = Predictor.__new__(Predictor)
+    predictor.cfg = SimpleNamespace(train=SimpleNamespace(sed_fps=2.0))
+    scores = np.arange(24, dtype=np.float32).reshape(3, 4, 2).transpose(0, 2, 1)
+    scores[0, 0, 2] = -0.0  # Clipping should still include this frame.
+    # Float64 input exercises the existing accumulator with the same values.
+    expected = predictor.to_global_frames(scores.astype(np.float64), offsets, duration)
+    actual = predictor.to_global_frames(scores, offsets, duration)
+    assert actual.dtype == np.float32
+    assert actual.shape == expected.shape
+    assert actual.tobytes() == expected.tobytes()
 
 
 def test_get_recording_scores_can_reuse_loaded_audio(tmp_path):
