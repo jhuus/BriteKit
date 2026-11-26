@@ -34,7 +34,10 @@ class Trainer:
             precision = "16-mixed" if self.cfg.train.mixed_precision else "32-true"
         # Lightning validates configured precision strings when creating its trainer.
         self.precision = cast("_PRECISION_INPUT", precision)
-        torch.set_float32_matmul_precision("medium")
+        matmul_precision = self.cfg.train.matmul_precision
+        if matmul_precision not in ("highest", "high", "medium"):
+            raise ValueError("train.matmul_precision must be highest, high, or medium")
+        torch.set_float32_matmul_precision(matmul_precision)
         if self.cfg.train.seed is not None:
             pl.seed_everything(self.cfg.train.seed, workers=True)
             if torch.cuda.is_available():
@@ -50,11 +53,12 @@ class Trainer:
         Run training as specified in configuration.
         """
         import lightning.pytorch as pl
-        from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
+        from lightning.pytorch.callbacks import ModelCheckpoint
         from lightning.pytorch.loggers import TensorBoardLogger
         import torch
 
         from britekit.core.data_module import DataModule
+        from britekit.core.training_progress import TrainingProgressBar
         from britekit.models import model_loader
 
         if self.cfg.train.load_ckpt_path and self.cfg.train.init_backbone_ckpt_path:
@@ -107,7 +111,7 @@ class Trainer:
                         filename=filename,
                         auto_insert_metric_name=False,
                     ),
-                    TQDMProgressBar(refresh_rate=10),
+                    TrainingProgressBar(refresh_rate=10),
                 ],
                 deterministic=deterministic,
                 max_epochs=self.cfg.train.num_epochs,
@@ -234,10 +238,10 @@ class Trainer:
         Suggest a learning rate and produce a plot.
         """
         import lightning.pytorch as pl
-        from lightning.pytorch.callbacks import TQDMProgressBar
         from lightning.pytorch.tuner import Tuner
 
         from britekit.core.data_module import DataModule
+        from britekit.core.training_progress import TrainingProgressBar
         from britekit.models import model_loader
 
         dm = DataModule()
@@ -247,7 +251,7 @@ class Trainer:
             devices=1,
             accelerator="auto",
             callbacks=[
-                TQDMProgressBar(refresh_rate=10),
+                TrainingProgressBar(refresh_rate=10),
             ],
             deterministic=self.cfg.train.deterministic,
             max_epochs=1,

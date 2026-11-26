@@ -202,7 +202,10 @@ def test_teacher_targets_are_reordered_by_segment_id(tmp_path):
         )
 
     module = DataModule.__new__(DataModule)
-    targets, frame_targets = module._load_teacher_targets(path, ["a", "b"], [10, 20])
+    targets, frame_targets, available = module._load_teacher_targets(
+        path, ["a", "b"], [10, 20]
+    )
+    np.testing.assert_array_equal(available, [True, True])
 
     np.testing.assert_array_equal(
         targets, np.array([[0.9, 0.1], [0.2, 0.8]], dtype=np.float32)
@@ -218,3 +221,115 @@ def test_teacher_targets_are_reordered_by_segment_id(tmp_path):
         ),
         atol=0.001,
     )
+
+
+@pytest.mark.parametrize("teacher_only", [False, True])
+@pytest.mark.parametrize("has_frame", [False, True])
+def test_missing_teacher_uses_hard_noise_labels(
+    distillation_cfg, teacher_only, has_frame
+):
+    cfg = distillation_cfg
+    cfg.train.augment = False
+    cfg.train.teacher_only_if_no_frame = teacher_only
+    cfg.train.distillation_temperature = 2.0
+    dataset = SpectrogramDataset(
+        [compress_spectrogram(np.ones((2, 4), dtype=np.float32))],
+        [[0]],
+        1,
+        noise_class_index=0,
+        segment_ids=[10],
+        frame_label_dict={10: np.ones(2, dtype=np.float32)} if has_frame else {},
+        teacher_targets=np.zeros((1, 1), dtype=np.float32),
+        teacher_frame_targets=np.zeros((1, 1, 2), dtype=np.float32),
+        teacher_target_mask=np.array([False]),
+    )
+    item = dataset[0]
+    assert item["teacher_target_mask"].item() == 0
+    assert dataset.noise_indexes == [0]
+    torch.testing.assert_close(item["frame_labels"], torch.ones((2, 1)))
+    if teacher_only:
+        assert item["hard_segment_mask"].item() == 1
+        assert item["frame_label_mask"].item() == 1
+
+    model = _model(cfg)
+    segment_logits = torch.tensor([[1.2]], requires_grad=True)
+    frame_logits = torch.tensor([[[0.3, -0.4]]], requires_grad=True)
+    # Smoothed labels must be preserved; dummy teacher zeros must have no effect.
+    hard = torch.tensor([[0.92]])
+    frames = hard.unsqueeze(1).expand(1, 2, 1)
+    actual = model._calc_loss(
+        segment_logits,
+        frame_logits,
+        hard,
+        hard,
+        frames,
+        item["teacher_segment_labels"].unsqueeze(0),
+        item["teacher_frame_labels"].unsqueeze(0),
+        item.get("hard_segment_mask", torch.tensor(1.0)).unsqueeze(0),
+        item.get("frame_label_mask", torch.tensor(1.0)).unsqueeze(0),
+        item["teacher_target_mask"].unsqueeze(0),
+    )
+    expected = model._calc_loss(segment_logits, frame_logits, hard, hard, frames)
+    torch.testing.assert_close(actual, expected)
+    torch.testing.assert_close(
+        torch.autograd.grad(actual, (segment_logits, frame_logits), retain_graph=True),
+        torch.autograd.grad(expected, (segment_logits, frame_logits)),
+    )
+
+
+def test_partial_teacher_pickle_tracks_missing_segments(tmp_path):
+    path = tmp_path / "partial.pkl"
+    with path.open("wb") as file:
+        pickle.dump(
+            {
+                "format_version": 2,
+                "class_codes": ["a"],
+                "segment_ids": [20],
+                "probabilities": np.array([[0.7]], dtype=np.float32),
+                "frame_probabilities": np.array([[[0.2, 0.8]]], dtype=np.float16),
+            },
+            file,
+        )
+    module = DataModule.__new__(DataModule)
+    targets, frames, available = module._load_teacher_targets(path, ["a"], [10, 20, 30])
+    np.testing.assert_array_equal(available, [False, True, False])
+    np.testing.assert_allclose(targets[:, 0], [0, 0.7, 0])
+    np.testing.assert_allclose(frames[1, 0], [0.2, 0.8], atol=0.001)
+    np.testing.assert_array_equal(frames[[0, 2]], np.zeros((2, 1, 2)))
+    targets, frames, available = module._load_teacher_targets(path, ["a"], [10])
+    assert not available.any()
+    assert targets.shape == (1, 1)
+    assert frames.shape == (1, 1, 2)
+
+
+@pytest.mark.parametrize("augmentation", ["simple_merge", "mixup", "cutmix"])
+def test_merge_with_missing_teacher_uses_hard_supervision(
+    distillation_cfg, augmentation
+):
+    cfg = distillation_cfg
+    cfg.train.augment = True
+    cfg.train.multi_label = True
+    cfg.train.teacher_only_if_no_frame = True
+    cfg.train.prob_simple_merge = float(augmentation == "simple_merge")
+    cfg.train.prob_mixup = float(augmentation == "mixup")
+    cfg.train.prob_cutmix = float(augmentation == "cutmix")
+    cfg.train.prob_fade1 = 0.0
+    cfg.train.augmentations = []
+    dataset = SpectrogramDataset(
+        [compress_spectrogram(np.ones((2, 4), dtype=np.float32)) for _ in range(2)],
+        [[0], [1]],
+        2,
+        teacher_targets=np.array([[0.8, 0.1], [0, 0]], dtype=np.float32),
+        teacher_frame_targets=np.zeros((2, 2, 2), dtype=np.float32),
+        teacher_target_mask=np.array([True, False]),
+    )
+    with (
+        patch("britekit.core.dataset.random.random", return_value=0.0),
+        patch("britekit.core.dataset.random.randint", return_value=1),
+    ):
+        item = dataset[0]
+    assert item["teacher_target_mask"].item() == 0
+    assert item["hard_segment_mask"].item() == 1
+    assert item["frame_label_mask"].item() == 1
+    if augmentation == "simple_merge":
+        torch.testing.assert_close(item["segment_labels"], torch.ones(2))

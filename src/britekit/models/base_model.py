@@ -115,6 +115,9 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
 
         self.save_hyperparameters()
         self.cfg = get_config()
+        self._calibration_cache: (
+            tuple[float, float, int, torch.Tensor, torch.Tensor] | None
+        ) = None
 
         # Save parameters
         self.model_type = model_type
@@ -156,6 +159,10 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
     # ==================================================================
     # Lightning lifecycle hooks
     # ==================================================================
+
+    def setup(self, stage: str) -> None:
+        if self.cfg.train.channels_last:
+            self.to(memory_format=torch.channels_last)
 
     def on_save_checkpoint(self, checkpoint):
         if not hasattr(self, "identifier"):
@@ -296,6 +303,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         teacher_frame_labels = batch.get("teacher_frame_labels")
         hard_segment_mask = batch.get("hard_segment_mask")
         frame_label_mask = batch.get("frame_label_mask")
+        teacher_target_mask = batch.get("teacher_target_mask")
 
         if self.multi_label:
             seg_labels = (
@@ -319,6 +327,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
             teacher_frame_labels,
             hard_segment_mask,
             frame_label_mask,
+            teacher_target_mask,
         )
 
         if frame_logits is not None and self.cfg.train.offpeak_weight > 0:
@@ -329,14 +338,34 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
             p_max = (p * m).amax(dim=-1)
             loss += self.cfg.train.offpeak_weight * (p_sum - p_max).clamp_min(0).mean()
 
-        learning_rate = get_learning_rate(self.optimizer)
-        if isinstance(learning_rate, list):
-            for index, group in enumerate(self.optimizer.param_groups):
-                name = group.get("name", index)
-                self.log(f"lr/{name}", group["lr"], on_step=True, on_epoch=False)
-        else:
-            self.log("lr", learning_rate, on_step=True, on_epoch=False)
-        self.log("loss", loss, on_step=True, on_epoch=False, prog_bar=True)
+        # Lightning would move a Python scalar passed to log() to the model's
+        # device. Keep optimizer rates that are already on the host there.
+        groups = self.optimizer.param_groups
+        log_dtype = (
+            torch.float64
+            if torch.get_default_dtype() == torch.float64
+            else torch.float32
+        )
+        for index, group in enumerate(groups):
+            name = "lr" if len(groups) == 1 else f"lr/{group.get('name', index)}"
+            learning_rate = group["lr"]
+            if not isinstance(learning_rate, torch.Tensor):
+                learning_rate = torch.tensor(
+                    learning_rate, dtype=log_dtype, device="cpu"
+                )
+            self.log(name, learning_rate, on_step=True, on_epoch=False)
+
+        from britekit.core.training_progress import TrainingProgressBar
+
+        trainer = getattr(self, "_trainer", None)
+        progress_bar = getattr(trainer, "progress_bar_callback", None)
+        self.log(
+            "loss",
+            loss,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=not isinstance(progress_bar, TrainingProgressBar),
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -463,6 +492,41 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
     # Inference & embeddings
     # ==================================================================
 
+    def _calibration_tensors(
+        self, logits: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        coefficient = self.cfg.infer.scaling_coefficient
+        intercept = self.cfg.infer.scaling_intercept
+        # Cache immutable Python scalars. Arrays and tensors can be mutated in
+        # place, so preserve the per-block conversion for those values.
+        cacheable = (
+            logits.is_cuda
+            and type(coefficient) in (float, int)
+            and type(intercept) in (float, int)
+        )
+        if cacheable:
+            # Keep reuse on the allocating stream so the cached tensors do not
+            # outlive their use from an allocator's perspective.
+            stream = torch.cuda.current_stream(logits.device).cuda_stream
+            cached = self._calibration_cache
+            if cached is not None:
+                old_coefficient, old_intercept, old_stream, w, b = cached
+                # Identity also distinguishes +0.0 from -0.0.
+                if (
+                    old_coefficient is coefficient
+                    and old_intercept is intercept
+                    and old_stream == stream
+                    and w.device == logits.device
+                    and w.dtype == logits.dtype
+                ):
+                    return w, b
+
+        w = torch.as_tensor(coefficient, device=logits.device, dtype=logits.dtype)
+        b = torch.as_tensor(intercept, device=logits.device, dtype=logits.dtype)
+        if cacheable:
+            self._calibration_cache = (coefficient, intercept, stream, w, b)
+        return w, b
+
     def predict(self, x, device=None, preprocess=None):
         """
         Memory-safe, block-wise inference with a single AMP toggle.
@@ -519,17 +583,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
 
                 # segment scores
                 if self.multi_label:
-                    w = torch.as_tensor(
-                        self.cfg.infer.scaling_coefficient,
-                        device=seg_logits.device,
-                        dtype=seg_logits.dtype,
-                    )
-                    b = torch.as_tensor(
-                        self.cfg.infer.scaling_intercept,
-                        device=seg_logits.device,
-                        dtype=seg_logits.dtype,
-                    )
-
+                    w, b = self._calibration_tensors(seg_logits)
                     seg_scores = torch.sigmoid(seg_logits * w + b)
                 else:
                     seg_scores = torch.softmax(seg_logits, dim=1)
@@ -628,6 +682,7 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
         teacher_frame_labels=None,
         hard_segment_mask=None,
         frame_label_mask=None,
+        teacher_target_mask=None,
     ):
         segment_losses = self._loss_per_sample(seg_logits, seg_labels)
 
@@ -645,11 +700,14 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
             teacher_losses *= temperature**2
             blended_losses = (1 - weight) * segment_losses + weight * teacher_losses
             if hard_segment_mask is not None:
-                segment_losses = torch.where(
+                blended_losses = torch.where(
                     hard_segment_mask.bool(), blended_losses, teacher_losses
                 )
-            else:
-                segment_losses = blended_losses
+            segment_losses = (
+                torch.where(teacher_target_mask.bool(), blended_losses, segment_losses)
+                if teacher_target_mask is not None
+                else blended_losses
+            )
         elif hard_segment_mask is not None and not hard_segment_mask.bool().all():
             raise ValueError("Teacher-only samples require teacher segment labels")
 
@@ -681,8 +739,11 @@ class BaseModel(_ModelBase):  # type: ignore[misc,valid-type]
                 ).mean(dim=(1, 2))
                 teacher_frame_losses *= temperature**2
                 if frame_label_mask is not None:
+                    use_hard_frames = frame_label_mask.bool()
+                    if teacher_target_mask is not None:
+                        use_hard_frames = use_hard_frames | ~teacher_target_mask.bool()
                     frame_losses = torch.where(
-                        frame_label_mask.bool(), frame_losses, teacher_frame_losses
+                        use_hard_frames, frame_losses, teacher_frame_losses
                     )
             elif frame_label_mask is not None and not frame_label_mask.bool().all():
                 raise ValueError("Teacher-only samples require teacher frame labels")

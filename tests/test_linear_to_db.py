@@ -382,6 +382,8 @@ def test_cuda_prediction_converts_per_block():
 
     class BlockModel:
         predict = BaseModel.predict
+        _calibration_tensors = BaseModel._calibration_tensors
+        _calibration_cache = None
         _iter_blocks = BaseModel._iter_blocks
         _ensure_tensor = BaseModel._ensure_tensor
         multi_label = True

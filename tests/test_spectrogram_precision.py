@@ -4,6 +4,8 @@ import zlib
 
 import numpy as np
 import pytest
+import torch
+from torch.utils.data import DataLoader
 
 from britekit.core.base_config import BaseConfig
 from britekit.core.config_loader import get_config, set_base_config
@@ -50,6 +52,28 @@ def test_default_writer_is_byte_compatible_with_legacy_format(cfg):
         expand_spectrogram(legacy)[0],
         np.clip(values * 255, 0, 255).astype(np.uint8).astype(np.float32) / 255,
     )
+
+
+def test_spawn_worker_uses_dataset_spectrogram_config(cfg, tmp_path):
+    config_path = tmp_path / "train.yaml"
+    config_path.write_text("audio:\n  spec_height: 2\n  spec_width: 4\n")
+    config = get_config(str(config_path))
+    values = np.linspace(0, 1, 8, dtype=np.float32).reshape(2, 4)
+    blobs = [compress_spectrogram(values, bits=bits) for bits in (8, 16)]
+    dataset = SpectrogramDataset(blobs, [[0], [0]], 1)
+    expected = torch.stack([dataset[index]["input"] for index in range(2)])
+
+    config.audio.spec_width = 8
+    loader = DataLoader(
+        dataset,
+        batch_size=2,
+        num_workers=1,
+        multiprocessing_context="spawn",
+        persistent_workers=True,
+    )
+    for _ in range(2):
+        (batch,) = loader
+        torch.testing.assert_close(batch["input"], expected, rtol=0, atol=0)
 
 
 def test_16_bit_headered_wire_format(cfg):

@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 # Defer some imports to improve initialization performance.
-import ctypes
 from functools import partial
 import logging
 import math
-from multiprocessing import Value
 import random
 
 import numpy as np
@@ -14,7 +12,6 @@ from scipy.ndimage import gaussian_filter
 from britekit.core.base_config import BaseConfig
 
 AUGMENTATION_REGISTRY = {}
-_have_real_noise = Value(ctypes.c_bool, True)
 
 
 def register_augmentation(name):
@@ -52,6 +49,9 @@ class AugmentationPipeline:
         """
         self.cfg = cfg
         self.dataset = dataset
+        # Keep this with the pipeline. A module-global multiprocessing.Value
+        # creates a semaphore in every worker that imports this module.
+        self._have_real_noise = dataset is not None
         self.augmentations = []
 
         if not cfg.train.augmentations:
@@ -127,26 +127,15 @@ class AugmentationPipeline:
         """
         Add an actual noise spectrogram but, unlike mixup, do not update the label.
         """
-        global _have_real_noise
-        if not _have_real_noise.value or self.dataset is None:
+        if not self._have_real_noise:
             return spec
 
         noise_spec = self.dataset.get_random_noise()
         if noise_spec is None:
-            # with multiple workers, only do this once
-            with _have_real_noise.get_lock():
-                if _have_real_noise.value:
-                    _have_real_noise.value = False
-                    logging.error("")
-                    logging.error("*** WARNING:")
-                    logging.error(
-                        "No noise class is defined, but add_real_noise is enabled."
-                    )
-                    logging.error("In most cases it is best to provide noise data.")
-                    logging.error(
-                        "The add_real_noise augmentation will be disabled in this run."
-                    )
-                    logging.error("")
+            self._have_real_noise = False
+            logging.warning(
+                "No noise samples are available. Provide noise data to use add_real_noise."
+            )
             return spec
 
         # Validate shapes match

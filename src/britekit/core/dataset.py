@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
+import copy
 import math
 import random
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 
 import numpy as np
 import torch
+from omegaconf import OmegaConf
 from torch.utils.data import Dataset
 
 from britekit.core.augmentation import AugmentationPipeline, apply_fade, fade_after_db
-from britekit.core.config_loader import get_config
+from britekit.core.config_loader import BaseConfig, get_config
 from britekit.core.util import expand_spectrogram
 
 
@@ -38,6 +40,7 @@ class SpectrogramDataset(Dataset):
         frame_label_dict: Optional[Dict[int, np.ndarray]] = None,
         teacher_targets: Optional[np.ndarray] = None,
         teacher_frame_targets: Optional[np.ndarray] = None,
+        teacher_target_mask: Optional[np.ndarray] = None,
     ):
         # Input validation
         if not compressed_specs or not class_indexes:
@@ -78,8 +81,27 @@ class SpectrogramDataset(Dataset):
                 f"({len(compressed_specs)}, {num_classes}), got {teacher_targets.shape}"
             )
         self.teacher_targets = teacher_targets
+        if teacher_target_mask is not None:
+            if teacher_targets is None or teacher_target_mask.shape != (
+                len(compressed_specs),
+            ):
+                raise ValueError(
+                    "teacher_target_mask requires one entry per teacher target"
+                )
+        self.teacher_target_mask = (
+            np.asarray(teacher_target_mask, dtype=bool)
+            if teacher_target_mask is not None
+            else np.full(len(compressed_specs), teacher_targets is not None, dtype=bool)
+        )
 
-        self.cfg = get_config()
+        # Resolve preprocessing settings once and pass them with the dataset to
+        # workers, including those that start with a fresh process-global config.
+        cfg = get_config()
+        self.cfg = (
+            cast(BaseConfig, OmegaConf.to_object(cfg))
+            if OmegaConf.is_config(cfg)
+            else copy.deepcopy(cfg)
+        )
         if self.cfg.audio.convert_to_db and self.cfg.audio.decibels:
             raise ValueError(
                 "convert_to_db requires a linear pickle and audio.decibels=false"
@@ -153,6 +175,7 @@ class SpectrogramDataset(Dataset):
             else None
         )
         has_frame_label = self._has_frame_label(idx)
+        has_teacher_target = bool(self.teacher_target_mask[idx])
 
         merged_frames = None
         mixup = False
@@ -188,6 +211,9 @@ class SpectrogramDataset(Dataset):
                         has_frame_label = has_frame_label and self._has_frame_label(
                             other_index
                         )
+                        has_teacher_target = has_teacher_target and bool(
+                            self.teacher_target_mask[other_index]
+                        )
                         mixup = True
                 elif r < self.cfg.train.prob_simple_merge + self.cfg.train.prob_mixup:
                     spec, label_tensor, other_index, lam = self._mixup(
@@ -205,6 +231,9 @@ class SpectrogramDataset(Dataset):
                         )
                     has_frame_label = has_frame_label and self._has_frame_label(
                         other_index
+                    )
+                    has_teacher_target = has_teacher_target and bool(
+                        self.teacher_target_mask[other_index]
                     )
                     mixup = True
                 elif (
@@ -229,6 +258,9 @@ class SpectrogramDataset(Dataset):
                         )
                     has_frame_label = has_frame_label and self._has_frame_label(
                         other_index
+                    )
+                    has_teacher_target = has_teacher_target and bool(
+                        self.teacher_target_mask[other_index]
                     )
                     cutmix_info = (time_range, other_label, original_label)
                     mixup = True
@@ -273,11 +305,12 @@ class SpectrogramDataset(Dataset):
             "frame_labels": frame_labels,
         }
         if self.cfg.train.teacher_only_if_no_frame:
-            supervision_mask = float(has_frame_label)
+            supervision_mask = float(has_frame_label or not has_teacher_target)
             item["hard_segment_mask"] = torch.tensor(supervision_mask)
             item["frame_label_mask"] = torch.tensor(supervision_mask)
         if teacher_tensor is not None:
             item["teacher_segment_labels"] = teacher_tensor
+            item["teacher_target_mask"] = torch.tensor(float(has_teacher_target))
         if teacher_frame_tensor is not None:
             item["teacher_frame_labels"] = teacher_frame_tensor
         return item
@@ -359,8 +392,7 @@ class SpectrogramDataset(Dataset):
                 f"Index {idx} out of bounds [0, {len(self.compressed_specs)})"
             )
 
-        spec = expand_spectrogram(self.compressed_specs[idx])
-        return spec.reshape(1, self.cfg.audio.spec_height, self.cfg.audio.spec_width)
+        return expand_spectrogram(self.compressed_specs[idx], cfg=self.cfg)
 
     def _mixup(self, spec, label_tensor, class_indexes):
         """

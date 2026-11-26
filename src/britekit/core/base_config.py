@@ -92,16 +92,21 @@ class TrainingConfig:
     teacher_targets_pickle: Optional[str] = None
     distillation_weight: float = 0.5  # Teacher share of segment loss
     distillation_temperature: float = 1.0
+    # Missing teacher targets always fall back to hard segment/frame labels.
     teacher_only_if_no_frame: bool = False
 
     # Path to frame-label pickle used in SED training
     frame_label_pickle: Optional[str] = None
 
-    num_workers: int = 3  # Number of trainer worker threads
+    num_workers: int = 3  # Number of data-loading worker processes
+    # False re-creates workers and seeds their RNGs at each epoch.
+    persistent_workers: bool = True
     compile: bool = False  # Compile the model?
+    channels_last: bool = False  # Use channels-last layout for 2D model training
     # Lightning precision override (e.g. "bf16-mixed"); None uses mixed_precision.
     precision: Optional[str] = None
     mixed_precision: bool = False  # Legacy FP16 mixed precision switch
+    matmul_precision: str = "medium"  # PyTorch FP32 matmul precision
 
     # Should loss function weight classes by spec count?
     use_class_weights: bool = False

@@ -173,16 +173,19 @@ class DataModule(LightningDataModule):
 
         teacher_targets = None
         teacher_frame_targets = None
+        teacher_target_mask = None
         if (
             self.cfg.train.teacher_only_if_no_frame
             and not self.cfg.train.teacher_targets_pickle
         ):
             raise ValueError("teacher_only_if_no_frame requires teacher_targets_pickle")
         if self.cfg.train.teacher_targets_pickle:
-            teacher_targets, teacher_frame_targets = self._load_teacher_targets(
-                self.cfg.train.teacher_targets_pickle,
-                self.train_class_codes,
-                self.segment_ids,
+            (teacher_targets, teacher_frame_targets, teacher_target_mask) = (
+                self._load_teacher_targets(
+                    self.cfg.train.teacher_targets_pickle,
+                    self.train_class_codes,
+                    self.segment_ids,
+                )
             )
 
         self.full_dataset = SpectrogramDataset(
@@ -196,6 +199,7 @@ class DataModule(LightningDataModule):
             frame_label_dict=frame_label_dict,
             teacher_targets=teacher_targets,
             teacher_frame_targets=teacher_frame_targets,
+            teacher_target_mask=teacher_target_mask,
         )
 
         # Load test data
@@ -374,15 +378,23 @@ class DataModule(LightningDataModule):
             raise ValueError("Teacher-target pickle contains duplicate segment IDs")
 
         target_indexes = {segment_id: i for i, segment_id in enumerate(target_ids)}
-        missing_ids = [
-            segment_id for segment_id in segment_ids if segment_id not in target_indexes
-        ]
-        if missing_ids:
-            raise ValueError(
-                f"Teacher targets are missing {len(missing_ids)} training segment IDs"
+        available = np.array([sid in target_indexes for sid in segment_ids], dtype=bool)
+        if not available.all():
+            logging.info(
+                "Using hard-label supervision for %s segments without teacher targets",
+                int((~available).sum()),
             )
-
-        if target_ids == list(segment_ids):
+            ordered = np.zeros((len(segment_ids), len(class_codes)), dtype=np.float32)
+            ordered_frames = np.zeros(
+                (len(segment_ids), *frame_probabilities.shape[1:]),
+                dtype=frame_probabilities.dtype,
+            )
+            order = [
+                target_indexes[sid] for sid in segment_ids if sid in target_indexes
+            ]
+            ordered[available] = probabilities[order]
+            ordered_frames[available] = frame_probabilities[order]
+        elif target_ids == list(segment_ids):
             ordered = probabilities
             ordered_frames = frame_probabilities
         else:
@@ -395,7 +407,7 @@ class DataModule(LightningDataModule):
             ordered_frames.shape,
             path,
         )
-        return ordered, ordered_frames
+        return ordered, ordered_frames, available
 
     def class_weights(self):
         import numpy as np
@@ -501,12 +513,23 @@ class DataModule(LightningDataModule):
                 self._make_val_dataset(val_idx), list(range(len(val_idx)))
             )
 
+    def on_after_batch_transfer(self, batch, dataloader_idx):
+        if self.cfg.train.channels_last:
+            import torch
+
+            inputs = batch["input"]
+            # Set the stride explicitly for one-channel spectrograms.
+            batch["input"] = inputs.to(memory_format=torch.channels_last)
+        return batch
+
     def train_dataloader(self):
         from torch.utils.data import DataLoader
 
         if self.train_data is None:
             raise ValueError("Training data not prepared. Call prepare_fold() first.")
 
+        sampler = None
+        shuffle = False
         max_per_recording = self.cfg.train.max_per_recording
         if max_per_recording is not None:
             if self.recording_ids is None:
@@ -526,19 +549,17 @@ class DataModule(LightningDataModule):
                 max_per_recording,
                 self.cfg.train.max_per_recording_min_recordings,
             )
-            return DataLoader(
-                self.train_data,
-                batch_size=self.cfg.train.batch_size,
-                sampler=sampler,
-                num_workers=self.cfg.train.num_workers,
-                pin_memory=self._pin_memory(),
-            )
+        else:
+            shuffle = self.cfg.train.shuffle
 
+        num_workers = self.cfg.train.num_workers
         return DataLoader(
             self.train_data,
             batch_size=self.cfg.train.batch_size,
-            shuffle=self.cfg.train.shuffle,
-            num_workers=self.cfg.train.num_workers,
+            sampler=sampler,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            persistent_workers=num_workers > 0 and self.cfg.train.persistent_workers,
             pin_memory=self._pin_memory(),
         )
 

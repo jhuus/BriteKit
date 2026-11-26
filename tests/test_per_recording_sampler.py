@@ -2,7 +2,9 @@ import random
 from types import SimpleNamespace
 
 import pytest
+from torch.utils.data import Subset
 
+from britekit.core.base_config import BaseConfig
 from britekit.core.data_module import DataModule, PerRecordingSampler
 
 
@@ -66,3 +68,23 @@ def test_data_module_rejects_missing_recording_ids():
 
     with pytest.raises(ValueError, match="requires.*recording IDs"):
         module.train_dataloader()
+
+
+@pytest.mark.parametrize("recording_limit", [None, 1])
+@pytest.mark.parametrize(
+    ("num_workers", "enabled", "expected"),
+    [(0, True, False), (1, False, False), (1, True, True)],
+)
+def test_training_loader_worker_persistence(
+    recording_limit, num_workers, enabled, expected
+):
+    module = DataModule.__new__(DataModule)
+    module.train_data = Subset([0], [0])
+    module.recording_ids = [10]
+    module.labels = [[0]]
+    module.cfg = BaseConfig()
+    module.cfg.train.max_per_recording = recording_limit
+    module.cfg.train.num_workers = num_workers
+    module.cfg.train.persistent_workers = enabled
+
+    assert module.train_dataloader().persistent_workers is expected

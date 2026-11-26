@@ -2,12 +2,14 @@ import copy
 
 import lightning.pytorch as pl
 import numpy as np
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
 from britekit.core import config_loader
 from britekit.core.base_config import BaseConfig
+from britekit.core.data_module import DataModule
 from britekit.core.trainer import Trainer
 from britekit.models.base_model import BaseModel
 
@@ -25,6 +27,11 @@ class TinyModel(BaseModel):
         )
         self.head = nn.Linear(4, 2)
         self.logged_names = []
+        self.input_channel_strides = set()
+
+    def training_step(self, batch, batch_idx):
+        self.input_channel_strides.add(batch["input"].stride(1))
+        return super().training_step(batch, batch_idx)
 
     def log(self, name, *args, **kwargs):
         # A compiled Lightning training/validation step would enter this method
@@ -35,8 +42,11 @@ class TinyModel(BaseModel):
 
 
 class TinyDataModule(pl.LightningDataModule):
+    on_after_batch_transfer = DataModule.on_after_batch_transfer
+
     def __init__(self):
         super().__init__()
+        self.cfg = config_loader.get_config()
         self.train_class_names = self.train_class_codes = ["A", "B"]
         self.train_class_alt_names = self.train_class_alt_codes = ["", ""]
         self.num_train_specs = 8
@@ -62,8 +72,9 @@ class TinyDataModule(pl.LightningDataModule):
         return DataLoader(self.samples, batch_size=4)
 
 
+@pytest.mark.parametrize("channels_last", [False, True])
 def test_compiled_training_keeps_logging_eager_and_checkpoints_loadable(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, channels_last
 ):
     cfg = BaseConfig()
     cfg.audio.spec_height = cfg.audio.spec_width = 8
@@ -71,6 +82,10 @@ def test_compiled_training_keeps_logging_eager_and_checkpoints_loadable(
     cfg.train.num_epochs = 2
     cfg.train.optimizer = "adamw"
     monkeypatch.setattr(config_loader, "_base_config", cfg)
+    if channels_last:
+        config_path = tmp_path / "train.yaml"
+        config_path.write_text("train:\n  channels_last: true\n")
+        config_loader.get_config(str(config_path))
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("britekit.core.data_module.DataModule", TinyDataModule)
     model = TinyModel()
@@ -96,6 +111,8 @@ def test_compiled_training_keeps_logging_eager_and_checkpoints_loadable(
     try:
         Trainer().run()
         assert {"lr", "loss", "val_loss", "val_roc"} <= set(model.logged_names)
+        assert model.input_channel_strides == ({1} if channels_last else {64})
+        assert model.backbone[0].weight.stride(1) == (1 if channels_last else 9)
         assert any(
             not torch.equal(value, initial_state[key])
             for key, value in model.state_dict().items()
