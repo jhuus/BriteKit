@@ -3,7 +3,7 @@
 import copy
 import math
 import random
-from typing import Any, Callable, Dict, List, Optional, cast
+from typing import Any, Callable, List, Optional, Sequence, Mapping, cast
 
 import numpy as np
 import torch
@@ -30,16 +30,16 @@ class SpectrogramDataset(Dataset):
 
     def __init__(
         self,
-        compressed_specs: List[Any],
-        class_indexes: List[List[int]],
+        compressed_specs: Sequence[Any],
+        class_indexes: Sequence[List[int]],
         num_classes: int,
         noise_class_index: int = -1,
         is_training: bool = True,
-        segment_ids: Optional[List[int]] = None,
-        recording_ids: Optional[List[int]] = None,
-        frame_label_dict: Optional[Dict[int, np.ndarray]] = None,
-        teacher_targets: Optional[np.ndarray] = None,
-        teacher_frame_targets: Optional[np.ndarray] = None,
+        segment_ids: Optional[Sequence[int]] = None,
+        recording_ids: Optional[Sequence[int]] = None,
+        frame_label_dict: Optional[Mapping[int, np.ndarray]] = None,
+        teacher_targets: Any = None,
+        teacher_frame_targets: Any = None,
         teacher_target_mask: Optional[np.ndarray] = None,
     ):
         # Input validation
@@ -377,7 +377,7 @@ class SpectrogramDataset(Dataset):
             frame_labels = torch.zeros(
                 num_frames, self.num_classes, dtype=torch.float32
             )
-            stored_tensor = torch.from_numpy(stored)
+            stored_tensor = torch.from_numpy(stored.copy())
             frame_labels[:, present[0]] = stored_tensor
         else:
             # Multi-class or no stored labels: broadcast segment labels to all frames.

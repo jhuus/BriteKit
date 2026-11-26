@@ -3,13 +3,15 @@
 # Defer some imports to improve initialization performance.
 import logging
 import pickle
+from pathlib import Path
 import random
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Sequence
 
 from lightning.pytorch import LightningDataModule
 from torch.utils.data import Sampler
 
 from britekit.core.config_loader import get_config
+from britekit.core.indexed_store import IndexView, read_store, align_targets
 
 
 class PerRecordingSampler(Sampler):
@@ -162,13 +164,20 @@ class DataModule(LightningDataModule):
         frame_label_dict = None
         if self.cfg.train.frame_label_pickle:
             try:
-                with open(self.cfg.train.frame_label_pickle, "rb") as f:
-                    frame_label_dict = pickle.load(f)
+                if Path(self.cfg.train.frame_label_pickle).is_dir():
+                    frame_label_dict = read_store(
+                        self.cfg.train.frame_label_pickle, "training-frames"
+                    )["labels"]
+                else:
+                    with open(self.cfg.train.frame_label_pickle, "rb") as f:
+                        frame_label_dict = pickle.load(f)
                 logging.info(
                     f"Loaded frame labels for {len(frame_label_dict)} segments "
                     f"from {self.cfg.train.frame_label_pickle}"
                 )
             except Exception as e:
+                if Path(self.cfg.train.frame_label_pickle).is_dir():
+                    raise
                 logging.warning(f"Failed to load frame-label pickle: {e}. Ignoring.")
 
         teacher_targets = None
@@ -255,13 +264,13 @@ class DataModule(LightningDataModule):
         List[str],
         List[str],
         List[str],
-        List[Any],
-        List[List[int]],
-        Optional[List[int]],
-        Optional[List[int]],
+        Sequence[Any],
+        Sequence[List[int]],
+        Optional[Sequence[int]],
+        Optional[Sequence[int]],
     ]:
         """
-        Load data from a pickle file with error handling.
+        Load metadata and samples from a legacy pickle or indexed store.
 
         Args:
         - path (str): Path to the pickle file
@@ -277,8 +286,11 @@ class DataModule(LightningDataModule):
             raise ValueError("Pickle file path cannot be empty")
 
         try:
-            with open(path, "rb") as f:
-                data = pickle.load(f)
+            if Path(path).is_dir():
+                data = read_store(path, "training")
+            else:
+                with open(path, "rb") as f:
+                    data = pickle.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(f"Pickle file not found: {path}")
         except (pickle.UnpicklingError, EOFError) as e:
@@ -324,6 +336,16 @@ class DataModule(LightningDataModule):
             raise ValueError(
                 "Training pickle must contain segment IDs when distillation is enabled"
             )
+        if Path(path).is_dir():
+            result = align_targets(
+                read_store(path, "teacher-targets"), class_codes, segment_ids
+            )
+            logging.info(
+                "Mapped teacher targets from %s (%s missing segments)",
+                path,
+                int((~result[2]).sum()),
+            )
+            return result
         with open(path, "rb") as file:
             data = pickle.load(file)
 
@@ -437,13 +459,17 @@ class DataModule(LightningDataModule):
         """Create a non-augmenting dataset containing only the validation samples."""
         from britekit.core.dataset import SpectrogramDataset
 
-        specs = [self.specs[i] for i in val_indices]
+        specs = IndexView(self.specs, val_indices)
         labels = [self.labels[i] for i in val_indices]
         segment_ids = (
-            [self.segment_ids[i] for i in val_indices] if self.segment_ids else None
+            [self.segment_ids[i] for i in val_indices]
+            if self.segment_ids is not None
+            else None
         )
         recording_ids = (
-            [self.recording_ids[i] for i in val_indices] if self.recording_ids else None
+            [self.recording_ids[i] for i in val_indices]
+            if self.recording_ids is not None
+            else None
         )
         noise_class_index = self.full_dataset.noise_class_index
         return SpectrogramDataset(

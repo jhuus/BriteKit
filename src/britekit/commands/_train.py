@@ -24,7 +24,7 @@ def train(
     Train a bioacoustic recognition model using the specified configuration.
 
     This command initiates the complete training pipeline for a bioacoustic model.
-    It loads training data from the database, configures the model architecture,
+    It loads training data from a pickle or indexed store, configures the model architecture,
     and runs the training process with the specified hyperparameters. The training
     includes validation, checkpointing, and progress monitoring.
 
@@ -36,8 +36,8 @@ def train(
         If not specified, uses default configuration.
     - prefix (str, optional): Prefix to add to checkpoint names.
     - seed (int, optional): Integer seed.
-    - frame_label_pickle (str, optional): Path to frame-label pickle for SED training.
-    - teacher_targets_pickle (str, optional): Path to soft segment targets for distillation.
+    - frame_label_pickle (str, optional): Path to frame-label pickle or indexed store for SED training.
+    - teacher_targets_pickle (str, optional): Path to teacher-target pickle or indexed store for distillation.
     """
     from britekit.core.trainer import Trainer
 
@@ -87,14 +87,14 @@ def train(
     "frame_label_pickle",
     type=click.Path(exists=True),
     required=False,
-    help="Path to frame-label pickle for SED training.",
+    help="Path to frame-label pickle or indexed store for SED training.",
 )
 @click.option(
     "--teacher-targets",
     "teacher_targets_pickle",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=True),
     required=False,
-    help="Path to soft segment targets for distillation.",
+    help="Path to teacher-target pickle or indexed store for distillation.",
 )
 def _train_cmd(
     cfg_path: str,
