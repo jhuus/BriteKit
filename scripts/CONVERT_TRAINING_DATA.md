@@ -1,3 +1,67 @@
+# Export new training data
+
+Use `export-training` to write an indexed store directly from the training database:
+
+```bash
+britekit export-training --db ~/code/git/HawkEars/data/training.db \
+  --output ~/code/git/HawkEars/data/training-new
+```
+
+The output is a new directory, defaulting to `data/training`. Existing destinations
+are refused. Point `train.train_pickle` at that directory to train. The Python API
+is `britekit.commands.export_training(...)`.
+
+`--classes`, `--sgroup`, `--max`, `--cfg`, and `--root` remain available. Class
+ordering follows the CSV (or database order if omitted). Multi-label segments
+appear once with all selected labels. `--max` assigns each segment to its earliest
+selected class and uses seed 101 to cap that primary class reproducibly; a class
+can have additional coverage through secondary labels. Empty selected classes
+are rejected. Compressed spectrograms are streamed unchanged, one at a time;
+selection metadata still uses RAM proportional to sample/label counts. The
+manifest identifies the source database and spectrogram group. It does not infer
+frontend settings from the blobs; retain the config used to extract them.
+
+`pickle-train` / `pickle_train` remain deprecated aliases, but now also write
+indexed store directories, **not pickle files**. Existing legacy pickles can
+still be converted with the scripts below.
+
+# Generate new teacher targets
+
+`teacher-targets` reads indexed training stores directly and streams output arrays
+into a new indexed teacher-target store:
+
+```bash
+britekit teacher-targets ~/code/git/HawkEars/data/training \
+  --checkpoints path/to/teacher-or-ensemble \
+  --output ~/code/git/HawkEars/data/teacher-targets-new
+```
+
+Set `train.teacher_targets_pickle` to the output directory. The command still
+accepts legacy training pickle input, which requires unpickling the full source;
+indexed input reads compressed samples on demand. Output is always an indexed
+store directory and must not already exist, regardless of its filename suffix.
+Existing target stores are preserved. Output mappings close before atomic
+publication, and errors clean up the temporary store.
+
+Ensemble averaging, per-checkpoint preprocessing, `--classes`, `--map-code`, and
+`--hard` retain their behavior. Segment targets use float32; SED frame targets use
+float16. Thresholding is performed on each averaged batch before it is written,
+without allocating another dataset-sized array. Targets require only batch
+buffers plus sample/ID metadata in process memory; mapped pages can be cached and
+reclaimed by the OS. Teachers and batch predictions still consume device memory.
+
+The manifest preserves ordered class codes, segment IDs (in `segment_ids.npy`),
+checkpoint fingerprints, and source provenance. Directory sources are hashed
+file by file with bounded buffers; the aggregate SHA-256 is calculated from the
+sorted, compact JSON map of filenames to SHA-256 digests (`sha256-file-map-v1`).
+This reads the complete input store once after inference, without loading it into
+RAM. Legacy-file fingerprints retain the original file SHA-256 convention.
+
+Teachers without SED outputs produce segment-only stores, as they previously
+produced segment-only pickles. BriteKit's current training distillation loader
+requires frame targets, so use SED teachers for that workflow. The shared
+`pickle-frame-infer` path retains its existing frame-label pickle output.
+
 # Convert existing training pickles
 
 Run these from the BriteKit repository using its Hatch environment:

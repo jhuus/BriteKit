@@ -3,6 +3,8 @@
 # File name starts with _ to keep it out of typeahead for API users.
 # Defer heavyweight imports to improve --help performance.
 import csv
+from contextlib import ExitStack
+import json
 import hashlib
 import logging
 from copy import deepcopy
@@ -26,6 +28,39 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _source_fingerprint(path: Path) -> dict:
+    if not path.is_dir():
+        return {"path": str(path), "sha256": _sha256(path)}
+    # Hash the complete store, using a deterministic aggregate independent of
+    # absolute paths. Include names so swapped files cannot share a fingerprint.
+    names = (
+        "manifest.json",
+        "specs.bin",
+        "offsets.npy",
+        "label_values.npy",
+        "label_offsets.npy",
+        "segment_ids.npy",
+        "recording_ids.npy",
+    )
+    files = {name: _sha256(path / name) for name in sorted(names)}
+    digest = hashlib.sha256(
+        json.dumps(files, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "path": str(path),
+        "sha256": digest,
+        "hash_method": "sha256-file-map-v1",
+        "files": files,
+    }
+
+
+def _validate_probabilities(values, name):
+    import numpy as np
+
+    if not np.isfinite(values).all() or (values < 0).any() or (values > 1).any():
+        raise ValueError(f"{name} must be finite probabilities in [0, 1]")
+
+
 def teacher_targets(
     train_pickle_path: str,
     checkpoint_path: str,
@@ -40,18 +75,20 @@ def teacher_targets(
     """
     Generate segment and frame targets from a checkpoint or ensemble.
 
-    The input must be a BriteKit training pickle containing stable segment IDs.
+    The input is an indexed training store or a legacy training pickle with stable segment IDs.
     Stored spectrograms must match the teachers' source representation. Linear
     features are converted to dB per teacher when its checkpoint requests it,
     using its power, top_db, and db_power settings, without training augmentation.
     For an ensemble directory, probabilities are averaged across all checkpoints.
-    SED frame probabilities are stored when the teachers provide them. Calibration
-    and application-level filtering are not applied.
+    Targets are written batch by batch into a new indexed store directory.
+    Segment arrays use float32; optional SED frame arrays use float16.
+    The output directory must not already exist. Calibration and application-level
+    filtering are not applied.
 
     Args:
-    - train_pickle_path (str): Path to the BriteKit training pickle.
+    - train_pickle_path (str): Path to an indexed training store or legacy training pickle.
     - checkpoint_path (str): Path to a teacher checkpoint or ensemble directory.
-    - output_path (str): Path for the generated teacher-target pickle.
+    - output_path (str): New output directory for the indexed teacher-target store.
     - cfg_path (str, optional): Path to YAML configuration overrides.
     - batch_size (int): Number of spectrograms per inference batch.
     - device (str, optional): Inference device, such as cpu, cuda, or mps.
@@ -63,17 +100,23 @@ def teacher_targets(
     - code_mapping (dict, optional): Map checkpoint codes to training codes,
       for example {"BADO": "BAOW"}. Output codes retain the training names.
     """
-    _generate_targets(
-        train_pickle_path,
-        checkpoint_path,
-        output_path,
-        cfg_path,
-        batch_size,
-        device,
-        classes_path=classes_path,
-        code_mapping=code_mapping,
-        hard=hard,
-    )
+    from britekit.core.convert_pickles import _destination
+
+    # Close mapped outputs before publishing or removing the temporary directory.
+    with _destination(Path(output_path)) as directory, ExitStack() as resources:
+        _generate_targets(
+            train_pickle_path,
+            checkpoint_path,
+            output_path,
+            cfg_path,
+            batch_size,
+            device,
+            classes_path=classes_path,
+            code_mapping=code_mapping,
+            hard=hard,
+            store_directory=directory,
+            resources=resources,
+        )
 
 
 def _generate_targets(
@@ -89,11 +132,15 @@ def _generate_targets(
     hard: Optional[float] = None,
     frame_labels_only: bool = False,
     full_segment_classes: Optional[list[str]] = None,
+    store_directory: Optional[Path] = None,
+    resources: Optional[ExitStack] = None,
 ) -> None:
     """Shared inference for distillation targets and legacy frame-label pickles."""
     import numpy as np
 
     from britekit.core.audio_util import convert_to_db
+    from britekit.core.convert_pickles import _manifest, _save
+    from britekit.core.indexed_store import read_store
     from britekit.models import model_loader
 
     if hard is not None and not 0 <= hard <= 1:
@@ -126,8 +173,11 @@ def _generate_targets(
     destination = Path(output_path)
 
     logging.info("Loading training spectrograms from %s", source_path)
-    with source_path.open("rb") as file:
-        training_data = pickle.load(file)
+    if source_path.is_dir():
+        training_data = read_store(str(source_path), "training")
+    else:
+        with source_path.open("rb") as source_file:
+            training_data = pickle.load(source_file)
 
     required_keys: tuple[str, ...] = ("class_codes", "spec_values", "spec_segment_ids")
     if frame_labels_only:
@@ -163,6 +213,15 @@ def _generate_targets(
         )
     if len(segment_ids) != len(set(segment_ids)):
         raise ValueError("Training pickle contains duplicate segment IDs")
+
+    if not specs:
+        raise ValueError("Training pickle contains no spectrograms")
+    if not class_codes or len(class_codes) != len(set(class_codes)):
+        raise ValueError("Training data must have unique, nonempty class codes")
+    if any(
+        not isinstance(sid, Integral) or isinstance(sid, bool) for sid in segment_ids
+    ):
+        raise ValueError("Training data requires integer segment IDs")
 
     label_indexes = []
     if frame_labels_only:
@@ -321,12 +380,23 @@ def _generate_targets(
                 "Frame-label ensemble checkpoints must have matching sed_fps"
             )
 
+    def mapped_output(name, shape, dtype):
+        if store_directory is None or resources is None:
+            raise ValueError("Teacher targets require an output store")
+        array = np.lib.format.open_memmap(
+            store_directory / f"{name}.npy", mode="w+", dtype=dtype, shape=shape
+        )
+        resources.callback(array._mmap.close)
+        resources.callback(array.flush)
+        return array
+
     probabilities = (
         None
         if frame_labels_only
-        else np.empty((len(specs), len(class_codes)), dtype=np.float32)
+        else mapped_output("probabilities", (len(specs), len(class_codes)), np.float32)
     )
     frame_probabilities = None
+    expected_has_frames = None
     frame_labels = {}
     num_batches = (len(specs) + batch_size - 1) // batch_size
     progress_interval = max(1, num_batches // 100)
@@ -382,16 +452,39 @@ def _generate_targets(
                 segment_scores = np.asarray(segment_scores)[:, indexes]
                 if frames is not None:
                     frames = np.asarray(frames)[:, indexes, :]
+            if not frame_labels_only:
+                segment_scores = np.asarray(segment_scores)
+                if segment_scores.shape != (end - start, len(class_codes)):
+                    raise ValueError(
+                        f"Unexpected teacher segment output shape: {segment_scores.shape}"
+                    )
+                _validate_probabilities(segment_scores, "Segment outputs")
+                if frames is not None:
+                    frames = np.asarray(frames)
+                    if frames.ndim != 3:
+                        raise ValueError(
+                            f"Unexpected teacher frame output shape: {frames.shape}"
+                        )
+                    _validate_probabilities(frames, "Frame outputs")
             predictions.append((segment_scores, frames))
         if probabilities is not None:
             scores = [prediction[0] for prediction in predictions]
-            probabilities[start:end] = np.mean(scores, axis=0, dtype=np.float32)
+            averaged_scores = np.mean(scores, axis=0, dtype=np.float32)
+            probabilities[start:end] = (
+                (averaged_scores >= hard) if hard is not None else averaged_scores
+            )
 
         frame_scores = [prediction[1] for prediction in predictions]
         has_frame_scores = [frame_output is not None for frame_output in frame_scores]
         if any(has_frame_scores) and not all(has_frame_scores):
             raise ValueError(
                 "Teacher ensemble mixes models with and without frame outputs"
+            )
+        if expected_has_frames is None:
+            expected_has_frames = all(has_frame_scores)
+        elif expected_has_frames != all(has_frame_scores):
+            raise ValueError(
+                "Teacher frame output availability changed between batches"
             )
         if all(has_frame_scores):
             valid_frame_scores = [
@@ -407,6 +500,8 @@ def _generate_targets(
                 raise ValueError(
                     "Teacher ensemble checkpoints have different frame output shapes"
                 )
+            if first_shape[-1] < 1:
+                raise ValueError("Teacher frame outputs must have at least one frame")
             if first_shape[:2] != (
                 end - start,
                 1 if frame_labels_only else len(class_codes),
@@ -429,8 +524,10 @@ def _generate_targets(
                         else curve.copy()
                     )
             elif frame_probabilities is None:
-                frame_probabilities = np.empty(
-                    (len(specs), len(class_codes), first_shape[2]), dtype=np.float16
+                frame_probabilities = mapped_output(
+                    "frame_probabilities",
+                    (len(specs), len(class_codes), first_shape[2]),
+                    np.float16,
                 )
                 logging.info(
                     "Teacher frame targets have %d frames per spectrogram",
@@ -476,12 +573,7 @@ def _generate_targets(
     output = {
         "format_version": 2,
         "class_codes": class_codes,
-        "segment_ids": segment_ids,
-        "probabilities": probabilities,
-        "source": {
-            "path": str(source_path),
-            "sha256": _sha256(source_path),
-        },
+        "source": _source_fingerprint(source_path),
         "teacher": {
             "path": str(teacher_path),
             "ensemble_method": "mean_probability",
@@ -496,14 +588,9 @@ def _generate_targets(
             ],
         },
     }
-    if frame_probabilities is not None:
-        output["frame_probabilities"] = frame_probabilities
-
-    if hard is not None:
-        assert probabilities is not None
-        output["probabilities"] = (probabilities >= hard).astype(probabilities.dtype)
-
-    _write_targets(destination, output)
+    assert store_directory is not None
+    _save(store_directory, "segment_ids", np.asarray(segment_ids))
+    _manifest(store_directory, "teacher-targets", source_path, len(specs), output)
     assert probabilities is not None
     logging.info(
         "Wrote teacher targets with segment shape %s and frame shape %s to %s",
@@ -530,7 +617,7 @@ def _write_targets(destination: Path, output) -> None:
     short_help="Generate soft or hard training targets from a model ensemble.",
     help=util.cli_help_from_doc(teacher_targets.__doc__),
 )
-@click.argument("train_pickle_path", type=click.Path(exists=True, dir_okay=False))
+@click.argument("train_pickle_path", type=click.Path(exists=True))
 @click.option(
     "--checkpoints",
     "checkpoint_path",
@@ -542,9 +629,9 @@ def _write_targets(destination: Path, output) -> None:
     "-o",
     "--output",
     "output_path",
-    type=click.Path(dir_okay=False),
+    type=click.Path(file_okay=False),
     required=True,
-    help="Output teacher-target pickle.",
+    help="New indexed teacher-target store directory (must not exist).",
 )
 @click.option(
     "-c",

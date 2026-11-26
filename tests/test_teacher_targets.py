@@ -1,4 +1,5 @@
 import pickle
+import json
 from copy import deepcopy
 from types import SimpleNamespace
 
@@ -6,6 +7,19 @@ import numpy as np
 import pytest
 
 from britekit.commands import _teacher_targets
+
+
+def read_output(path):
+    manifest = json.loads((path / "manifest.json").read_text())
+    assert manifest["kind"] == "teacher-targets"
+    result = manifest["metadata"]
+    for name in ("segment_ids", "probabilities", "frame_probabilities"):
+        if (path / f"{name}.npy").exists():
+            result[name] = np.load(
+                path / f"{name}.npy", mmap_mode="r", allow_pickle=False
+            )
+    result["segment_ids"] = result["segment_ids"].tolist()
+    return result
 
 
 class FakeModel:
@@ -105,8 +119,7 @@ def test_teacher_targets_averages_ensemble_and_writes_metadata(
             hard=hard,
         )
 
-    with output_path.open("rb") as file:
-        output = pickle.load(file)
+    output = read_output(output_path)
 
     assert output["format_version"] == 2
     assert output["class_codes"] == ["a", "b"]
@@ -243,8 +256,7 @@ def test_teacher_targets_preprocesses_each_teacher_independently(
     assert cfg == original_cfg
     assert len({id(model.cfg) for model in models}) == len(models)
     np.testing.assert_array_equal(source_spec, magnitude**power)
-    with output_path.open("rb") as file:
-        targets = pickle.load(file)
+    targets = read_output(output_path)
     np.testing.assert_allclose(targets["probabilities"], 0.4)
     np.testing.assert_allclose(targets["frame_probabilities"], 0.3, atol=0.001)
 
@@ -331,8 +343,7 @@ def test_teacher_targets_matches_training_preprocessing_with_real_checkpoint(
     _teacher_targets.teacher_targets(
         str(source), str(checkpoint), str(output_path), device="cpu"
     )
-    with output_path.open("rb") as file:
-        targets = pickle.load(file)
+    targets = read_output(output_path)
     np.testing.assert_allclose(targets["probabilities"], expected[0], atol=1e-6)
     np.testing.assert_allclose(targets["frame_probabilities"], expected[1], atol=5e-4)
     assert runtime_cfg == BaseConfig()
@@ -390,8 +401,7 @@ def test_teacher_targets_selects_and_aligns_class_subset(
         code_mapping={"old_a": "a"},
         hard=hard,
     )
-    with output_path.open("rb") as file:
-        output = pickle.load(file)
+    output = read_output(output_path)
     assert output["class_codes"] == ["a", "b"]
     assert output["segment_ids"] == [10, 20, 30]
     np.testing.assert_allclose(
@@ -401,4 +411,209 @@ def test_teacher_targets_selects_and_aligns_class_subset(
         output["frame_probabilities"][:, :, 0],
         [[0, 1] if hard else [0.2, 0.8]] * 3,
         atol=0.001,
+    )
+
+
+@pytest.fixture
+def indexed_source(tmp_path):
+    from britekit.core.convert_pickles import convert_pickle
+    from britekit.core.util import compress_spectrogram
+
+    source = tmp_path / "source.pkl"
+    source.write_bytes(
+        pickle.dumps(
+            dict(
+                class_names=["Alpha", "Beta"],
+                class_codes=["a", "b"],
+                alt_names=[None, None],
+                alt_codes=[None, None],
+                spec_values=[
+                    compress_spectrogram(
+                        np.full((2, 3), i / 4, dtype=np.float32), bits=16
+                    )
+                    for i in range(3)
+                ],
+                spec_segment_ids=[30, 10, 20],
+                spec_recording_ids=[1, 2, 3],
+                spec_class_indexes=[[0], [1], [0]],
+            )
+        )
+    )
+    store = tmp_path / "training"
+    convert_pickle("training", str(source), str(store))
+    return store
+
+
+def configure_teacher(monkeypatch, model):
+    monkeypatch.setattr(
+        _teacher_targets,
+        "get_config",
+        lambda _: SimpleNamespace(audio=SimpleNamespace(), infer=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        "britekit.models.model_loader.load_from_checkpoint",
+        lambda *args, **kwargs: model,
+    )
+
+
+@pytest.mark.parametrize("hard", [None, 0.5])
+def test_indexed_input_streams_batches_and_training_loader_can_read_output(
+    monkeypatch, tmp_path, indexed_source, hard
+):
+    from britekit.core.data_module import DataModule
+
+    checkpoint = tmp_path / "teacher.ckpt"
+    checkpoint.write_bytes(b"teacher")
+    output = tmp_path / "targets"
+    model = FakeModel(["a", "b"], 0.4, 0.6)
+    configure_teacher(monkeypatch, model)
+    predict = model.predict
+    calls = []
+
+    def checked_predict(batch, device):
+        assert not output.exists()  # partial stores are never published
+        (temporary,) = list(tmp_path.glob(".targets-*"))
+        assert (temporary / "probabilities.npy").is_file()
+        if calls:
+            saved = np.load(temporary / "probabilities.npy", mmap_mode="r")
+            np.testing.assert_allclose(saved[:2], 0 if hard is not None else 0.4)
+            saved_frames = np.load(temporary / "frame_probabilities.npy", mmap_mode="r")
+            np.testing.assert_allclose(
+                saved_frames[:2], 1 if hard is not None else 0.6, atol=0.001
+            )
+        calls.append(len(batch))
+        return predict(batch, device)
+
+    model.predict = checked_predict
+    monkeypatch.setattr(
+        _teacher_targets.pickle,
+        "load",
+        lambda *args: pytest.fail("Indexed input must not unpickle"),
+    )
+    original_empty = np.empty
+
+    def bounded_empty(shape, *args, **kwargs):
+        assert shape not in ((3, 2), (3, 2, 4)), "Full target allocated in RAM"
+        return original_empty(shape, *args, **kwargs)
+
+    monkeypatch.setattr(np, "empty", bounded_empty)
+    _teacher_targets.teacher_targets(
+        str(indexed_source),
+        str(checkpoint),
+        str(output),
+        batch_size=2,
+        device="cpu",
+        hard=hard,
+    )
+    assert calls == [2, 1]
+    assert not list(tmp_path.glob(".targets-*"))
+    result = read_output(output)
+    assert result["segment_ids"] == [30, 10, 20]
+    assert result["probabilities"].dtype == np.float32
+    assert result["frame_probabilities"].dtype == np.float16
+    assert result["source"]["hash_method"] == "sha256-file-map-v1"
+    assert len(result["source"]["files"]) == 7
+    module = DataModule.__new__(DataModule)
+    targets, frames, mask = module._load_teacher_targets(
+        str(output), ["a", "b"], [20, 99, 30]
+    )
+    np.testing.assert_array_equal(mask, [True, False, True])
+    np.testing.assert_array_equal(targets[1], [0, 0])
+    np.testing.assert_allclose(targets[0], 0 if hard is not None else 0.4)
+    np.testing.assert_allclose(frames[2], 1 if hard is not None else 0.6, atol=0.001)
+
+
+@pytest.mark.parametrize(
+    "problem", ["inference", "fingerprint", "nan", "shape", "frame-availability"]
+)
+def test_streamed_output_failure_cleans_temporary_store(
+    monkeypatch, tmp_path, indexed_source, problem
+):
+    checkpoint = tmp_path / "teacher.ckpt"
+    checkpoint.write_bytes(b"teacher")
+    output = tmp_path / "targets"
+    model = FakeModel(["a", "b"], 0.4, 0.6)
+    configure_teacher(monkeypatch, model)
+    predict = model.predict
+    calls = 0
+
+    def failing_predict(batch, device):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            if problem == "inference":
+                raise RuntimeError("inference failure")
+            if problem == "nan":
+                model.score = float("nan")
+            if problem == "shape":
+                return np.zeros((len(batch), 1)), None
+            if problem == "frame-availability":
+                return np.zeros((len(batch), 2)), None
+        return predict(batch, device)
+
+    model.predict = failing_predict
+    if problem == "fingerprint":
+
+        def failed_hash(path):
+            raise RuntimeError("fingerprint failure")
+
+        monkeypatch.setattr(_teacher_targets, "_source_fingerprint", failed_hash)
+    with pytest.raises((RuntimeError, ValueError)):
+        _teacher_targets.teacher_targets(
+            str(indexed_source),
+            str(checkpoint),
+            str(output),
+            batch_size=2,
+            device="cpu",
+        )
+    assert not output.exists()
+    assert not list(tmp_path.glob(".targets-*"))
+
+
+def test_existing_destination_refused_before_loading(monkeypatch, tmp_path):
+    output = tmp_path / "targets"
+    output.mkdir()
+    (output / "keep").write_text("original")
+    with pytest.raises(FileExistsError):
+        _teacher_targets.teacher_targets(
+            "missing-input", "missing-checkpoint", str(output)
+        )
+    assert (output / "keep").read_text() == "original"
+
+
+def test_teacher_cli_accepts_indexed_directories(monkeypatch, tmp_path, indexed_source):
+    from click.testing import CliRunner
+
+    checkpoint = tmp_path / "teacher.ckpt"
+    checkpoint.write_bytes(b"teacher")
+    configure_teacher(monkeypatch, FakeModel(["a", "b"], 0.4, 0.6))
+    output = tmp_path / "targets"
+    result = CliRunner().invoke(
+        _teacher_targets._teacher_targets_cmd,
+        [
+            str(indexed_source),
+            "--checkpoints",
+            str(checkpoint),
+            "-o",
+            str(output),
+            "--device",
+            "cpu",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert read_output(output)["probabilities"].shape == (3, 2)
+
+
+def test_store_fingerprint_is_deterministic_and_covers_content(
+    tmp_path, indexed_source
+):
+    first = _teacher_targets._source_fingerprint(indexed_source)
+    assert first == _teacher_targets._source_fingerprint(indexed_source)
+    offsets_path = indexed_source / "recording_ids.npy"
+    ids = np.load(offsets_path)
+    ids[0] = 999
+    np.save(offsets_path, ids)
+    assert (
+        _teacher_targets._source_fingerprint(indexed_source)["sha256"]
+        != first["sha256"]
     )

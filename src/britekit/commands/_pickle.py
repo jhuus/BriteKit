@@ -81,7 +81,7 @@ def _pickle_occurrence_cmd(
     )
 
 
-def pickle_train(
+def export_training(
     cfg_path: Optional[str] = None,
     classes_path: Optional[str] = None,
     db_path: Optional[str] = None,
@@ -91,46 +91,47 @@ def pickle_train(
     spec_group: Optional[str] = None,
 ) -> None:
     """
-    Convert database spectrograms to a pickle file for use in training.
+    Export database spectrograms to an indexed training store.
 
-    This command extracts spectrograms from the training database and saves them in a pickle file
-    that can be efficiently loaded during model training. It can process all classes in the database
-    or specific classes specified by a CSV file.
+    Writes original compressed spectrograms incrementally into a new directory,
+    with memory-mappable indexes and labels. Only selection metadata is held in
+    RAM. The directory must not exist; incomplete exports are not published.
+    Use its path as train.train_pickle when training.
 
     Args:
     - cfg_path (str, optional): Path to YAML file defining config overrides.
     - classes_path (str, optional): Path to CSV file containing class names to include.
         If omitted, includes all classes in the database.
     - db_path (str, optional): Path to the training database. Defaults to cfg.train.train_db.
-    - output_path (str, optional): Output pickle file path. Defaults to "data/training.pkl".
+    - output_path (str, optional): Output indexed-store directory. Defaults to "data/training".
     - root_dir (str, optional): Root directory containing data directory. Defaults to working directory.
     - max_per_class (int, optional): Maximum number of spectrograms to include per class.
     - spec_group (str, optional): Spectrogram group name to extract from. Defaults to 'default'.
     """
-    from britekit.core.pickler import TrainingPickler
+    from britekit.core.training_exporter import TrainingExporter
 
     cfg = get_config(cfg_path)
     if db_path is None:
         db_path = cfg.train.train_db
 
-    if classes_path is not None:
-        if not os.path.exists(classes_path):
-            logging.error(f"Error: file {classes_path} not found.")
-            return
+    if classes_path is not None and not os.path.isfile(classes_path):
+        from britekit.core.exceptions import InputError
+
+        raise InputError(f"Class list not found: {classes_path}")
 
     if output_path is None:
-        output_path = str(Path(root_dir) / "data" / "training.pkl")
+        output_path = str(Path(root_dir) / "data" / "training")
 
-    pickler = TrainingPickler(
+    exporter = TrainingExporter(
         db_path, output_path, classes_path, max_per_class, spec_group
     )
-    pickler.pickle()
+    exporter.export()
 
 
 @click.command(
-    name="pickle-train",
-    short_help="Convert a training database to a pickle file for use in training.",
-    help=util.cli_help_from_doc(pickle_train.__doc__),
+    name="export-training",
+    short_help="Export an indexed training store from the database.",
+    help=util.cli_help_from_doc(export_training.__doc__),
 )
 @click.option(
     "-c",
@@ -144,7 +145,7 @@ def pickle_train(
     "--classes",
     "classes_path",
     required=False,
-    help="Path to CSV containing class names to pickle (optional). Default is all classes.",
+    help="Path to CSV containing class names to export (optional). Default is all classes.",
 )
 @click.option(
     "-d", "--db", "db_path", required=False, help="Path to the training database."
@@ -154,7 +155,7 @@ def pickle_train(
     "--output",
     "output_path",
     required=False,
-    help='Output file path. Default is "data/training.pkl".',
+    help='Output directory. Default is "data/training".',
 )
 @click.option(
     "--root",
@@ -168,8 +169,8 @@ def pickle_train(
     "--max",
     "max_per_class",
     required=False,
-    type=int,
-    help="Maximum spectrograms per class.",
+    type=click.IntRange(min=1),
+    help="Maximum spectrograms assigned to each primary class.",
 )
 @click.option(
     "--sgroup",
@@ -178,7 +179,7 @@ def pickle_train(
     default="default",
     help="Spectrogram group name. Defaults to 'default'.",
 )
-def _pickle_train_cmd(
+def _export_training_cmd(
     cfg_path: Optional[str],
     classes_path: Optional[str],
     db_path: Optional[str],
@@ -188,7 +189,7 @@ def _pickle_train_cmd(
     spec_group: Optional[str],
 ) -> None:
     util.set_logging()
-    pickle_train(
+    export_training(
         cfg_path,
         classes_path,
         db_path,
@@ -197,6 +198,28 @@ def _pickle_train_cmd(
         max_per_class,
         spec_group,
     )
+
+
+# Keep the previous spelling for scripts while steering new callers to export-training.
+def pickle_train(*args, **kwargs) -> None:
+    """Deprecated alias for export_training; writes an indexed store directory."""
+    import warnings
+
+    warnings.warn(
+        "pickle_train is deprecated; use export_training (outputs an indexed store directory)",
+        FutureWarning,
+        stacklevel=2,
+    )
+    export_training(*args, **kwargs)
+
+
+_pickle_train_cmd = click.Command(
+    "pickle-train",
+    callback=_export_training_cmd.callback,
+    params=_export_training_cmd.params,
+    deprecated="Use export-training; output is an indexed store directory.",
+    help="Deprecated alias for export-training. Writes an indexed store directory.",
+)
 
 
 def _compute_frame_labels(score, left_scores, right_scores, alpha, num_frames, pad=1):
